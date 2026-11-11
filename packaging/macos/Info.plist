@@ -20,9 +20,19 @@
   <string>__VERSION__</string>
   <key>LSMinimumSystemVersion</key>
   <string>12.0</string>
-  <!-- A menu-bar app: no Dock icon; the window is the browser (ADR-0004). -->
+  <!-- A menu-bar app: no Dock icon until its window opens (ADR-0017). -->
   <key>LSUIElement</key>
   <true/>
+  <key>NSHighResolutionCapable</key>
+  <true/>
+  <key>NSSupportsAutomaticGraphicsSwitching</key>
+  <true/>
+  <!-- The window loads the UI from http://127.0.0.1:<port>. -->
+  <key>NSAppTransportSecurity</key>
+  <dict>
+    <key>NSAllowsLocalNetworking</key>
+    <true/>
+  </dict>
   <key>NSHumanReadableCopyright</key>
   <string>Apache-2.0</string>
 </dict>

@@ -13,6 +13,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -30,6 +31,7 @@ import (
 	"github.com/akamachinecode/portplane/internal/setup"
 	"github.com/akamachinecode/portplane/internal/tray"
 	"github.com/akamachinecode/portplane/internal/webui"
+	"github.com/akamachinecode/portplane/internal/window"
 )
 
 // aliasName is the portless name of the UI: https://portplane.localhost.
@@ -53,7 +55,7 @@ func cmdServe(args []string, stdout, stderr io.Writer) int {
 	// One Portplane per user: a second start opens the first one's window.
 	if inst, ok := runningInstance(); ok {
 		fmt.Fprintf(stdout, "Portplane is already running at %s\n", inst.URL)
-		if *open {
+		if *open && !showRunning(inst) {
 			_ = desktop.OpenApp(inst.URL)
 		}
 		return 0
@@ -100,13 +102,33 @@ func cmdServe(args []string, stdout, stderr io.Writer) int {
 		cancel()
 	}
 
+	url := rawURL
+	if publicURL != "" {
+		url = publicURL
+	}
+	// The window: native on macOS (ADR-0017), where it lives in the tray's
+	// run loop; the browser elsewhere and without a tray (ADR-0004). The
+	// native window loads the loopback address, which needs neither the
+	// portless CA nor .localhost name resolution.
+	native := window.Supported() && !*noTray && tray.Available()
+	showUI := func() {
+		if native {
+			window.Show(rawURL)
+			return
+		}
+		if err := desktop.OpenApp(url); err != nil {
+			fmt.Fprintln(stderr, "portplane: could not open a browser:", err)
+		}
+	}
+
 	srv := &server.Server{
-		Hub:       h,
-		UI:        webui.FS(),
-		Token:     server.NewToken(),
-		Port:      port,
-		PublicURL: publicURL,
-		Dev:       *dev,
+		Hub:        h,
+		UI:         webui.FS(),
+		Token:      server.NewToken(),
+		ShowWindow: showUI,
+		Port:       port,
+		PublicURL:  publicURL,
+		Dev:        *dev,
 		GetFolders: func() []string {
 			return local.Folders()
 		},
@@ -158,11 +180,7 @@ func cmdServe(args []string, stdout, stderr io.Writer) int {
 		BaseContext:       func(net.Listener) context.Context { return ctx },
 	}
 
-	url := rawURL
-	if publicURL != "" {
-		url = publicURL
-	}
-	if err := writeInstance(instance{PID: os.Getpid(), Port: port, URL: url}); err != nil {
+	if err := writeInstance(instance{PID: os.Getpid(), Port: port, URL: url, Token: srv.Token}); err != nil {
 		fmt.Fprintln(stderr, "portplane: warning:", err)
 	}
 	defer removeInstance()
@@ -175,13 +193,14 @@ func cmdServe(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stdout, "  development mode: no token, any *.localhost host")
 	}
 	if *open {
-		if err := desktop.OpenApp(url); err != nil {
-			fmt.Fprintln(stderr, "portplane: could not open a browser:", err)
-		}
+		showUI()
 	}
 
 	ctx, quit := context.WithCancel(ctx)
 	defer quit()
+	if native {
+		window.OnQuit(ctx, quit) // Cmd-Q in the window's menu
+	}
 	errc := make(chan error, 1)
 	go func() {
 		err := httpSrv.Serve(ln)
@@ -190,12 +209,8 @@ func cmdServe(args []string, stdout, stderr io.Writer) int {
 	}()
 	// The tray needs the main goroutine (macOS); without one, just wait.
 	shown := !*noTray && tray.Run(ctx, tray.Options{
-		Updates: h.Observe(ctx),
-		Open: func() {
-			if err := desktop.OpenApp(url); err != nil {
-				fmt.Fprintln(stderr, "portplane: could not open a browser:", err)
-			}
-		},
+		Updates:      h.Observe(ctx),
+		Open:         showUI,
 		Quit:         quit,
 		Autostart:    autostart.Enabled,
 		SetAutostart: setAutostart,
@@ -221,10 +236,13 @@ func cmdServe(args []string, stdout, stderr io.Writer) int {
 }
 
 // instance records the running Portplane so a second start can find it.
+// The file is private to the user (0600), like the page that carries the
+// same token (ADR-0008).
 type instance struct {
-	PID  int    `json:"pid"`
-	Port int    `json:"port"`
-	URL  string `json:"url"`
+	PID   int    `json:"pid"`
+	Port  int    `json:"port"`
+	URL   string `json:"url"`
+	Token string `json:"token,omitempty"`
 }
 
 func instancePath() string {
@@ -277,6 +295,29 @@ func runningInstance() (instance, bool) {
 	}
 	_ = resp.Body.Close()
 	return i, resp.StatusCode == http.StatusOK && resp.Header.Get("Content-Security-Policy") != ""
+}
+
+// showRunning asks the running Portplane to bring up its own window (native
+// on macOS). It reports false when that one cannot, such as a version
+// without the route, so the caller opens the browser instead.
+func showRunning(i instance) bool {
+	if i.Token == "" {
+		return false
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "http://127.0.0.1:"+strconv.Itoa(i.Port)+"/api/window", strings.NewReader("{}"))
+	if err != nil {
+		return false
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Portplane-Token", i.Token)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return false
+	}
+	_ = resp.Body.Close()
+	return resp.StatusCode == http.StatusNoContent
 }
 
 func setAutostart(on bool) error {

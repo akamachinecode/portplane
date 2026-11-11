@@ -53,6 +53,9 @@ type Server struct {
 	Reveal     func(string) error
 	PickFolder func(context.Context) (string, error)
 	CanPick    func() bool
+	// ShowWindow brings up the Portplane window (a second start asks the
+	// running one through POST /api/window). Nil: the route answers 404.
+	ShowWindow func()
 	// Extra handlers registered by later milestones (setup, machines).
 	Extra map[string]http.HandlerFunc
 }
@@ -92,6 +95,7 @@ func (s *Server) Handler() http.Handler {
 	api.HandleFunc("GET /api/settings", s.getSettings)
 	api.HandleFunc("PUT /api/settings", s.putSettings)
 	api.HandleFunc("POST /api/folders/pick", s.pickFolder)
+	api.HandleFunc("POST /api/window", s.showWindow)
 	for pattern, h := range s.Extra {
 		api.HandleFunc(pattern, h)
 	}
@@ -330,6 +334,15 @@ func (s *Server) open(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Server) showWindow(w http.ResponseWriter, _ *http.Request) {
+	if s.ShowWindow == nil {
+		writeError(w, http.StatusNotFound, errors.New("no window to show"))
+		return
+	}
+	s.ShowWindow()
 	w.WriteHeader(http.StatusNoContent)
 }
 

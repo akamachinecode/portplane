@@ -191,6 +191,22 @@ func TestPickFolderAcceptsTheUIRequest(t *testing.T) {
 	}
 }
 
+func TestShowWindow(t *testing.T) {
+	s, _, h := newTestServer(t)
+	if got := do(h, "POST", "/api/window", "127.0.0.1:4799", "secret", `{}`).Code; got != 404 {
+		t.Fatalf("no window: %d, want 404", got)
+	}
+	shown := 0
+	s.ShowWindow = func() { shown++ }
+	h = s.Handler()
+	if got := do(h, "POST", "/api/window", "127.0.0.1:4799", "", `{}`).Code; got != 401 || shown != 0 {
+		t.Fatalf("no token: %d (shown %d), want 401", got, shown)
+	}
+	if got := do(h, "POST", "/api/window", "127.0.0.1:4799", "secret", `{}`).Code; got != 204 || shown != 1 {
+		t.Fatalf("right token: %d (shown %d), want 204", got, shown)
+	}
+}
+
 func TestSettings(t *testing.T) {
 	_, _, h := newTestServer(t)
 	rec := do(h, "PUT", "/api/settings", "127.0.0.1:4799", "secret", `{"folders":["/x","/y"]}`)
