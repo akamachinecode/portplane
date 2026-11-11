@@ -79,9 +79,40 @@ func Group(apps []App) []Project {
 		}
 		return out[i].order < out[j].order
 	})
+	// A prefix is only usable for group actions when it does not also match
+	// apps outside the group (a main checkout "shop/" also covers its linked
+	// worktrees under "shop/feature/"). Without one, the UI lists the tasks.
+	byRunner := map[string][]App{}
+	for _, a := range apps {
+		byRunner[a.Runner] = append(byRunner[a.Runner], a)
+	}
+	clash := func(runner, prefix string, members []string) bool {
+		in := map[string]bool{}
+		for _, id := range members {
+			in[id] = true
+		}
+		for _, a := range byRunner[runner] {
+			if strings.HasPrefix(a.Task, prefix) && !in[a.ID] {
+				return true
+			}
+		}
+		return false
+	}
 	projects := make([]Project, len(out))
 	for i, pa := range out {
-		projects[i] = pa.p
+		p := pa.p
+		var all []string
+		for j := range p.Worktrees {
+			wt := &p.Worktrees[j]
+			all = append(all, wt.Apps...)
+			if wt.Prefix != "" && clash(p.Runner, wt.Prefix, wt.Apps) {
+				wt.Prefix = ""
+			}
+		}
+		if p.Prefix != "" && clash(p.Runner, p.Prefix, all) {
+			p.Prefix = ""
+		}
+		projects[i] = p
 	}
 	return projects
 }

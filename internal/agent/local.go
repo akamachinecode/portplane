@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/akamachinecode/portplane/internal/buildinfo"
@@ -38,8 +39,7 @@ type Options struct {
 // Local is the agent for the machine Portplane runs on.
 type Local struct {
 	id, name string
-	interval time.Duration
-	pace     chan time.Duration
+	pace     atomic.Int64 // collection interval, as a time.Duration
 	dekit    Runner
 	portless Router
 	os       osinfo.Source
@@ -54,6 +54,7 @@ type Local struct {
 	lastAt   time.Time
 	watchers map[chan model.MachineSnapshot]struct{}
 	poke     chan struct{}
+	states   map[string][]dekit.TaskState // last good `dekit ls` per runner
 	toolsAt  time.Time
 	toolsVal model.Tools
 	closed   chan struct{}
@@ -81,16 +82,17 @@ func NewLocal(o Options) *Local {
 		o.OS = osinfo.System{}
 	}
 	home, _ := os.UserHomeDir()
-	return &Local{
-		id: o.ID, name: o.Name, interval: o.Interval,
+	l := &Local{
+		id: o.ID, name: o.Name,
 		dekit: o.Dekit, portless: o.Portless, os: o.OS,
 		git: gitinfo.NewLookup(), configs: newConfigCache(), home: home,
 		folders:  cleanFolders(o.Folders),
 		watchers: map[chan model.MachineSnapshot]struct{}{},
 		poke:     make(chan struct{}, 1),
-		pace:     make(chan time.Duration, 1),
 		closed:   make(chan struct{}),
 	}
+	l.pace.Store(int64(o.Interval))
+	return l
 }
 
 func cleanFolders(in []string) []string {
@@ -112,19 +114,48 @@ func cleanFolders(in []string) []string {
 	return out
 }
 
+func (l *Local) rememberStates(root string, s []dekit.TaskState) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.states == nil {
+		l.states = map[string][]dekit.TaskState{}
+	}
+	if s == nil {
+		delete(l.states, root)
+		return
+	}
+	l.states[root] = s
+}
+
+func (l *Local) rememberedStates(root string) []dekit.TaskState {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.states[root]
+}
+
 // Folders returns the watched folders.
 func (l *Local) Folders() []string {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	return append([]string(nil), l.folders...)
+	out := make([]string, len(l.folders)) // never nil: the UI reads .length
+	copy(out, l.folders)
+	return out
 }
 
 // SetFolders replaces the watched folders and refreshes.
 func (l *Local) SetFolders(_ context.Context, folders []string) error {
-	for _, f := range folders {
-		if strings.TrimSpace(f) == "" {
+	for i, f := range folders {
+		f = strings.TrimSpace(f)
+		if f == "" {
 			continue
 		}
+		if f == "~" || strings.HasPrefix(f, "~/") || strings.HasPrefix(f, `~\`) {
+			f = filepath.Join(l.home, f[1:])
+		}
+		if !filepath.IsAbs(f) {
+			return fmt.Errorf("%s: use a full path (such as %s)", f, filepath.Join(l.home, f))
+		}
+		folders[i] = f
 		fi, err := os.Stat(f)
 		if err != nil {
 			return fmt.Errorf("folder %s: %w", f, err)
@@ -226,16 +257,15 @@ func (l *Local) refresh(ctx context.Context) model.MachineSnapshot {
 	s := l.collect(ctx)
 	key := snapshotKey(s)
 	l.mu.Lock()
+	defer l.mu.Unlock()
 	changed := !bytes.Equal(key, l.lastKey)
 	l.last, l.lastKey, l.lastAt = s, key, time.Now()
-	var ws []chan model.MachineSnapshot
-	if changed {
-		for w := range l.watchers {
-			ws = append(ws, w)
-		}
+	if !changed {
+		return s
 	}
-	l.mu.Unlock()
-	for _, w := range ws {
+	// Sends never block and happen under the lock, so Watch can close a
+	// channel safely once its context ends.
+	for w := range l.watchers {
 		select {
 		case w <- s:
 		default:
@@ -275,42 +305,48 @@ func (l *Local) Watch(ctx context.Context) <-chan model.MachineSnapshot {
 	l.loopOnce.Do(func() { go l.loop() })
 	go func() {
 		s, _ := l.Snapshot(ctx)
+		l.mu.Lock()
 		select {
 		case ch <- s:
 		default:
 		}
+		l.mu.Unlock()
 		select {
 		case <-ctx.Done():
 		case <-l.closed:
 		}
 		l.mu.Lock()
 		delete(l.watchers, ch)
+		close(ch)
 		l.mu.Unlock()
 	}()
 	return ch
 }
 
-// SetInterval changes how often the agent collects while watched.
+// SetInterval changes how often the agent collects while watched. The
+// latest call wins; it never blocks.
 func (l *Local) SetInterval(d time.Duration) {
-	select {
-	case <-l.pace:
-	default:
+	if d <= 0 {
+		return
 	}
-	l.pace <- d
+	l.pace.Store(int64(d))
 	l.refreshSoon()
 }
 
 func (l *Local) loop() {
-	t := time.NewTicker(l.interval)
+	current := time.Duration(l.pace.Load())
+	t := time.NewTicker(current)
 	defer t.Stop()
 	for {
 		select {
 		case <-l.closed:
 			return
 		case <-t.C:
-		case d := <-l.pace:
-			t.Reset(d)
 		case <-l.poke:
+		}
+		if d := time.Duration(l.pace.Load()); d != current {
+			current = d
+			t.Reset(d)
 		}
 		l.mu.Lock()
 		n := len(l.watchers)
@@ -358,6 +394,9 @@ func (l *Local) Act(ctx context.Context, target model.Target, verb model.Verb) e
 		}
 		targets = []string{target.Task}
 	case target.Prefix != "" || len(target.Tasks) > 0:
+		if target.Prefix != "" && !strings.HasSuffix(target.Prefix, "/") {
+			return fmt.Errorf("a project prefix must end in /, got %q", target.Prefix)
+		}
 		var group []model.App
 		for _, a := range apps {
 			if (target.Prefix != "" && strings.HasPrefix(a.Task, target.Prefix)) || contains(target.Tasks, a.Task) {
@@ -367,7 +406,11 @@ func (l *Local) Act(ctx context.Context, target model.Target, verb model.Verb) e
 		if len(group) == 0 {
 			return errors.New("no apps match")
 		}
-		targets = groupTargets(group, target.Prefix, verb, l.configs.autostart(target.Runner))
+		prefix := target.Prefix
+		if prefix != "" && !l.prefixCovered(target.Runner, prefix, group) {
+			prefix = "" // the glob would reach tasks this view does not show
+		}
+		targets = groupTargets(group, prefix, verb, l.configs.autostart(target.Runner))
 	default:
 		return errors.New("nothing to act on")
 	}
@@ -420,6 +463,25 @@ func groupTargets(group []model.App, prefix string, verb model.Verb, autostart m
 		}
 	}
 	return out
+}
+
+// prefixCovered reports whether every configured task under prefix is in
+// group, so `dekit stop prefix**` touches nothing else.
+func (l *Local) prefixCovered(runner, prefix string, group []model.App) bool {
+	in := map[string]bool{}
+	for _, a := range group {
+		in[a.Task] = true
+	}
+	cfg, _ := l.configs.load(runner)
+	if cfg == nil {
+		return false
+	}
+	for _, t := range cfg.Tasks {
+		if strings.HasPrefix(t.Path, prefix) && !in[t.Path] {
+			return false
+		}
+	}
+	return true
 }
 
 func contains(s []string, v string) bool {

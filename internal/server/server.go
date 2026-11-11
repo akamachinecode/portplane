@@ -345,14 +345,32 @@ func (s *Server) reveal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	snap := s.Hub.Snapshot()
-	local := false
-	for _, m := range snap.Machines {
+	var local *model.MachineSnapshot
+	for i, m := range snap.Machines {
 		if m.Machine.ID == req.Machine && m.Machine.Local {
-			local = true
+			local = &snap.Machines[i]
 		}
 	}
-	if !local {
+	if local == nil {
 		writeError(w, http.StatusBadRequest, errors.New("folders can only be revealed on this machine"))
+		return
+	}
+	// Only folders Portplane shows: chosen folders, projects, apps and ports.
+	known := map[string]bool{}
+	for _, f := range local.Folders {
+		known[f] = true
+	}
+	for _, r := range local.Runners {
+		known[r.Root] = true
+	}
+	for _, a := range local.Apps {
+		known[a.Dir] = true
+	}
+	for _, p := range local.OtherPorts {
+		known[p.Dir] = true
+	}
+	if req.Path == "" || !known[req.Path] {
+		writeError(w, http.StatusBadRequest, errors.New("unknown folder"))
 		return
 	}
 	if err := s.Reveal(req.Path); err != nil {

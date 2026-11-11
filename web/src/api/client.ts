@@ -86,7 +86,7 @@ export function createHttpApi(token: string | null, fetchImpl: FetchLike = (i, o
     settings: () => json<Settings>("GET", "/api/settings"),
     saveSettings: (settings) => json<Settings>("PUT", "/api/settings", settings),
     async pickFolder() {
-      const res = await send("POST", "/api/folders/pick");
+      const res = await send("POST", "/api/folders/pick", {});
       if (res.status === 204) return { kind: "cancelled" };
       if (res.status === 501) return { kind: "unsupported" };
       if (!res.ok) throw new ApiError(await errorMessage(res), res.status);

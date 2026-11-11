@@ -94,6 +94,15 @@ describe("createHttpApi", () => {
     await expect(pick(json({ error: "boom" }, 500))).rejects.toThrow("boom");
   });
 
+  it("sends the folder picker request as JSON, which the server requires", async () => {
+    const f = fakeFetch(() => new Response(null, { status: 204 }));
+    await createHttpApi("t", f.fn).pickFolder();
+    const headers = f.calls[0].init.headers as Record<string, string>;
+    expect(f.calls[0].init.method).toBe("POST");
+    expect(headers["Content-Type"]).toBe("application/json");
+    expect(f.calls[0].init.body).toBe("{}");
+  });
+
   it("puts settings", async () => {
     const f = fakeFetch((_u, init) => json(JSON.parse(init.body as string)));
     const s = await createHttpApi("t", f.fn).saveSettings({ folders: ["/a", "/b"] });

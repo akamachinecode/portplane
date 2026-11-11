@@ -103,10 +103,10 @@ func (System) Cwd(ctx context.Context, pid int) string {
 		return ""
 	}
 	cwd, err := p.CwdWithContext(ctx)
-	if err != nil {
+	if err != nil || cwd == "" {
 		return ""
 	}
-	return cwd
+	return filepath.Clean(cwd) // Windows reports a trailing separator
 }
 
 // Cache memoises process lookups for one snapshot.

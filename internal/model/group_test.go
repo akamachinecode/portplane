@@ -49,4 +49,8 @@ func TestGroupOrdersRunningProjectsFirst(t *testing.T) {
 	if b.Worktrees[1].Prefix != "b/wt/" {
 		t.Fatalf("worktree prefix: %q", b.Worktrees[1].Prefix)
 	}
+	// "b/" would also reach b/wt/web: the main checkout gets no prefix.
+	if b.Worktrees[0].Prefix != "" {
+		t.Fatalf("main checkout prefix must not cover the linked worktree: %q", b.Worktrees[0].Prefix)
+	}
 }

@@ -11,10 +11,23 @@ import (
 // Project is a dekit project Portplane watches.
 type Project struct {
 	Root string // folder that holds dekit.yaml
-	// Within, when set, limits the view to tasks whose folder is inside it:
-	// the user chose a folder that has no dekit.yaml of its own but sits
-	// inside a project.
-	Within string
+	// Within, when set, limits the view to tasks whose folder is inside one
+	// of these: the user chose folders that have no dekit.yaml of their own
+	// but sit inside a project.
+	Within []string
+}
+
+// Shows reports whether a task in dir belongs in the view.
+func (p Project) Shows(dir string) bool {
+	if len(p.Within) == 0 {
+		return true
+	}
+	for _, w := range p.Within {
+		if Inside(dir, w) {
+			return true
+		}
+	}
+	return false
 }
 
 // skipDirs are never searched for dekit.yaml.
@@ -29,12 +42,20 @@ const maxDepth = 3
 func Discover(folders []string) []Project {
 	seen := map[string]int{}
 	var out []Project
+	full := map[string]bool{} // roots chosen directly: no filter
 	add := func(p Project) {
 		if i, ok := seen[p.Root]; ok {
-			if p.Within == "" {
-				out[i].Within = ""
+			switch {
+			case len(p.Within) == 0:
+				full[p.Root] = true
+				out[i].Within = nil
+			case !full[p.Root]:
+				out[i].Within = append(out[i].Within, p.Within...)
 			}
 			return
+		}
+		if len(p.Within) == 0 {
+			full[p.Root] = true
 		}
 		seen[p.Root] = len(out)
 		out = append(out, p)
@@ -49,7 +70,7 @@ func Discover(folders []string) []Project {
 			continue
 		}
 		if up := findAbove(filepath.Dir(f)); up != "" {
-			add(Project{Root: up, Within: f})
+			add(Project{Root: up, Within: []string{f}})
 		}
 	}
 	return out

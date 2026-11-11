@@ -36,14 +36,24 @@ func TestDiscover(t *testing.T) {
 	// A folder without dekit.yaml uses the nearest one above, filtered.
 	blog := filepath.Join(base, "repos", "blog")
 	got = Discover([]string{blog})
-	if len(got) != 1 || got[0].Root != filepath.Join(base, "repos") || got[0].Within != blog {
+	if len(got) != 1 || got[0].Root != filepath.Join(base, "repos") || len(got[0].Within) != 1 || got[0].Within[0] != blog {
 		t.Fatalf("got %+v", got)
 	}
 
 	// The same root chosen directly too: unfiltered wins.
 	got = Discover([]string{blog, filepath.Join(base, "repos")})
-	if got[0].Within != "" {
+	if got[0].Within != nil {
 		t.Fatalf("unfiltered should win: %+v", got)
+	}
+
+	// Two folders inside the same project: both stay visible.
+	shopDocs := filepath.Join(base, "repos", "docs")
+	if err := os.MkdirAll(shopDocs, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	got = Discover([]string{blog, shopDocs})
+	if len(got) != 1 || len(got[0].Within) != 2 || !got[0].Shows(filepath.Join(shopDocs, "x")) || !got[0].Shows(blog) || got[0].Shows(filepath.Join(base, "repos", "other")) {
+		t.Fatalf("union of folders: %+v", got)
 	}
 }
 

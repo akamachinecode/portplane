@@ -2,9 +2,11 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/akamachinecode/portplane/internal/dekit"
@@ -260,5 +262,61 @@ func writeFile(t *testing.T, p, body string) {
 	}
 	if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestFoldersAreNeverNull(t *testing.T) {
+	l := NewLocal(Options{Dekit: &fakeDekit{}, Portless: fakeRouter{}, OS: fakeOS{}})
+	snap := l.collect(context.Background())
+	b, _ := json.Marshal(snap)
+	if !strings.Contains(string(b), `"folders":[]`) {
+		t.Fatalf("folders must be [] for the UI: %s", b)
+	}
+	if l.Folders() == nil {
+		t.Fatal("Folders() must not be nil")
+	}
+	if err := l.SetFolders(context.Background(), []string{"relative/dir"}); err == nil {
+		t.Fatal("relative folders must be refused")
+	}
+}
+
+func TestSameCommandInSeveralFoldersUsesTheCwd(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root+"/dekit.yaml", `tasks:
+  shop/web:
+    cwd: apps/web
+    cmd: pnpm dev
+  shop/api:
+    cwd: apps/api
+    cmd: pnpm dev
+`)
+	dk := &fakeDekit{
+		runners: []dekit.RunnerRecord{{PID: 100, Root: root, Running: true}},
+		states: map[string][]dekit.TaskState{root: {
+			{Path: "shop/web", Kind: "service", State: "ready"},
+			{Path: "shop/api", Kind: "service", State: "ready"},
+		}},
+	}
+	osf := fakeOS{
+		listeners: []osinfo.Listener{{Port: 3000, PID: 111}, {Port: 3001, PID: 121}},
+		procs: map[int]osinfo.Proc{
+			110: {PID: 110, PPID: 100, Cmdline: []string{"pnpm", "dev"}},
+			111: {PID: 111, PPID: 110, Cmdline: []string{"node", "web.js"}},
+			120: {PID: 120, PPID: 100, Cmdline: []string{"pnpm", "dev"}},
+			121: {PID: 121, PPID: 120, Cmdline: []string{"node", "api.js"}},
+		},
+		cwds: map[int]string{110: root + "/apps/web", 120: root + "/apps/api/"},
+	}
+	l := NewLocal(Options{Folders: []string{root}, Dekit: dk, Portless: fakeRouter{}, OS: osf})
+	snap := l.collect(context.Background())
+	ports := map[string]int{}
+	for _, a := range snap.Apps {
+		ports[a.Task] = a.Port
+	}
+	if ports["shop/web"] != 3000 || ports["shop/api"] != 3001 {
+		t.Fatalf("ports by cwd: %v", ports)
+	}
+	if err := l.Act(context.Background(), model.Target{Runner: root, Prefix: "sho"}, model.VerbStop); err == nil {
+		t.Fatal("a prefix that is not a folder must be refused")
 	}
 }

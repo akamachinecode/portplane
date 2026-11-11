@@ -28,7 +28,9 @@ function writeOpen(machine: string, open: boolean) {
 
 function PortRow({ port, local, home }: { port: Port; local: boolean; home: string | undefined }) {
   const dir = port.dir ? shortenPath(port.dir, home) : undefined;
-  const href = `http://localhost:${port.port}`;
+  // port.url names a portless alias when one points here; it is only
+  // meaningful on the machine that reported it.
+  const href = (local && port.url) || `http://localhost:${port.port}`;
   return (
     <li className="port-row">
       <span className="port-num">:{port.port}</span>

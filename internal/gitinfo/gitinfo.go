@@ -89,14 +89,17 @@ func fromGitFile(worktree, gitFile string) *Repo {
 	if !filepath.IsAbs(gitdir) {
 		gitdir = filepath.Join(worktree, gitdir)
 	}
-	common := filepath.Clean(filepath.Join(gitdir, "..", ".."))
-	if c, err := os.ReadFile(filepath.Join(gitdir, "commondir")); err == nil {
-		cd := strings.TrimSpace(string(c))
-		if !filepath.IsAbs(cd) {
-			cd = filepath.Join(gitdir, cd)
-		}
-		common = filepath.Clean(cd)
+	c, err := os.ReadFile(filepath.Join(gitdir, "commondir"))
+	if err != nil {
+		// No commondir: a submodule (gitdir under .git/modules), not a linked
+		// worktree. It is its own repository.
+		return &Repo{Root: worktree, Worktree: worktree}
 	}
+	common := strings.TrimSpace(string(c))
+	if !filepath.IsAbs(common) {
+		common = filepath.Join(gitdir, common)
+	}
+	common = filepath.Clean(common)
 	// common is <main>/.git for a normal repository; a submodule's gitdir
 	// lives under .git/modules and has no commondir: treat it as its own repo.
 	if filepath.Base(common) != ".git" {

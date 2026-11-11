@@ -46,7 +46,7 @@ func (f *fakeAgent) Close() error                                { return nil }
 func newTestServer(t *testing.T) (*Server, *fakeAgent, http.Handler) {
 	t.Helper()
 	h := hub.New()
-	fa := &fakeAgent{snap: model.MachineSnapshot{Machine: model.Machine{ID: "local", Local: true, Status: "online"}}}
+	fa := &fakeAgent{snap: model.MachineSnapshot{Machine: model.Machine{ID: "local", Local: true, Status: "online"}, Folders: []string{"/code"}}}
 	h.Add("local", fa, model.Machine{ID: "local", Local: true})
 	t.Cleanup(h.Close)
 	folders := []string{"/a"}
@@ -167,6 +167,27 @@ func TestActionsNeedJSONAndRoute(t *testing.T) {
 	h.ServeHTTP(rec, req)
 	if rec.Code != 403 {
 		t.Fatalf("foreign origin: %d", rec.Code)
+	}
+}
+
+func TestRevealOnlyKnownFolders(t *testing.T) {
+	_, _, h := newTestServer(t)
+	time.Sleep(50 * time.Millisecond) // let the hub take the agent's snapshot
+	if got := do(h, "POST", "/api/reveal", "127.0.0.1:4799", "secret", `{"machine":"local","path":"/code"}`).Code; got != 204 {
+		t.Fatalf("known folder: %d", got)
+	}
+	if got := do(h, "POST", "/api/reveal", "127.0.0.1:4799", "secret", `{"machine":"local","path":"/Applications/Calculator.app"}`).Code; got != 400 {
+		t.Fatalf("unknown folder: %d", got)
+	}
+}
+
+func TestPickFolderAcceptsTheUIRequest(t *testing.T) {
+	s, _, _ := newTestServer(t)
+	s.PickFolder = func(context.Context) (string, error) { return "/picked", nil }
+	h := s.Handler()
+	rec := do(h, "POST", "/api/folders/pick", "127.0.0.1:4799", "secret", `{}`)
+	if rec.Code != 200 || !strings.Contains(rec.Body.String(), "/picked") {
+		t.Fatalf("pick: %d %s", rec.Code, rec.Body.String())
 	}
 }
 

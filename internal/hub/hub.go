@@ -31,9 +31,7 @@ type Hub struct {
 	order   []string
 	version uint64
 	subs    map[chan model.Snapshot]struct{}
-	// decorate lets the app adjust a machine's snapshot before it is
-	// published (for example, remote URLs).
-	decorate func(model.MachineSnapshot) model.MachineSnapshot
+	paceMu  sync.Mutex // serialises pacing decisions
 }
 
 type entry struct {
@@ -45,13 +43,6 @@ type entry struct {
 // New returns an empty hub.
 func New() *Hub {
 	return &Hub{agents: map[string]*entry{}, subs: map[chan model.Snapshot]struct{}{}}
-}
-
-// SetDecorator installs a function applied to every machine snapshot.
-func (h *Hub) SetDecorator(fn func(model.MachineSnapshot) model.MachineSnapshot) {
-	h.mu.Lock()
-	h.decorate = fn
-	h.mu.Unlock()
 }
 
 // Add registers an agent under id and starts following it. A placeholder
@@ -108,21 +99,6 @@ func (h *Hub) Remove(id string) {
 	}
 }
 
-// SetMachineStatus marks a machine (for example offline, with an error)
-// without a new snapshot from its agent.
-func (h *Hub) SetMachineStatus(id, status, errMsg string) {
-	h.mu.Lock()
-	e, ok := h.agents[id]
-	if ok {
-		e.snap.Machine.Status = status
-		e.snap.Machine.Error = errMsg
-	}
-	h.mu.Unlock()
-	if ok {
-		h.publish()
-	}
-}
-
 func (h *Hub) update(id string, a agent.Agent, s model.MachineSnapshot) {
 	h.mu.Lock()
 	e, ok := h.agents[id]
@@ -157,11 +133,7 @@ func (h *Hub) Snapshot() model.Snapshot {
 func (h *Hub) snapshotLocked() model.Snapshot {
 	out := model.Snapshot{Version: h.version, Machines: make([]model.MachineSnapshot, 0, len(h.order))}
 	for _, id := range h.order {
-		s := h.agents[id].snap
-		if h.decorate != nil {
-			s = h.decorate(s)
-		}
-		out.Machines = append(out.Machines, s)
+		out.Machines = append(out.Machines, h.agents[id].snap)
 	}
 	return out
 }
@@ -196,24 +168,29 @@ func (h *Hub) publish() {
 func (h *Hub) Subscribe(ctx context.Context) <-chan model.Snapshot {
 	c := make(chan model.Snapshot, 1)
 	h.mu.Lock()
-	first := len(h.subs) == 0
 	h.subs[c] = struct{}{}
 	c <- h.snapshotLocked()
 	h.mu.Unlock()
-	if first {
-		h.paceAll(true)
-	}
+	h.repace()
 	go func() {
 		<-ctx.Done()
 		h.mu.Lock()
 		delete(h.subs, c)
-		last := len(h.subs) == 0
 		h.mu.Unlock()
-		if last {
-			h.paceAll(false)
-		}
+		h.repace()
 	}()
 	return c
+}
+
+// repace sets every agent's rate from the subscribers present now. Calls are
+// serialised, so a late "idle" can never undo a newer "active".
+func (h *Hub) repace() {
+	h.paceMu.Lock()
+	defer h.paceMu.Unlock()
+	h.mu.Lock()
+	active := len(h.subs) > 0
+	h.mu.Unlock()
+	h.paceAll(active)
 }
 
 func (h *Hub) paceAll(active bool) {

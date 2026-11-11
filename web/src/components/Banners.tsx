@@ -46,7 +46,8 @@ export function RunnerBanners({ ms, home }: { ms: MachineSnapshot; home: string 
   return (
     <>
       {ms.runners
-        .filter((r) => !r.up)
+        // Without dekit, the tool banner already explains; nothing can start.
+        .filter((r) => ms.tools.dekit && (!r.up || r.error))
         .map((r) => {
           const key = `runner|${machine}|${r.root}`;
           const busy = pending.has(key);
@@ -55,11 +56,18 @@ export function RunnerBanners({ ms, home }: { ms: MachineSnapshot; home: string 
               key={r.root}
               tone="warn"
               title={
-                <>
-                  dekit isn't running for <strong>{r.name}</strong>
-                </>
+                r.up ? (
+                  <>
+                    dekit reported a problem for <strong>{r.name}</strong>
+                  </>
+                ) : (
+                  <>
+                    dekit isn't running for <strong>{r.name}</strong>
+                  </>
+                )
               }
               action={
+                r.up ? undefined : (
                 <button
                   type="button"
                   className="btn"
@@ -72,6 +80,7 @@ export function RunnerBanners({ ms, home }: { ms: MachineSnapshot; home: string 
                   {busy && <Spinner />}
                   Start runner
                 </button>
+                )
               }
             >
               <span className="banner-meta">

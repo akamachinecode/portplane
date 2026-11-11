@@ -89,10 +89,16 @@ func (l *Local) collect(ctx context.Context) model.MachineSnapshot {
 			switch {
 			case errors.Is(err, dekit.ErrRunnerDown):
 				run.Up = false
+				l.rememberStates(p.Root, nil)
 			case err != nil:
+				// A slow or failed `dekit ls` is not a stopped runner: keep
+				// the last known states rather than flashing everything off.
+				run.Up = true
 				run.Error = err.Error()
+				states = l.rememberedStates(p.Root)
 			default:
 				run.Up = true
+				l.rememberStates(p.Root, states)
 			}
 		}
 		snap.Runners = append(snap.Runners, run)
@@ -100,7 +106,7 @@ func (l *Local) collect(ctx context.Context) model.MachineSnapshot {
 		joined := joinTasks(cfg, states)
 		for _, t := range joined {
 			t.root = p.Root
-			if p.Within != "" && (t.cfg == nil || !dekit.Inside(t.cfg.Dir, p.Within)) {
+			if len(p.Within) > 0 && (t.cfg == nil || !p.Shows(t.cfg.Dir)) {
 				continue
 			}
 			t.order = order
@@ -250,18 +256,36 @@ func matchTask(ctx context.Context, cache *osinfo.Cache, tasks []*task, pid int)
 	if proc == nil {
 		return nil
 	}
-	var best *task
+	var best []*task
 	bestScore := 0
 	for _, t := range tasks {
 		if t.cfg == nil || len(t.cfg.Cmd) == 0 {
 			continue
 		}
-		if s := cmdScore(proc.Cmdline, t.cfg.Cmd); s > bestScore {
-			best, bestScore = t, s
+		switch s := cmdScore(proc.Cmdline, t.cfg.Cmd); {
+		case s > bestScore:
+			best, bestScore = []*task{t}, s
+		case s == bestScore && s > 0:
+			best = append(best, t)
 		}
 	}
-	if best != nil {
-		return best
+	if len(best) == 1 {
+		return best[0]
+	}
+	if len(best) > 1 {
+		// Same command in several folders (`pnpm dev` per app): dekit starts
+		// each task in its own cwd, so the process's folder decides.
+		cwd := filepath.Clean(cache.Cwd(ctx, pid))
+		var match *task
+		for _, t := range best {
+			if t.cfg.Dir != "" && filepath.Clean(t.cfg.Dir) == cwd {
+				if match != nil {
+					return nil
+				}
+				match = t
+			}
+		}
+		return match
 	}
 	// A single alive task without a known command: it must be that one.
 	var alive []*task
