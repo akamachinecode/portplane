@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/akamachinecode/portplane/internal/agent"
+	"github.com/akamachinecode/portplane/internal/autostart"
 	"github.com/akamachinecode/portplane/internal/dekit"
 	"github.com/akamachinecode/portplane/internal/desktop"
 	"github.com/akamachinecode/portplane/internal/envpath"
@@ -27,6 +28,7 @@ import (
 	"github.com/akamachinecode/portplane/internal/server"
 	"github.com/akamachinecode/portplane/internal/settings"
 	"github.com/akamachinecode/portplane/internal/setup"
+	"github.com/akamachinecode/portplane/internal/tray"
 	"github.com/akamachinecode/portplane/internal/webui"
 )
 
@@ -39,6 +41,7 @@ func cmdServe(args []string, stdout, stderr io.Writer) int {
 	listen := fs.String("listen", "127.0.0.1:0", "loopback address to listen on")
 	open := fs.Bool("open", false, "open the UI when ready")
 	noAlias := fs.Bool("no-alias", false, "do not register https://portplane.localhost with portless")
+	noTray := fs.Bool("no-tray", false, "do not show the menu-bar or tray icon")
 	dev := fs.Bool("dev", false, "development only: accept any *.localhost host and no token (for the Vite dev server)")
 	if err := fs.Parse(args); err != nil {
 		return 2
@@ -145,6 +148,9 @@ func cmdServe(args []string, stdout, stderr io.Writer) int {
 	for pattern, handler := range server.MachineHandlers(machines, remote.Candidates) {
 		srv.Extra[pattern] = handler
 	}
+	for pattern, handler := range server.AutostartHandlers(autostart.Enabled, setAutostart) {
+		srv.Extra[pattern] = handler
+	}
 	httpSrv := &http.Server{
 		Handler:           srv.Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
@@ -173,15 +179,39 @@ func cmdServe(args []string, stdout, stderr io.Writer) int {
 		}
 	}
 
+	ctx, quit := context.WithCancel(ctx)
+	defer quit()
 	errc := make(chan error, 1)
-	go func() { errc <- httpSrv.Serve(ln) }()
+	go func() {
+		err := httpSrv.Serve(ln)
+		errc <- err
+		quit()
+	}()
+	// The tray needs the main goroutine (macOS); without one, just wait.
+	shown := !*noTray && tray.Run(ctx, tray.Options{
+		Updates: h.Observe(ctx),
+		Open: func() {
+			if err := desktop.OpenApp(url); err != nil {
+				fmt.Fprintln(stderr, "portplane: could not open a browser:", err)
+			}
+		},
+		Quit:         quit,
+		Autostart:    autostart.Enabled,
+		SetAutostart: setAutostart,
+		ReportFailure: func(err error) {
+			fmt.Fprintln(stderr, "portplane:", err)
+		},
+	})
+	if !shown {
+		<-ctx.Done()
+	}
 	select {
-	case <-ctx.Done():
 	case err := <-errc:
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			fmt.Fprintln(stderr, "portplane:", err)
 			return 1
 		}
+	default:
 	}
 	sctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -246,4 +276,11 @@ func runningInstance() (instance, bool) {
 	}
 	_ = resp.Body.Close()
 	return i, resp.StatusCode == http.StatusOK && resp.Header.Get("Content-Security-Policy") != ""
+}
+
+func setAutostart(on bool) error {
+	if on {
+		return autostart.Enable()
+	}
+	return autostart.Disable()
 }

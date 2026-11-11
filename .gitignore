@@ -1,6 +1,7 @@
 # build
 /bin/
 /dist/
+/build/
 /internal/webui/dist/*
 !/internal/webui/dist/.keep
 node_modules/

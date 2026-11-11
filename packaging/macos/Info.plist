@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleName</key>
+  <string>Portplane</string>
+  <key>CFBundleDisplayName</key>
+  <string>Portplane</string>
+  <key>CFBundleIdentifier</key>
+  <string>dev.portplane.app</string>
+  <key>CFBundleExecutable</key>
+  <string>portplane</string>
+  <key>CFBundleIconFile</key>
+  <string>portplane.icns</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleShortVersionString</key>
+  <string>__VERSION__</string>
+  <key>CFBundleVersion</key>
+  <string>__VERSION__</string>
+  <key>LSMinimumSystemVersion</key>
+  <string>12.0</string>
+  <!-- A menu-bar app: no Dock icon; the window is the browser (ADR-0004). -->
+  <key>LSUIElement</key>
+  <true/>
+  <key>NSHumanReadableCopyright</key>
+  <string>Apache-2.0</string>
+</dict>
+</plist>

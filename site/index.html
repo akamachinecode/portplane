@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Portplane: every dev server, on every machine, in one window</title>
+  <meta name="description" content="See which local dev servers are running across your project folders and machines, open them at stable https://name.localhost URLs, and start or stop them with a click. Built on dekit and portless.">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="top">
+    <a class="brand" href="./"><img src="icon.svg" alt="" width="28" height="28"> Portplane</a>
+    <nav>
+      <a href="#how">How it works</a>
+      <a href="#install">Install</a>
+      <a href="https://github.com/akamachinecode/portplane">GitHub</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <p class="eyebrow">Open source · macOS · Linux · Windows (beta)</p>
+      <h1>Every dev server,<br>on every machine,<br>in one window.</h1>
+      <p class="lede">See what is running across all your project folders and your other machines over SSH. Open each app at a stable <code>https://&lt;name&gt;.localhost</code> URL, and start or stop it with a click. No logs, no terminals: the state of things at a glance.</p>
+      <div class="cta">
+        <a class="button primary" id="download" href="https://github.com/akamachinecode/portplane/releases/latest">Download</a>
+        <a class="button" href="#install">Install from the terminal</a>
+      </div>
+      <p class="fine" id="download-note">Free and open source under Apache-2.0. Downloads come from GitHub Releases, with signed checksums.</p>
+    </section>
+
+    <figure class="shot">
+      <picture>
+        <source srcset="screenshot-dark.png" media="(prefers-color-scheme: dark)">
+        <img src="screenshot-light.png" alt="Portplane showing a monorepo with running, starting and failed apps, each with its .localhost URL" width="1200" height="640">
+      </picture>
+    </figure>
+
+    <section class="features">
+      <div>
+        <h3>See</h3>
+        <p>Every app's state (on, starting, failed or off), its stable URL and the port behind it, grouped by project and git worktree. Ports opened by anything else show up too.</p>
+      </div>
+      <div>
+        <h3>Act</h3>
+        <p>Start, stop or restart an app or a whole project. Open everything a project runs in one click. When something fails, the last lines of its output are one click away, ready to copy.</p>
+      </div>
+      <div>
+        <h3>Set up</h3>
+        <p>Point Portplane at a folder. It finds the apps in your monorepos and worktrees, proposes a URL for each and writes plain dekit config after you review the diff.</p>
+      </div>
+      <div>
+        <h3>Reach</h3>
+        <p>Add a machine from <code>~/.ssh/config</code> or Tailscale. Its servers appear next to yours and open at <code>https://&lt;app&gt;.&lt;machine&gt;.localhost</code> through the SSH connection.</p>
+      </div>
+    </section>
+
+    <section id="how" class="how">
+      <h2>Built on the tools you already use</h2>
+      <p>Portplane does not run your servers and does not replace anything. It sits on top of two small tools and keeps their config plain and yours.</p>
+      <table>
+        <thead><tr><th>Piece</th><th>Owns</th></tr></thead>
+        <tbody>
+          <tr><td><a href="https://dekit.run">dekit</a></td><td>Running and supervising processes, dependencies between tasks, restarts</td></tr>
+          <tr><td><a href="https://github.com/vercel-labs/portless">portless</a></td><td>Stable <code>.localhost</code> URLs, the local HTTPS proxy and its trusted certificate</td></tr>
+          <tr><td>Portplane</td><td>Finding projects, the combined view, remote machines, setup</td></tr>
+        </tbody>
+      </table>
+      <ul class="principles">
+        <li><strong>Local-first.</strong> No accounts, no cloud, no telemetry.</li>
+        <li><strong>No listener on your network.</strong> The UI lives on loopback; other machines are reached only over SSH, with your keys.</li>
+        <li><strong>No lock-in.</strong> Generated config is plain dekit YAML you can keep using without Portplane.</li>
+      </ul>
+    </section>
+
+    <section id="install" class="install">
+      <h2>Install</h2>
+      <div class="tabs" role="tablist">
+        <button role="tab" data-os="mac" aria-selected="true">macOS</button>
+        <button role="tab" data-os="linux" aria-selected="false">Linux</button>
+        <button role="tab" data-os="windows" aria-selected="false">Windows</button>
+      </div>
+      <div class="panel" data-os="mac">
+        <p>Download the <code>.dmg</code> for your Mac (Apple silicon: <code>arm64</code>, Intel: <code>amd64</code>) and drag Portplane to Applications. It lives in the menu bar. Or install the command line:</p>
+        <pre><code>curl -fsSL https://akamachinecode.github.io/portplane/install.sh | sh</code></pre>
+        <p class="fine">Portplane is not notarized by Apple. The first time you open the app, macOS blocks it: open <em>System Settings → Privacy &amp; Security</em> and choose <em>Open Anyway</em>. The terminal install is not affected.</p>
+      </div>
+      <div class="panel" data-os="linux" hidden>
+        <pre><code>curl -fsSL https://akamachinecode.github.io/portplane/install.sh | sh</code></pre>
+        <p>Or download the <code>.deb</code> or <code>.rpm</code> from the latest release.</p>
+      </div>
+      <div class="panel" data-os="windows" hidden>
+        <pre><code>irm https://akamachinecode.github.io/portplane/install.ps1 | iex</code></pre>
+        <p class="fine">Windows support is in beta. The binary is not code-signed, so SmartScreen may warn you: choose <em>More info → Run anyway</em>.</p>
+      </div>
+      <p>Then add a folder and open the window:</p>
+      <pre><code>portplane folders add ~/code
+portplane</code></pre>
+      <p>You also need <a href="https://dekit.run">dekit</a> and <a href="https://github.com/vercel-labs/portless">portless</a>; Portplane tells you what is missing and the exact command to install it. Every download can be verified: see <a href="https://github.com/akamachinecode/portplane/blob/main/docs/install.md">the install guide</a>.</p>
+    </section>
+  </main>
+
+  <footer>
+    <p>Portplane is open source (Apache-2.0). <a href="https://github.com/akamachinecode/portplane">Source</a> · <a href="https://github.com/akamachinecode/portplane/blob/main/docs/security.md">Security</a> · <a href="https://github.com/akamachinecode/portplane/issues">Issues</a></p>
+  </footer>
+</body>
+</html>

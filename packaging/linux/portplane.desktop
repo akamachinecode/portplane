@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Portplane
+GenericName=Dev server dashboard
+Comment=Every dev server, on every machine, in one window
+Exec=portplane
+Icon=portplane
+Terminal=false
+Categories=Development;
+Keywords=localhost;dev;server;dekit;portless;
