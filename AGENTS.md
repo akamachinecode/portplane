@@ -6,7 +6,14 @@ Guidance for AI coding agents working on this repository (Claude Code, Codex, Cu
 
 Portplane is a cross-platform desktop app (macOS, Linux, Windows). It shows every local dev server across the user's project folders and SSH machines, at stable `.localhost` URLs. It builds on dekit (processes) and portless (URLs) and never forks or replaces them.
 
-**Status: design phase.** Read `docs/vision.md`, `docs/field-notes.md` and `docs/open-questions.md` before proposing architecture. Decisions become ADRs in `docs/adr/` using the first-principles template in `docs/adr/README.md`.
+**Status: early development** towards v1.0, following `docs/roadmap.md`. Read `docs/vision.md`, `docs/field-notes.md` and the ADRs in `docs/adr/` before changing architecture. New decisions become ADRs using the first-principles template in `docs/adr/README.md`; pending ones are in `docs/open-questions.md`.
+
+## Layout and commands
+
+- `cmd/portplane`: the single binary (desktop app, CLI and remote agent).
+- `internal/`: Go packages. `internal/webui/dist` holds the built UI that the binary embeds.
+- `web/`: the React + Vite UI (`pnpm -C web dev|build|test|typecheck`).
+- `mise run build|test|lint`: everything CI checks. Dev servers run under dekit (`dekit.yaml` at the root), never started directly.
 
 `prototype/` is the single-machine Node prototype that started the project. It is reference material: do not extend it into the product.
 

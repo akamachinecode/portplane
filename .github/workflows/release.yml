@@ -1,0 +1,55 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to (re)build and publish, for example v0.1.0"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  release-please:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+    steps:
+      - id: release
+        uses: googleapis/release-please-action@v5
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  goreleaser:
+    needs: release-please
+    if: ${{ always() && (needs.release-please.outputs.release_created == 'true' || github.event_name == 'workflow_dispatch') }}
+    # macOS: darwin builds need CGO for the tray icon (ADR-0004); every other
+    # target cross-compiles with CGO_ENABLED=0.
+    runs-on: macos-latest
+    permissions:
+      contents: write
+      id-token: write # cosign keyless signing
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.release-please.outputs.tag_name || inputs.tag }}
+      - uses: jdx/mise-action@v5
+        with:
+          install_args: go node pnpm goreleaser
+      - uses: sigstore/cosign-installer@v4
+      - run: pnpm -C web install --frozen-lockfile
+      - run: pnpm -C web build
+      - run: goreleaser release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

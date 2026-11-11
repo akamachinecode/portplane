@@ -1,7 +1,8 @@
 # build
 /bin/
 /dist/
-/web/dist/
+/internal/webui/dist/*
+!/internal/webui/dist/.keep
 node_modules/
 *.test
 coverage.*

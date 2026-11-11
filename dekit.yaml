@@ -1,0 +1,7 @@
+# Dev servers for working on Portplane itself. Run `dekit up` or
+# `dekit start web` from the repository; see CONTRIBUTING.md.
+tasks:
+  web:
+    cwd: web
+    cmd: ["portless", "portplane-dev", "pnpm", "run", "dev"]
+    ready: {log: "ready in"}

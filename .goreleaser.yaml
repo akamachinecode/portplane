@@ -1,0 +1,81 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+# Runs on a macOS runner (see .github/workflows/release.yml and ADR-0012).
+# The web UI must be built into internal/webui/dist before this runs.
+version: 2
+
+project_name: portplane
+
+builds:
+  - id: darwin
+    main: ./cmd/portplane
+    binary: portplane
+    goos: [darwin]
+    goarch: [amd64, arm64]
+    env:
+      - CGO_ENABLED=1 # tray icon (ADR-0004)
+    flags: [-trimpath]
+    ldflags:
+      - -s -w
+      - -X github.com/akamachinecode/portplane/internal/buildinfo.version={{.Version}}
+      - -X github.com/akamachinecode/portplane/internal/buildinfo.commit={{.Commit}}
+      - -X github.com/akamachinecode/portplane/internal/buildinfo.date={{.Date}}
+  - id: others
+    main: ./cmd/portplane
+    binary: portplane
+    goos: [linux, windows]
+    goarch: [amd64, arm64]
+    env:
+      - CGO_ENABLED=0
+    flags: [-trimpath]
+    ldflags:
+      - -s -w
+      - -X github.com/akamachinecode/portplane/internal/buildinfo.version={{.Version}}
+      - -X github.com/akamachinecode/portplane/internal/buildinfo.commit={{.Commit}}
+      - -X github.com/akamachinecode/portplane/internal/buildinfo.date={{.Date}}
+
+archives:
+  - id: default
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+
+nfpms:
+  - id: packages
+    ids: [others]
+    package_name: portplane
+    file_name_template: "{{ .ConventionalFileName }}"
+    vendor: Portplane contributors
+    homepage: https://github.com/akamachinecode/portplane
+    maintainer: Portplane contributors <https://github.com/akamachinecode/portplane/issues>
+    description: Every dev server, on every machine, in one window.
+    license: Apache-2.0
+    formats: [deb, rpm]
+    bindir: /usr/bin
+
+checksum:
+  name_template: checksums.txt
+
+signs:
+  - id: cosign
+    cmd: cosign
+    artifacts: checksum
+    signature: "${artifact}.sigstore.json"
+    args:
+      - sign-blob
+      - --yes
+      - --bundle=${signature}
+      - ${artifact}
+
+changelog:
+  disable: true # release-please writes the changelog and the release notes
+
+release:
+  mode: keep-existing
+  prerelease: auto
+  footer: |
+    **Verify a download:** `cosign verify-blob --bundle checksums.txt.sigstore.json --certificate-identity-regexp 'https://github.com/akamachinecode/portplane/' --certificate-oidc-issuer https://token.actions.githubusercontent.com checksums.txt`, then `sha256sum --check --ignore-missing checksums.txt`.
