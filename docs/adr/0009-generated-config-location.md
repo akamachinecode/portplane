@@ -1,6 +1,6 @@
 # ADR-0009: Write generated tasks to a `.portplane/tasks.yaml` fragment loaded from `dekit.yaml`
 
-- **Status:** Accepted
+- **Status:** Accepted. Amended by [ADR-0022](0022-edit-dekit-config.md): the user can edit hand-written tasks from the app. Setup still writes only the fragment.
 - **Date:** 2026-11-11
 - **Resolves:** P2 in [open-questions.md](../open-questions.md)
 
