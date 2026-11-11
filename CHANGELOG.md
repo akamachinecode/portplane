@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0](https://github.com/akamachinecode/portplane/compare/v0.2.0...v0.3.0) (2026-11-11)
+
+
+### Features
+
+* **desktop:** open the UI in a native window on macOS ([#12](https://github.com/akamachinecode/portplane/issues/12)) ([574a12d](https://github.com/akamachinecode/portplane/commit/574a12de79d116ac7cba70bf40824fa03973a31e))
+
+
+### Bug fixes
+
+* **install:** skip the signature check when cosign cannot run ([#10](https://github.com/akamachinecode/portplane/issues/10)) ([e8600bd](https://github.com/akamachinecode/portplane/commit/e8600bd10b6e27ad27ea7bb58086d09abe0513c9))
+
 ## [0.2.0](https://github.com/akamachinecode/portplane/compare/v0.1.0...v0.2.0) (2026-11-11)
 
 
