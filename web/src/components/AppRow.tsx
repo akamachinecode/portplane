@@ -1,9 +1,9 @@
 import { useId, useState } from "react";
 import { errorText } from "../api/errors";
 import type { App, MachineSnapshot, Verb } from "../api/types";
-import { appHref, bookmarkUrl, isAlive } from "../lib/apps";
+import { appHref, copyableUrl, isAlive, rowAddress } from "../lib/apps";
 import { copyText } from "../lib/clipboard";
-import { appAddress, dekitCommand, displayHost, portLabel, stateLabel } from "../lib/format";
+import { dekitCommand, portLabel, stateLabel } from "../lib/format";
 import { appsFingerprint } from "../lib/pending";
 import { appTarget } from "../lib/targets";
 import { useApp } from "./AppContext";
@@ -24,10 +24,10 @@ export function AppRow({ app, ms }: { app: App; ms: MachineSnapshot }) {
   const key = `app|${machine}|${app.id}|`;
   const busy = pending.hasPrefix(key);
   const href = app.state === "on" ? appHref(app, ms.machine) : undefined;
-  // The live URL; or, while it runs without one, where it listens; or the
-  // hostname portless keeps for it while it's off, greyed out.
-  const address = app.url || !href ? appAddress(app) : displayHost(href);
-  const copyUrl = bookmarkUrl(app, ms.tools);
+  // The live URL (tunnelled, for another machine); or, while it runs without
+  // one, where it listens; or the hostname portless keeps while it's off.
+  const address = rowAddress(app, ms.machine, href);
+  const copyUrl = copyableUrl(app, ms.machine, ms.tools);
 
   const act = (verb: Verb) =>
     pending.run(key + verb, appsFingerprint(machine, [app.id]), () => api.act(appTarget(machine, app), verb));

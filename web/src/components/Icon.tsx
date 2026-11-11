@@ -78,6 +78,33 @@ const PATHS = {
       <path d="M12 16.5V20" />
     </>
   ),
+  pencil: (
+    <>
+      <path d="M15.5 5.5l3 3L9 18H6v-3z" />
+      <path d="M13.5 7.5l3 3" />
+    </>
+  ),
+  trash: (
+    <>
+      <path d="M5 7h14" />
+      <path d="M10 4.5h4" />
+      <path d="M7 7l.8 11a1.5 1.5 0 0 0 1.5 1.5h5.4a1.5 1.5 0 0 0 1.5-1.5L17 7" />
+      <path d="M10.5 11v5M13.5 11v5" />
+    </>
+  ),
+  file: (
+    <>
+      <path d="M7 3.5h6.5L18.5 8.5v11a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-15a1 1 0 0 1 1-1z" />
+      <path d="M13 3.5V9h5.5" />
+    </>
+  ),
+  shield: <path d="M12 3.5l7 2.5v5.5c0 4.2-3 7.4-7 9-4-1.6-7-4.8-7-9V6z" />,
+  wand: (
+    <>
+      <path d="M5 19L15 9" />
+      <path d="M14 5.5V3.5M18.5 10h2M17.2 6.8l1.4-1.4M14 5.5l1 1M18.5 10l-1-1" />
+    </>
+  ),
 } as const;
 
 export type IconName = keyof typeof PATHS;

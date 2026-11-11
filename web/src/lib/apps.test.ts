@@ -4,12 +4,14 @@ import type { App, Machine, Tools } from "../api/types";
 import {
   appHref,
   bookmarkUrl,
+  copyableUrl,
   indexApps,
   isAlive,
   isVisible,
   projectApps,
   runningUrls,
   serviceCounts,
+  rowAddress,
   visibleApps,
   worktreeApps,
 } from "./apps";
@@ -115,5 +117,25 @@ describe("bookmarkUrl", () => {
   });
   it("has nothing to offer without a URL or a hostname", () => {
     expect(bookmarkUrl(app({}), https)).toBeUndefined();
+  });
+});
+
+describe("remote addresses", () => {
+  const https: Tools = { proxyRunning: true, proxyHttps: true, proxyPort: 443 };
+  const on = app({ state: "on", url: "https://web.shop.localhost", hostname: "web.shop.localhost", remoteUrl: "https://web.shop.box.localhost" });
+  const off = app({ state: "off", hostname: "web.shop.localhost" });
+
+  it("shows where Open goes: the tunnelled URL on another machine", () => {
+    expect(rowAddress(on, remote, appHref(on, remote))).toBe("web.shop.box.localhost");
+    expect(rowAddress(on, local, appHref(on, local))).toBe("web.shop.localhost");
+    expect(rowAddress(off, remote, undefined)).toBe("web.shop.localhost");
+    const portOnly = app({ state: "on", port: 4514 });
+    expect(rowAddress(portOnly, local, appHref(portOnly, local))).toBe("localhost:4514");
+  });
+
+  it("copies only URLs that work from here", () => {
+    expect(copyableUrl(on, remote, https)).toBe("https://web.shop.box.localhost");
+    expect(copyableUrl(off, remote, https)).toBeUndefined();
+    expect(copyableUrl(off, local, https)).toBe("https://web.shop.localhost");
   });
 });

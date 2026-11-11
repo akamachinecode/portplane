@@ -1,4 +1,5 @@
 import type { App, Machine, Project, State, Tools, Worktree } from "../api/types";
+import { appAddress, displayHost } from "./format";
 
 /** The app's process is running (mirrors State.Alive in Go). */
 export function isAlive(state: State): boolean {
@@ -76,3 +77,19 @@ export function bookmarkUrl(app: App, tools: Tools): string | undefined {
   return `${scheme}://${app.hostname}${port}`;
 }
 
+/**
+ * The URL to copy. On another machine only the tunnelled URL works from
+ * here (ADR-0016), and only while the app runs.
+ */
+export function copyableUrl(app: App, machine: Machine, tools: Tools): string | undefined {
+  return machine.local ? bookmarkUrl(app, tools) : app.remoteUrl;
+}
+
+/**
+ * The address a row shows: where Open goes while the app runs (the
+ * tunnelled URL for another machine), else the hostname portless keeps.
+ */
+export function rowAddress(app: App, machine: Machine, href: string | undefined): string | undefined {
+  if (!machine.local && href) return displayHost(href);
+  return app.url || !href ? appAddress(app) : displayHost(href);
+}

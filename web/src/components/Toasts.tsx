@@ -1,8 +1,12 @@
+import { createPortal } from "react-dom";
 import type { Toast } from "../hooks/useToasts";
+import { useTopDialog } from "./Dialog";
 import { Icon } from "./Icon";
 
 export function Toasts({ toasts, onDismiss }: { toasts: Toast[]; onDismiss(id: number): void }) {
-  return (
+  // Above an open modal, outside it would be inert and under its backdrop.
+  const host = useTopDialog();
+  const list = (
     <div className="toasts" aria-live="polite" aria-relevant="additions">
       {toasts.map((t) => (
         <div key={t.id} className={`toast toast-${t.kind}`} role={t.kind === "error" ? "alert" : "status"}>
@@ -15,4 +19,5 @@ export function Toasts({ toasts, onDismiss }: { toasts: Toast[]; onDismiss(id: n
       ))}
     </div>
   );
+  return host ? createPortal(list, host) : list;
 }

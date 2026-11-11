@@ -21,8 +21,8 @@ function snap(apps: Array<Partial<App>>): Snapshot {
 
 describe("summarize", () => {
   it("counts the mock", () => {
-    // web and api on; docs, the checkout install and the checkout web starting; admin failed
-    expect(summarize(mockSnapshot())).toEqual({ running: 2, starting: 3, stopping: 0, failed: 1 });
+    // web and api on, here and on the remote box; docs, the checkout install and the checkout web starting; admin failed
+    expect(summarize(mockSnapshot())).toEqual({ running: 4, starting: 3, stopping: 0, failed: 1 });
   });
   it("leaves hidden jobs out", () => {
     const s = summarize(snap([{ kind: "job", state: "done" }, { kind: "job", state: "on" }, { kind: "job", state: "failed" }]));

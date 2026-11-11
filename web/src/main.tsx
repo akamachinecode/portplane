@@ -12,7 +12,10 @@ async function loadApi(): Promise<Api> {
     const params = new URLSearchParams(location.search);
     if (params.has("mock")) {
       const { createMockApi } = await import("./api/mock");
-      return createMockApi((params.get("mock") || "default") as Parameters<typeof createMockApi>[0]);
+      const mock = createMockApi((params.get("mock") || "default") as Parameters<typeof createMockApi>[0]);
+      // for poking at the mock from the console, e.g. portplaneMock.touchSetupFolder()
+      (window as unknown as { portplaneMock: typeof mock }).portplaneMock = mock;
+      return mock;
     }
   }
   return createHttpApi(readToken(document));

@@ -1,6 +1,22 @@
 import { ApiError } from "./errors";
 import { connectFeed, type FeedHandlers } from "./events";
-import type { Excerpt, Info, Settings, Snapshot, Target, Verb } from "./types";
+import type {
+  ApplyResult,
+  Autostart,
+  Excerpt,
+  Info,
+  MachineCandidate,
+  MachineSettings,
+  MachineUpdate,
+  NewMachine,
+  Proposal,
+  Settings,
+  SetupCheck,
+  SetupOverrides,
+  Snapshot,
+  Target,
+  Verb,
+} from "./types";
 
 export { ApiError } from "./errors";
 
@@ -21,6 +37,26 @@ export interface Api {
   settings(): Promise<Settings>;
   saveSettings(settings: Settings): Promise<Settings>;
   pickFolder(): Promise<PickResult>;
+
+  /** What setup needs on this computer (ADR-0014). */
+  setupCheck(): Promise<SetupCheck>;
+  /** Scans a watched folder and proposes tasks; read-only. */
+  setupScan(folder: string, overrides: SetupOverrides): Promise<Proposal>;
+  /** Writes what a scan proposed. Fails with 409 when the folder changed since (see isStale). */
+  setupApply(folder: string, digest: string, overrides: SetupOverrides): Promise<ApplyResult>;
+
+  machines(): Promise<MachineSettings[]>;
+  machineCandidates(): Promise<MachineCandidate[]>;
+  /** Tests SSH and installs the agent: can take minutes. Aborting the signal cancels it. */
+  addMachine(machine: NewMachine, signal?: AbortSignal): Promise<MachineSettings>;
+  updateMachine(id: string, update: MachineUpdate): Promise<MachineSettings>;
+  removeMachine(id: string): Promise<void>;
+  /** A local URL for any port on a machine (remote ports tunnel over SSH). */
+  openPort(machine: string, port: number): Promise<string>;
+
+  autostart(): Promise<Autostart>;
+  setAutostart(enabled: boolean): Promise<Autostart>;
+
   /** Streams snapshots until the returned function is called. */
   subscribe(handlers: FeedHandlers): () => void;
 }
@@ -44,7 +80,7 @@ async function errorMessage(res: Response): Promise<string> {
 }
 
 export function createHttpApi(token: string | null, fetchImpl: FetchLike = (i, o) => fetch(i, o)): Api {
-  async function send(method: string, path: string, body?: unknown): Promise<Response> {
+  async function send(method: string, path: string, body?: unknown, signal?: AbortSignal): Promise<Response> {
     const headers: Record<string, string> = { Accept: "application/json" };
     if (token) headers[TOKEN_HEADER] = token;
     if (body !== undefined) headers["Content-Type"] = "application/json";
@@ -55,15 +91,17 @@ export function createHttpApi(token: string | null, fetchImpl: FetchLike = (i, o
         headers,
         body: body === undefined ? undefined : JSON.stringify(body),
         cache: "no-store",
+        signal,
       });
-    } catch {
+    } catch (err) {
+      if (signal?.aborted) throw err; // the caller cancelled: not a dead server
       throw new ApiError(UNREACHABLE, 0);
     }
     return res;
   }
 
-  async function json<T>(method: string, path: string, body?: unknown): Promise<T> {
-    const res = await send(method, path, body);
+  async function json<T>(method: string, path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
+    const res = await send(method, path, body, signal);
     if (!res.ok) throw new ApiError(await errorMessage(res), res.status);
     const text = await res.text();
     return (text ? JSON.parse(text) : undefined) as T;
@@ -93,6 +131,17 @@ export function createHttpApi(token: string | null, fetchImpl: FetchLike = (i, o
       const body = (await res.json()) as { path?: string };
       return body.path ? { kind: "picked", path: body.path } : { kind: "cancelled" };
     },
+    setupCheck: () => json<SetupCheck>("GET", "/api/setup/check"),
+    setupScan: (folder, overrides) => json<Proposal>("POST", "/api/setup/scan", { folder, overrides }),
+    setupApply: (folder, digest, overrides) => json<ApplyResult>("POST", "/api/setup/apply", { folder, digest, overrides }),
+    machines: () => json<MachineSettings[]>("GET", "/api/machines"),
+    machineCandidates: () => json<MachineCandidate[]>("GET", "/api/machines/candidates"),
+    addMachine: (machine, signal) => json<MachineSettings>("POST", "/api/machines", machine, signal),
+    updateMachine: (id, update) => json<MachineSettings>("PUT", `/api/machines/${encodeURIComponent(id)}`, update),
+    removeMachine: (id) => none("DELETE", `/api/machines/${encodeURIComponent(id)}`),
+    openPort: async (machine, port) => (await json<{ url: string }>("POST", "/api/ports/open", { machine, port })).url,
+    autostart: () => json<Autostart>("GET", "/api/autostart"),
+    setAutostart: (enabled) => json<Autostart>("PUT", "/api/autostart", { enabled }),
     subscribe: (handlers) =>
       connectFeed({
         url: eventsUrl(token),

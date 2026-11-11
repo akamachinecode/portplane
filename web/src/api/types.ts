@@ -122,3 +122,113 @@ export interface Info {
   url: string; // the stable URL of this UI, if portless is available
   picker: boolean; // a native folder picker is available (POST /api/folders/pick)
 }
+
+// ---- Setup (internal/setup, internal/server/setup.go) ----
+
+export type RequirementId = "node" | "dekit" | "portless" | "proxy" | "portplane";
+
+/** One thing setup needs, with how to get it. Portplane only shows the commands (ADR-0014). */
+export interface Requirement {
+  id: RequirementId;
+  name: string;
+  why: string;
+  ok: boolean;
+  version?: string;
+  problem?: string;
+  commands?: string[]; // copyable, in order
+  docs?: string;
+  privilege: boolean; // the command needs sudo or an elevated terminal
+}
+
+export interface SetupCheck {
+  requirements: Requirement[];
+  ready: boolean; // everything needed to write and run config
+}
+
+export type ProposalStatus = "new" | "unchanged" | "changed" | "manual" | "skipped";
+
+export interface AppProposal {
+  task: string; // dekit task path
+  project: string;
+  worktree?: string;
+  name: string; // the portless name (hostname without .localhost)
+  hostname: string;
+  dir: string; // relative to the folder
+  package?: string;
+  framework: string;
+  packageManager: string;
+  command: string[];
+  status: ProposalStatus;
+  skipped: boolean;
+  notes?: string[];
+}
+
+export interface ProposalChange {
+  added: string[];
+  changed: string[];
+  removed: string[];
+}
+
+export interface FileChange {
+  path: string; // absolute
+  before: string;
+  after: string;
+  created: boolean;
+  changed: boolean;
+}
+
+export interface Proposal {
+  folder: string;
+  apps: AppProposal[];
+  warnings: string[];
+  change: ProposalChange;
+  files: FileChange[];
+  digest: string; // apply only what was reviewed
+}
+
+/** The user's edits to a proposal, keyed by task path. */
+export interface SetupOverrides {
+  names?: Record<string, string>; // task -> portless name
+  skip?: Record<string, boolean>;
+}
+
+export interface ApplyResult {
+  written: string[];
+  reloaded: boolean;
+  reloadError?: string;
+}
+
+// ---- Remote machines (internal/settings, internal/remote) ----
+
+/** A machine as saved in settings. */
+export interface MachineSettings {
+  id: string; // stable id, also the URL label
+  name: string;
+  host: string; // ssh destination: a ~/.ssh/config alias or user@host
+  folders: string[];
+}
+
+export interface MachineCandidate {
+  host: string; // what to pass to ssh
+  name: string;
+  source: "ssh-config" | "tailscale";
+  os?: string;
+  online?: boolean;
+}
+
+export interface NewMachine {
+  host: string;
+  name: string;
+  folders: string[];
+}
+
+export interface MachineUpdate {
+  name?: string;
+  folders: string[];
+}
+
+// ---- Start at login ----
+
+export interface Autostart {
+  enabled: boolean;
+}

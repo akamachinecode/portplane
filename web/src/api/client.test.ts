@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ApiError, createHttpApi, eventsUrl, TOKEN_HEADER, UNREACHABLE } from "./client";
-import { isUnauthorized } from "./errors";
+import { isAbort, isStale, isUnauthorized } from "./errors";
 
 interface Call {
   url: string;
@@ -108,6 +108,73 @@ describe("createHttpApi", () => {
     const s = await createHttpApi("t", f.fn).saveSettings({ folders: ["/a", "/b"] });
     expect(f.calls[0].init.method).toBe("PUT");
     expect(s).toEqual({ folders: ["/a", "/b"] });
+  });
+});
+
+describe("setup, machines and autostart endpoints", () => {
+  const echo = () => fakeFetch((url, init) => json({ url, method: init.method, body: init.body ? JSON.parse(init.body as string) : null }));
+
+  it("sends each request where the server expects it", async () => {
+    const f = echo();
+    const api = createHttpApi("t", f.fn);
+    await api.setupCheck();
+    await api.setupScan("/home/dev/code", { skip: { "shop/web": true } });
+    await api.setupApply("/home/dev/code", "abc", { names: { "shop/web": "store" } });
+    await api.machines();
+    await api.machineCandidates();
+    await api.addMachine({ host: "box", name: "", folders: ["/srv/code"] });
+    await api.updateMachine("my box", { folders: [] });
+    await api.autostart();
+    await api.setAutostart(true);
+    expect(f.calls.map((c) => `${c.init.method} ${c.url}`)).toEqual([
+      "GET /api/setup/check",
+      "POST /api/setup/scan",
+      "POST /api/setup/apply",
+      "GET /api/machines",
+      "GET /api/machines/candidates",
+      "POST /api/machines",
+      "PUT /api/machines/my%20box",
+      "GET /api/autostart",
+      "PUT /api/autostart",
+    ]);
+    const body = (i: number) => JSON.parse(f.calls[i].init.body as string);
+    expect(body(1)).toEqual({ folder: "/home/dev/code", overrides: { skip: { "shop/web": true } } });
+    expect(body(2)).toEqual({ folder: "/home/dev/code", digest: "abc", overrides: { names: { "shop/web": "store" } } });
+    expect(body(5)).toEqual({ host: "box", name: "", folders: ["/srv/code"] });
+    expect(body(8)).toEqual({ enabled: true });
+    for (const c of f.calls) expect((c.init.headers as Record<string, string>)[TOKEN_HEADER]).toBe("t");
+  });
+
+  it("removes a machine and opens a port", async () => {
+    const f = fakeFetch((url) => (url.startsWith("/api/machines/") ? new Response(null, { status: 204 }) : json({ url: "http://127.0.0.1:41234" })));
+    const api = createHttpApi("t", f.fn);
+    await api.removeMachine("box");
+    expect(await api.openPort("box", 5432)).toBe("http://127.0.0.1:41234");
+    expect(f.calls[0].init.method).toBe("DELETE");
+    expect(f.calls[0].url).toBe("/api/machines/box");
+    expect(JSON.parse(f.calls[1].init.body as string)).toEqual({ machine: "box", port: 5432 });
+  });
+
+  it("reports a stale setup write as a 409", async () => {
+    const err = await createHttpApi("t", fakeFetch(() => json({ error: "the folder changed" }, 409)).fn)
+      .setupApply("/x", "d", {})
+      .catch((e: unknown) => e);
+    expect(isStale(err)).toBe(true);
+    expect(isStale(new ApiError("x", 400))).toBe(false);
+  });
+
+  it("passes an abort through instead of calling the server unreachable", async () => {
+    const ctl = new AbortController();
+    const api = createHttpApi("t", (_u, init) => {
+      return new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")));
+      });
+    });
+    const p = api.addMachine({ host: "box", name: "", folders: [] }, ctl.signal).catch((e: unknown) => e);
+    ctl.abort();
+    const err = await p;
+    expect(isAbort(err)).toBe(true);
+    expect(err).not.toBeInstanceOf(ApiError);
   });
 });
 

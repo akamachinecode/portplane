@@ -14,6 +14,16 @@ export function isUnauthorized(err: unknown): boolean {
   return err instanceof ApiError && (err.status === 401 || err.status === 403);
 }
 
+/** A setup write was refused because the folder changed since the scan (409). */
+export function isStale(err: unknown): boolean {
+  return err instanceof ApiError && err.status === 409;
+}
+
+/** The caller aborted the request (AbortController). */
+export function isAbort(err: unknown): boolean {
+  return typeof err === "object" && err !== null && (err as { name?: unknown }).name === "AbortError";
+}
+
 export function errorText(err: unknown): string {
   if (err instanceof Error && err.message) return err.message;
   return String(err) || "Something went wrong";
