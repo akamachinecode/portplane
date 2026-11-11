@@ -33,12 +33,11 @@ static BOOL ppSameOrigin(NSURL *a, NSURL *b) {
 }
 
 static void ppActivate(void) {
-	// macOS 14 replaced activateIgnoringOtherApps: with activate.
-	if ([NSApp respondsToSelector:@selector(activate)]) {
-		[NSApp performSelector:@selector(activate)];
-	} else {
-		[NSApp activateIgnoringOtherApps:YES];
-	}
+	// Not -activate (macOS 14): it is cooperative and only works when the
+	// active app yields, which neither Finder, the terminal nor the tray
+	// menu does, so the window opened behind the frontmost app. The window
+	// only opens on an explicit request (launch, tray, Dock, a second start).
+	[NSApp activateIgnoringOtherApps:YES];
 }
 
 static NSMenu *ppSubmenu(NSMenu *bar, NSString *title) {
@@ -237,6 +236,31 @@ static void ppSetIcon(const void *png, int n) {
 	});
 }
 
+// Quit in the Dock menu, Cmd-Tab Q, logout and scripts send a Quit Apple
+// event, which AppKit answers with terminate: and exit(), skipping Go's
+// cleanup (instance.json, the portless alias). Count it like Cmd-Q instead.
+@interface PPQuitEvent : NSObject
+- (void)handle:(NSAppleEventDescriptor *)event reply:(NSAppleEventDescriptor *)reply;
+@end
+
+@implementation PPQuitEvent
+- (void)handle:(NSAppleEventDescriptor *)event reply:(NSAppleEventDescriptor *)reply {
+	atomic_fetch_add(&ppQuits, 1);
+}
+@end
+
+static PPQuitEvent *ppQuitEvent;
+
+static void ppRegisterQuit(void) {
+	dispatch_async(dispatch_get_main_queue(), ^{
+		ppQuitEvent = [PPQuitEvent new];
+		[[NSAppleEventManager sharedAppleEventManager] setEventHandler:ppQuitEvent
+			andSelector:@selector(handle:reply:)
+			forEventClass:kCoreEventClass
+			andEventID:kAEQuitApplication];
+	});
+}
+
 static int ppTakeQuits(void) { return atomic_exchange(&ppQuits, 0); }
 */
 import "C"
@@ -268,8 +292,10 @@ func Show(url string) {
 }
 
 // OnQuit calls quit when the user chooses Quit Portplane in the window's
-// menu (Cmd-Q). It stops watching when ctx ends.
+// menu (Cmd-Q) or the app gets a Quit Apple event (the Dock's Quit, logout).
+// It stops watching when ctx ends.
 func OnQuit(ctx context.Context, quit func()) {
+	C.ppRegisterQuit()
 	go func() {
 		t := time.NewTicker(250 * time.Millisecond)
 		defer t.Stop()

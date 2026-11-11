@@ -43,9 +43,12 @@ What ADR-0004 required still holds: the same darwin binary must start headless a
 - The window loads `http://127.0.0.1:<port>`, not `https://portplane.localhost`. The loopback address needs neither the portless CA in the keychain nor `.localhost` name resolution in WebKit, and ADR-0008 already allows that Host. The page still receives its token in `index.html`. The window uses a non-persistent website data store: nothing is written to disk, since the origin and the token change every run.
 - Only the UI's origin loads in the window. Other `http(s)` links, including `target="_blank"`, open in the default browser. `window.open` returns `null`, so the UI falls back to asking Portplane to open the address (`POST /api/open`).
 - The window title follows the page title ("Portplane · 3 running"). The frame is remembered between runs.
-- Cmd-Q goes through the same shutdown as the tray's Quit, so portless aliases and SSH forwards are removed.
+- Cmd-Q, and the Quit Apple event that the Dock's Quit, logout and scripts send, go through the same shutdown as the tray's Quit, so the portless aliases and SSH forwards are removed. Without the Apple event handler, AppKit calls `exit()` and skips that cleanup.
+- Opening the window brings Portplane to the front with `activateIgnoringOtherApps:`. The cooperative `activate` from macOS 14 left the window behind the frontmost app in every test, because neither Finder, the terminal nor the menu-bar menu yields focus. The window only opens on an explicit request; start at login runs without opening it.
 - A second start used to open the browser at the running instance's URL. Now it asks the running instance to show its window through `POST /api/window`, with the token from the instance file. That file is private to the user (0600), which is no weaker than the page that carries the same token (ADR-0008). If the running instance is older and has no such route, the second start opens the browser as before.
 - A build without CGO (`CGO_ENABLED=0`), or `portplane serve --no-tray`, has no run loop and keeps the browser window.
+
+Checked by hand on 2026-11-11 on macOS 27.2: the Objective-C compiles without warnings (also with `-Wall -Wextra` and a macOS 12 deployment target). The window loads the UI with no white flash in dark mode, and its connections to the port close within a second when it closes. It comes to the front from Finder, the Dock and a second start, and no browser window opens. Links leave for the default browser, and Cmd-C and Cmd-V work in text fields. Quitting from Cmd-Q, the menu-bar menu or the Dock removes `instance.json` and the portless alias.
 
 Linux and Windows keep the browser window from ADR-0004 for now:
 
