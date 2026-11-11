@@ -19,9 +19,11 @@ import (
 	"github.com/akamachinecode/portplane/internal/agent"
 	"github.com/akamachinecode/portplane/internal/dekit"
 	"github.com/akamachinecode/portplane/internal/desktop"
+	"github.com/akamachinecode/portplane/internal/envpath"
 	"github.com/akamachinecode/portplane/internal/hub"
 	"github.com/akamachinecode/portplane/internal/model"
 	"github.com/akamachinecode/portplane/internal/portless"
+	"github.com/akamachinecode/portplane/internal/remote"
 	"github.com/akamachinecode/portplane/internal/server"
 	"github.com/akamachinecode/portplane/internal/settings"
 	"github.com/akamachinecode/portplane/internal/setup"
@@ -41,6 +43,8 @@ func cmdServe(args []string, stdout, stderr io.Writer) int {
 	if err := fs.Parse(args); err != nil {
 		return 2
 	}
+
+	envpath.Enrich()
 
 	// One Portplane per user: a second start opens the first one's window.
 	if inst, ok := runningInstance(); ok {
@@ -128,6 +132,19 @@ func cmdServe(args []string, stdout, stderr io.Writer) int {
 			return err == nil, err
 		},
 	})
+	fwd := remote.NewForwarder(pl)
+	// Agents stop before their forwards close, so no snapshot reopens one.
+	defer func() {
+		h.Close()
+		fwd.Close()
+	}()
+	machines := &remote.Manager{Hub: h, Store: store, Forward: fwd, Binaries: remote.ReleaseBinary}
+	if err := machines.Start(); err != nil {
+		fmt.Fprintln(stderr, "portplane: machines:", err)
+	}
+	for pattern, handler := range server.MachineHandlers(machines, remote.Candidates) {
+		srv.Extra[pattern] = handler
+	}
 	httpSrv := &http.Server{
 		Handler:           srv.Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
