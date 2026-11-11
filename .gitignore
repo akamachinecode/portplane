@@ -1,0 +1,15 @@
+# build
+/bin/
+/dist/
+/web/dist/
+node_modules/
+*.test
+coverage.*
+# editors / os
+.DS_Store
+.idea/
+.vscode/
+# env
+.env
+.env.*
+!.env.example

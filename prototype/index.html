@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Repos</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0f1115">
+<style>
+:root {
+  --bg: #f6f6f4;
+  --card: #ffffff;
+  --line: #e6e5e1;
+  --text: #1b1c1e;
+  --muted: #6e6f73;
+  --faint: #a3a4a8;
+  --hover: #f1f0ed;
+  --on: #1f9d55;
+  --on-soft: #e3f4ea;
+  --wait: #c98a0c;
+  --wait-soft: #fbf1dc;
+  --err: #d0393b;
+  --err-soft: #fbe5e5;
+  --ext: #3b6fd8;
+  --ext-soft: #e5ecfb;
+  --shadow: 0 1px 2px rgba(0,0,0,.04), 0 2px 8px rgba(0,0,0,.03);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1115;
+    --card: #171a20;
+    --line: #262a32;
+    --text: #e8e9ec;
+    --muted: #9095a0;
+    --faint: #5d626c;
+    --hover: #1e222a;
+    --on: #3ccf7c;
+    --on-soft: #16301f;
+    --wait: #e5a93a;
+    --wait-soft: #33290f;
+    --err: #f06264;
+    --err-soft: #3a1a1b;
+    --ext: #7aa2ff;
+    --ext-soft: #1a2440;
+    --shadow: none;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.mono { font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace; }
+button {
+  font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0;
+}
+a { color: inherit; text-decoration: none; }
+
+header {
+  position: sticky; top: 0; z-index: 5;
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 14px 24px;
+  background: color-mix(in srgb, var(--bg) 85%, transparent);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+.brand { font-weight: 650; font-size: 16px; letter-spacing: -.01em; margin-right: 4px; }
+.folder {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px;
+  background: var(--card); color: var(--text);
+}
+.folder:hover { background: var(--hover); }
+.folder svg { color: var(--muted); }
+.pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 12.5px; color: var(--muted);
+}
+.spacer { flex: 1; }
+.toggle { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); cursor: pointer; user-select: none; font-size: 13px; }
+.toggle input { accent-color: var(--on); margin: 0; }
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--card); font-size: 13px;
+}
+.btn:hover { background: var(--hover); }
+.btn.danger:hover { color: var(--err); border-color: color-mix(in srgb, var(--err) 40%, var(--line)); }
+
+main { padding: 20px 24px 60px; max-width: 1500px; margin: 0 auto; }
+.banner {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 12px 16px; margin-bottom: 18px; border-radius: 12px;
+  background: var(--wait-soft); color: var(--text); border: 1px solid color-mix(in srgb, var(--wait) 35%, transparent);
+}
+.grid { columns: 3 360px; column-gap: 14px; }
+.card {
+  break-inside: avoid; margin-bottom: 14px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+  box-shadow: var(--shadow); overflow: hidden;
+}
+.card.live { border-color: color-mix(in srgb, var(--on) 35%, var(--line)); }
+.card-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 12px 10px 16px;
+}
+.card-title { font-weight: 620; font-size: 14.5px; letter-spacing: -.005em; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.badge {
+  font-size: 11.5px; padding: 2px 8px; border-radius: 999px;
+  background: var(--hover); color: var(--muted); white-space: nowrap;
+  max-width: 220px; overflow: hidden; text-overflow: ellipsis;
+}
+.icons { margin-left: auto; display: flex; gap: 2px; flex-shrink: 0; }
+.icon {
+  width: 30px; height: 30px; border-radius: 8px;
+  display: inline-grid; place-items: center; color: var(--muted);
+}
+.icon:hover { background: var(--hover); color: var(--text); }
+.icon.go:hover { color: var(--on); }
+.icon.halt:hover { color: var(--err); }
+.icon[disabled] { opacity: .35; pointer-events: none; }
+.note { padding: 0 16px 10px; font-size: 12.5px; color: var(--wait); }
+.note.err { color: var(--err); }
+
+.row {
+  display: grid; grid-template-columns: 10px minmax(0, 1fr) auto auto;
+  align-items: center; gap: 12px;
+  padding: 10px 12px 10px 16px; border-top: 1px solid var(--line);
+}
+.row:hover { background: var(--hover); }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--faint); opacity: .5; }
+.on .dot, .outside .dot { background: var(--on); opacity: 1; box-shadow: 0 0 0 4px var(--on-soft); }
+.outside .dot { background: var(--ext); box-shadow: 0 0 0 4px var(--ext-soft); }
+.starting .dot, .stopping .dot { background: var(--wait); opacity: 1; animation: pulse 1.2s ease-in-out infinite; }
+.error .dot { background: var(--err); opacity: 1; box-shadow: 0 0 0 4px var(--err-soft); }
+@keyframes pulse { 50% { box-shadow: 0 0 0 5px var(--wait-soft); } }
+@media (prefers-reduced-motion: reduce) { .starting .dot, .stopping .dot { animation: none; } }
+
+.main { min-width: 0; }
+.meta { font-size: 12px; color: var(--muted); display: flex; gap: 6px; align-items: baseline; }
+.name { font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.meta .name + .state::before { content: "·"; margin-right: 6px; color: var(--faint); }
+.url {
+  display: block; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  color: var(--faint);
+}
+.on .url, .outside .url { color: var(--text); }
+a.url:hover { text-decoration: underline; text-underline-offset: 3px; }
+.state { font-size: 12px; color: var(--muted); }
+.on .state { color: var(--on); }
+.outside .state { color: var(--ext); }
+.starting .state, .stopping .state { color: var(--wait); }
+.error .state { color: var(--err); }
+.port {
+  font-size: 12px; color: var(--muted); padding: 2px 8px; border-radius: 6px;
+  background: var(--hover); white-space: nowrap;
+}
+.row:hover .port { background: var(--card); }
+.acts { display: flex; gap: 2px; }
+
+h2 { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 34px 0 12px; }
+.sub { font-weight: 400; text-transform: none; letter-spacing: 0; }
+details { margin-top: 30px; }
+details summary { cursor: pointer; color: var(--muted); font-size: 13px; list-style: none; }
+details summary::-webkit-details-marker { display: none; }
+details summary::before { content: "▸ "; }
+details[open] summary::before { content: "▾ "; }
+table { width: 100%; border-collapse: collapse; margin-top: 12px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+td, th { text-align: left; padding: 8px 14px; border-top: 1px solid var(--line); font-size: 13px; }
+th { color: var(--muted); font-weight: 500; font-size: 12px; border-top: 0; }
+td a:hover { text-decoration: underline; }
+.empty { color: var(--muted); padding: 40px 0; text-align: center; }
+
+.toast {
+  position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
+  max-width: min(640px, calc(100% - 32px));
+  background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 10px;
+  font-size: 13px; white-space: pre-wrap; box-shadow: 0 8px 30px rgba(0,0,0,.25);
+}
+@media (max-width: 560px) {
+  header, main { padding-left: 16px; padding-right: 16px; }
+  .port { display: none; }
+}
+</style>
+</head>
+<body>
+<header>
+  <span class="brand">Repos</span>
+  <button class="folder" id="folder" title="Cambiar de carpeta">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+    <span id="root" class="mono">…</span>
+  </button>
+  <span class="pill" id="summary"></span>
+  <span class="spacer"></span>
+  <label class="toggle"><input type="checkbox" id="onlyOn"> Solo encendidos</label>
+  <button class="btn danger" id="stopAll">Apagar todo</button>
+</header>
+<main id="main"><div class="empty">Cargando…</div></main>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const ICONS = {
+  play: '<path d="M7 5v14l11-7z" fill="currentColor" stroke="none"/>',
+  stop: '<rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor" stroke="none"/>',
+  restart: '<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>',
+  open: '<path d="M14 4h6v6"/><path d="M20 4l-9 9"/><path d="M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/>',
+  folder: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
+};
+const icon = (n, s = 16) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[n]}</svg>`;
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const host = (u) => u ? u.replace(/^https?:\/\//, "").replace(/\/$/, "") : "";
+
+const STATE_TEXT = {
+  on: "Encendido",
+  outside: "Encendido fuera de dekit",
+  starting: "Arrancando…",
+  stopping: "Apagando…",
+  off: "Apagado",
+};
+
+let data = null;
+let lastHtml = "";
+const pending = new Map(); // path -> estado provisional mientras dekit responde
+
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+};
+const onlyOn = document.getElementById("onlyOn");
+onlyOn.checked = store.get("onlyOn") === "1";
+onlyOn.onchange = () => { store.set("onlyOn", onlyOn.checked ? "1" : "0"); render(); };
+
+function stateText(i) {
+  if (i.status === "error") return i.signal ? `Se cerró (señal ${i.signal})` : `Falló (código ${i.code ?? "?"})`;
+  if (i.status === "starting" && i.waitingFor) return `Esperando a ${i.waitingFor}…`;
+  return STATE_TEXT[i.status] || i.status;
+}
+
+const isLive = (i) => i.status === "on" || i.status === "outside";
+const isBusy = (i) => i.status === "on" || i.status === "outside" || i.status === "starting";
+
+function row(i) {
+  const st = pending.get(i.path) || i.status;
+  const it = { ...i, status: st };
+  const label = it.url ? host(it.url) : "sin puerto todavía";
+  const link = it.url
+    ? `<a class="url mono" href="${esc(it.url)}" target="_blank" rel="noopener">${esc(label)}</a>`
+    : `<span class="url mono">${esc(label)}</span>`;
+  const btns = isBusy(it) || st === "stopping"
+    ? `<button class="icon" title="Reiniciar" data-act="restart" data-target="${esc(i.path)}">${icon("restart", 15)}</button>
+       <button class="icon halt" title="Apagar" data-act="stop" data-target="${esc(i.path)}" ${i.status === "outside" ? "disabled" : ""}>${icon("stop", 13)}</button>`
+    : `<button class="icon go" title="Encender" data-act="start" data-target="${esc(i.path)}">${icon("play", 15)}</button>`;
+  return `<div class="row ${st}">
+    <span class="dot"></span>
+    <div class="main">
+      <div class="meta">${i.name ? `<span class="name">${esc(i.name)}</span>` : ""}<span class="state">${esc(stateText(it))}</span></div>
+      ${link}
+    </div>
+    ${i.port ? `<span class="port mono" title="Puerto interno">:${i.port}</span>` : "<span></span>"}
+    <div class="acts">${btns}</div>
+  </div>`;
+}
+
+function card(g) {
+  const items = onlyOn.checked ? g.items.filter((i) => isBusy(i) || i.status === "error" || pending.has(i.path)) : g.items;
+  if (!items.length) return "";
+  const live = g.items.filter(isLive);
+  const any = g.items.some(isBusy);
+  const job = g.jobs.find((j) => j.state === "running");
+  const failed = g.jobs.find((j) => j.state === "exited" && j.code);
+  const badge = g.tree ? `<span class="badge" title="worktree ${esc(g.tree)}${g.branch ? " · " + esc(g.branch) : ""}">${esc(g.branch || g.tree)}</span>` : "";
+  return `<section class="card ${live.length ? "live" : ""}">
+    <div class="card-head">
+      <span class="card-title" title="${esc(g.folder)}">${esc(g.title)}</span>${badge}
+      <span class="icons">
+        <button class="icon" title="Abrir lo encendido en el navegador" data-open="${esc(JSON.stringify(live.map((i) => i.url).filter(Boolean)))}" ${live.length ? "" : "disabled"}>${icon("open", 15)}</button>
+        ${any
+          ? `<button class="icon halt" title="Apagar todo el proyecto" data-act="stop" data-target="${esc(g.target)}">${icon("stop", 13)}</button>`
+          : `<button class="icon go" title="Encender todo el proyecto" data-act="start" data-target="${esc(g.target)}">${icon("play", 15)}</button>`}
+        <button class="icon" title="Abrir la carpeta en Finder" data-reveal="${esc(g.folder)}">${icon("folder", 15)}</button>
+      </span>
+    </div>
+    ${job ? `<div class="note">Preparando: ${esc(job.name)}…</div>` : ""}
+    ${failed && !job ? `<div class="note err">${esc(failed.name)} falló (código ${failed.code})</div>` : ""}
+    ${items.map(row).join("")}
+  </section>`;
+}
+
+function otherCard(o) {
+  return `<section class="card live">
+    <div class="card-head">
+      <span class="card-title" title="${esc(o.folder)}">${esc(o.title)}</span>
+      <span class="badge">fuera de dekit</span>
+      <span class="icons"><button class="icon" title="Abrir la carpeta en Finder" data-reveal="${esc(o.folder)}">${icon("folder", 15)}</button></span>
+    </div>
+    ${o.items.map((i) => `<div class="row outside">
+      <span class="dot"></span>
+      <div class="main">
+        <div class="meta"><span class="state">${esc(i.command)} · pid ${i.pid}</span></div>
+        <a class="url mono" href="${esc(i.url)}" target="_blank" rel="noopener">${esc(host(i.url))}</a>
+      </div>
+      <span class="port mono">:${i.port}</span><span></span>
+    </div>`).join("")}
+  </section>`;
+}
+
+function render() {
+  if (!data) return;
+  document.getElementById("root").textContent = data.rootLabel;
+  const all = data.groups.flatMap((g) => g.items);
+  const on = all.filter(isLive).length;
+  const starting = all.filter((i) => i.status === "starting").length;
+  document.getElementById("summary").innerHTML =
+    `<span>${on} encendido${on === 1 ? "" : "s"}${starting ? ` · ${starting} arrancando` : ""}</span>` +
+    (data.proxy ? "" : ` · <span style="color:var(--err)">el proxy de portless no responde</span>`);
+  document.title = on ? `Repos · ${on}` : "Repos";
+
+  let html = "";
+  if (!data.hasConfig) {
+    html += `<div class="banner">Esta carpeta no tiene <span class="mono">dekit.yaml</span>: solo se ven los puertos abiertos de sus proyectos.</div>`;
+  } else if (!data.runner) {
+    html += `<div class="banner">dekit no está arrancado en esta carpeta. <button class="btn" data-runner>Arrancar dekit</button></div>`;
+  }
+  // lo encendido arriba; dentro de cada parte, el orden de dekit.yaml
+  const active = (g) => g.items.some((i) => isBusy(i) || i.status === "error" || pending.has(i.path));
+  const cards = [...data.groups.filter(active), ...data.groups.filter((g) => !active(g))].map(card).join("");
+  html += cards ? `<div class="grid">${cards}</div>`
+    : data.groups.length ? `<div class="empty">No hay nada encendido.</div>` : "";
+  if (data.others.length) {
+    html += `<h2>Otros servidores en esta carpeta <span class="sub">— no los lanzó dekit</span></h2><div class="grid">${data.others.map(otherCard).join("")}</div>`;
+  }
+  if (data.system.length) {
+    const open = store.get("systemOpen") === "1";
+    html += `<details id="system" ${open ? "open" : ""}><summary>Resto de puertos abiertos en el Mac (${data.system.length})</summary>
+      <table><tr><th>Puerto</th><th>Programa</th><th>Dirección</th></tr>
+      ${data.system.map((s) => `<tr><td class="mono">${s.port}</td><td>${esc(s.command)}</td><td>${s.local
+        ? `<a class="mono" href="${esc(s.url)}" target="_blank" rel="noopener">${esc(host(s.url))}</a>`
+        : `<span class="mono">${esc(host(s.url))}</span> <span style="color:var(--muted)">(abierto a la red)</span>`}</td></tr>`).join("")}
+      </table></details>`;
+  }
+  if (html !== lastHtml) {
+    document.getElementById("main").innerHTML = html;
+    lastHtml = html;
+    const det = document.getElementById("system");
+    if (det) det.ontoggle = () => store.set("systemOpen", det.open ? "1" : "0");
+  }
+}
+
+async function refresh() {
+  try {
+    const r = await fetch("/api/state", { cache: "no-store" });
+    if (!r.ok) throw new Error(await r.text());
+    data = await r.json();
+    for (const [p, st] of pending) {
+      const i = data.groups.flatMap((g) => g.items).find((x) => x.path === p);
+      // se suelta cuando dekit ya cuenta lo mismo
+      if (!i || (st === "starting" && i.status !== "off") || (st === "stopping" && !isBusy(i))) pending.delete(p);
+    }
+    render();
+  } catch (e) {
+    document.getElementById("summary").textContent = "Sin conexión con el panel";
+  }
+}
+
+let toastTimer;
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => (t.hidden = true), 6000);
+}
+
+async function act(body) {
+  const r = await fetch("/api/act", {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-panel": "1" },
+    body: JSON.stringify(body),
+  });
+  const out = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(out.error || "Algo falló");
+  return out;
+}
+
+document.addEventListener("click", async (e) => {
+  const b = e.target.closest("button");
+  if (!b || b.disabled) return;
+  try {
+    if (b.dataset.act) {
+      const target = b.dataset.target;
+      const st = b.dataset.act === "stop" ? "stopping" : "starting";
+      const paths = target.endsWith("/**")
+        ? data.groups.find((g) => g.target === target).items.map((i) => i.path)
+        : [target];
+      paths.forEach((p) => pending.set(p, st));
+      render();
+      await act({ action: b.dataset.act, target }).catch((err) => { paths.forEach((p) => pending.delete(p)); throw err; });
+    } else if (b.dataset.open) {
+      await act({ action: "open", urls: JSON.parse(b.dataset.open) });
+    } else if (b.dataset.reveal) {
+      await act({ action: "reveal", path: b.dataset.reveal });
+    } else if ("runner" in b.dataset) {
+      b.textContent = "Arrancando…";
+      await act({ action: "runner" });
+    } else if (b.id === "folder") {
+      const out = await act({ action: "pick" });
+      if (!out.cancelled) lastHtml = "";
+    } else if (b.id === "stopAll") {
+      if (!confirm("¿Apagar todos los servidores?")) return;
+      data.groups.flatMap((g) => g.items).filter(isBusy).forEach((i) => pending.set(i.path, "stopping"));
+      render();
+      await act({ action: "stop-all" });
+    }
+  } catch (err) {
+    toast(err.message);
+  }
+  refresh();
+});
+
+refresh();
+setInterval(() => { if (!document.hidden) refresh(); }, 2000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh(); });
+</script>
+</body>
+</html>
