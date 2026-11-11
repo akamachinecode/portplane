@@ -43,9 +43,11 @@ Turn the open questions that shape the code into ADRs. Each one checks current f
 | 0012 | Repo and release tooling: mise, release-please, goreleaser, cosign; no Apple notarization or Windows code signing for v1 | R4, R2 |
 | 0013 | Windows support level | R3 |
 
-Upstream, in parallel:
+All thirteen are accepted; see the [ADR index](adr/README.md). Facts checked along the way changed two starting proposals: dekit already offers `dekit screen --json` for a task's last lines, and Wails v3 would tie the Linux binary to WebKitGTK, so the desktop shell stays a browser UI with a tray icon.
 
-- [ ] dekit: confirm `dekit ls --json` is a stable contract, and ask for a non-interactive way to read a task's last log lines.
+Upstream, in parallel (drafts in [upstream.md](upstream.md)):
+
+- [ ] dekit: resolved `cmd` and `cwd` in `dekit ls --json`, and a stable JSON contract.
 - [ ] portless: propose `portless list --json`.
 
 **Exit:** ADRs 0001–0013 accepted; upstream issues opened.
@@ -115,7 +117,7 @@ Quality:
 
 ## Phase 6: M4, desktop
 
-- [ ] Native window (Wails v3, per ADR-0004) or a documented decision to keep the browser UI.
+- [ ] Open the UI as an app-mode browser window where a Chromium-based browser exists (ADR-0004).
 - [ ] Tray or menu-bar icon: count of running servers, open the window, quick start and stop.
 - [ ] Start at login on each OS.
 - [ ] Installers on GitHub Releases: macOS `.dmg` (unsigned), Linux `.tar.gz`, `.deb` and `.rpm`, Windows `.zip` or `.msi`, all with cosign-signed checksums.
