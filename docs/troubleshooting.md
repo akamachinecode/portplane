@@ -12,7 +12,11 @@
 
 **A remote app opens but logins or cookies break.** Cookies set for a parent domain on the remote machine (`shop.localhost`) do not apply under `shop.<machine>.localhost`; see [ADR-0016](adr/0016-remote-urls.md).
 
-**No tray icon on Linux.** Your desktop needs a StatusNotifier host; on GNOME install the AppIndicator extension. Portplane works without it.
+**No tray icon on Linux.** Your desktop needs a StatusNotifier host; on GNOME install the AppIndicator extension. Portplane works without it, and closing its window then quits it.
+
+**Portplane opens in the browser instead of its own window (Linux).** The window needs `portplane-window` next to `portplane` and WebKitGTK 6.0 (`sudo dnf install webkitgtk6.0`, or `sudo apt install libwebkitgtk-6.0-4`). Portplane prints why the window did not open when you start it from a terminal. If the window opens blank on some graphics drivers, start Portplane with `WEBKIT_DISABLE_DMABUF_RENDERER=1`.
+
+**Portplane opens in the browser instead of its own window (Windows).** The WebView2 runtime is missing; install it from Microsoft (Evergreen runtime).
 
 **Portplane cannot find dekit or portless when started at login.** Login items get a minimal PATH. Portplane adds your login shell's PATH and the usual install folders (`~/.local/bin`, Homebrew, mise shims); if your tools live elsewhere, add that folder to the PATH your login shell sets.
 
