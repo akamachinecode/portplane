@@ -43,7 +43,9 @@ func Group(apps []App) []Project {
 		wa.wt.Apps = append(wa.wt.Apps, a.ID)
 		wa.tasks = append(wa.tasks, a.Task)
 		pa.tasks = append(pa.tasks, a.Task)
-		pa.p.Total++
+		if a.Kind != "job" {
+			pa.p.Total++ // jobs are steps, not apps
+		}
 		if a.Kind != "job" && a.State.Alive() {
 			pa.p.Running++
 			wa.wt.Running++

@@ -21,9 +21,9 @@ type chanAgent struct {
 func (a *chanAgent) Snapshot(context.Context) (model.MachineSnapshot, error) {
 	return model.MachineSnapshot{}, nil
 }
-func (a *chanAgent) Watch(context.Context) <-chan model.MachineSnapshot { return a.ch }
+func (a *chanAgent) Watch(context.Context) <-chan model.MachineSnapshot  { return a.ch }
 func (a *chanAgent) Act(context.Context, model.Target, model.Verb) error { return nil }
-func (a *chanAgent) Up(context.Context, string) error                  { return nil }
+func (a *chanAgent) Up(context.Context, string) error                    { return nil }
 func (a *chanAgent) Excerpt(context.Context, string, string) (model.Excerpt, error) {
 	return model.Excerpt{}, nil
 }

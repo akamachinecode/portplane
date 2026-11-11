@@ -37,7 +37,7 @@ func TestGroupOrdersRunningProjectsFirst(t *testing.T) {
 		t.Fatalf("order: %+v", got)
 	}
 	b := got[0]
-	if b.Running != 1 || b.Total != 3 || b.Prefix != "b/" {
+	if b.Running != 1 || b.Total != 2 || b.Prefix != "b/" {
 		t.Fatalf("project b: %+v", b)
 	}
 	if len(b.Worktrees) != 2 || b.Worktrees[0].Name != "" || b.Worktrees[1].Name != "wt" {

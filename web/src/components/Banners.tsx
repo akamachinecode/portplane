@@ -1,0 +1,86 @@
+import type { MachineSnapshot } from "../api/types";
+import { shortenPath } from "../lib/format";
+import { runnerFingerprint } from "../lib/pending";
+import { useApp } from "./AppContext";
+import { Banner } from "./Banner";
+import { Spinner } from "./Icon";
+
+/** What is missing on this machine, and why it matters, in one sentence each. */
+export function ToolBanners({ ms }: { ms: MachineSnapshot }) {
+  const { tools } = ms;
+  return (
+    <>
+      {!tools.dekit && (
+        <Banner tone="warn" title="dekit isn't installed">
+          Portplane uses{" "}
+          <a href="https://dekit.run" target="_blank" rel="noopener noreferrer">
+            dekit
+          </a>{" "}
+          to start, stop and supervise your dev servers. Until it's installed, you get a read-only view of the ports open on
+          this machine.
+        </Banner>
+      )}
+      {!tools.portless && (
+        <Banner tone="info" title="portless isn't installed">
+          <a href="https://github.com/vercel-labs/portless" target="_blank" rel="noopener noreferrer">
+            portless
+          </a>{" "}
+          gives each dev server a stable <code>https://name.localhost</code> URL, so bookmarks keep working when ports move.
+          Without it, apps show their port only.
+        </Banner>
+      )}
+      {tools.portless && !tools.proxyRunning && (
+        <Banner tone="warn" title="The portless proxy isn't running">
+          Apps keep their <code>.localhost</code> names, but the URLs won't load until the proxy runs. Start it with{" "}
+          <code>portless proxy start</code>.
+        </Banner>
+      )}
+    </>
+  );
+}
+
+/** A dekit project whose runner is down: its apps can't start until it's up. */
+export function RunnerBanners({ ms, home }: { ms: MachineSnapshot; home: string | undefined }) {
+  const { api, pending } = useApp();
+  const machine = ms.machine.id;
+  return (
+    <>
+      {ms.runners
+        .filter((r) => !r.up)
+        .map((r) => {
+          const key = `runner|${machine}|${r.root}`;
+          const busy = pending.has(key);
+          return (
+            <Banner
+              key={r.root}
+              tone="warn"
+              title={
+                <>
+                  dekit isn't running for <strong>{r.name}</strong>
+                </>
+              }
+              action={
+                <button
+                  type="button"
+                  className="btn"
+                  aria-busy={busy || undefined}
+                  aria-disabled={busy || undefined}
+                  onClick={() => {
+                    if (!busy) void pending.run(key, runnerFingerprint(machine, r.root), () => api.runnerUp(machine, r.root));
+                  }}
+                >
+                  {busy && <Spinner />}
+                  Start runner
+                </button>
+              }
+            >
+              <span className="banner-meta">
+                <span className="mono">{shortenPath(r.root, home)}</span>
+                {r.error && <span className="banner-detail-error">{r.error}</span>}
+              </span>
+            </Banner>
+          );
+        })}
+    </>
+  );
+}

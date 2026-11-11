@@ -135,8 +135,8 @@ type Project struct {
 	Name      string     `json:"name"`
 	Runner    string     `json:"runner"`
 	Prefix    string     `json:"prefix,omitempty"` // shared task path prefix, for project-wide actions
-	Running   int        `json:"running"`
-	Total     int        `json:"total"`
+	Running   int        `json:"running"`          // services alive
+	Total     int        `json:"total"`            // services (jobs are steps, not counted)
 	Worktrees []Worktree `json:"worktrees"`
 }
 

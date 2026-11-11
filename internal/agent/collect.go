@@ -419,6 +419,12 @@ func (l *Local) describe(t *task, all []*task, routeByPID, routeByPort map[int]p
 		a.Ports = appendUnique(a.Ports, a.Port)
 		sort.Ints(a.Ports)
 	}
+	if a.Hostname == "" && a.Port != 0 {
+		// A static alias that points at the app's port names it.
+		if r, ok := routeByPort[a.Port]; ok {
+			a.Hostname = r.Hostname
+		}
+	}
 	switch {
 	case a.Hostname != "" && l.portless.Available():
 		a.URL = proxy.URL(a.Hostname)

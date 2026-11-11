@@ -1,10 +1,27 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
+import { createHttpApi, type Api } from "./api/client";
+import { readToken } from "./lib/token";
 import "./styles.css";
 
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-);
+async function loadApi(): Promise<Api> {
+  // `?mock` (dev builds only) runs the UI on an in-memory snapshot; the
+  // branch and the mock module are dropped from production builds.
+  if (import.meta.env.DEV) {
+    const params = new URLSearchParams(location.search);
+    if (params.has("mock")) {
+      const { createMockApi } = await import("./api/mock");
+      return createMockApi((params.get("mock") || "default") as Parameters<typeof createMockApi>[0]);
+    }
+  }
+  return createHttpApi(readToken(document));
+}
+
+void loadApi().then((api) => {
+  createRoot(document.getElementById("root")!).render(
+    <StrictMode>
+      <App api={api} />
+    </StrictMode>,
+  );
+});
