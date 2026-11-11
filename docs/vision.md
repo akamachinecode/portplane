@@ -36,7 +36,7 @@ A small desktop app that sits on top of the tools you already use.
 - **Set up.** Pick one or more folders. The app finds the projects and their dev servers and proposes a stable URL for each. With your confirmation, it writes the dekit and portless configuration using field-tested defaults.
 - **Reach.** Add another machine over SSH, Tailscale included. Its servers appear next to your local ones, and clicking one opens it through the SSH connection.
 
-No terminal output, no logs on screen by default. The point is to see the state of things at a glance.
+No terminal output and no logs in the main view. The point is to see the state of things at a glance. When you need an app's output, it is one click away, in a panel that stays closed until you open it ([ADR-0021](adr/0021-task-output.md)).
 
 ## How it fits with dekit and portless
 
@@ -60,7 +60,7 @@ Rules that follow from this:
 ## Core flows
 
 1. **First run.** Choose folders, then check what is installed:
-   - **dekit or portless missing:** the app explains why each one helps and how to install it. You can also keep the read-only mode.
+   - **dekit or portless missing:** the app explains why each one helps and installs it for you, from the official sources and without a password ([ADR-0019](adr/0019-install-tools.md)). The one step that needs admin rights, the HTTPS proxy, asks through the system's own password dialog ([ADR-0020](adr/0020-privileged-steps.md)). You can also keep the read-only mode.
    - **Both present:** the app scans the folders and proposes apps and URLs. You confirm and it writes the config. The main view appears with everything off and every URL already known, so you can bookmark them.
 2. **Daily use.** Open the app or its menu-bar/tray icon, see what is on, click to open, start or stop what you need.
 3. **Add a machine.** Pick a host from `~/.ssh/config` or your Tailscale peers. The app tests the connection, installs its small agent and asks which folders to watch there. From then on, the machine is a section of the same view.
@@ -82,7 +82,7 @@ Rules that follow from this:
 ## Non-goals
 
 - **Being a process manager, a proxy or a tunnel product.** That is dekit, portless and SSH.
-- **A terminal or log viewer.** At most, a short excerpt of the error when a server fails.
+- **A terminal or a log viewer as the main view.** A failed server shows a short excerpt of its error, and one app's output opens on demand in a panel. Nothing streams output by default.
 - **A hosted relay or "connect" service.** Remote access is SSH only.
 - **Production monitoring or container orchestration.** Docker-published ports may be *shown* later.
 - **Mobile apps.**

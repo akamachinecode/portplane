@@ -17,6 +17,13 @@ Portplane never forks dekit or portless (vision, principle 1). When it needs som
 - **Ask:** document `dekit ls --json`, `dekit screen --json` and `dekit wait --json` as a stable, versioned interface (for example a `"version": 1` field), with additive changes only within a version.
 - **Workaround:** Portplane tolerates unknown fields and unknown states, and tests against recorded output.
 
+### A stable attach RPC
+
+- **State:** draft, not filed yet.
+- **Ask:** publish the RPC behind `dekit attach` as a stable, documented interface: stream a task's output with its scrollback, send input, and resize.
+- **Why:** a GUI that shows a task's output can only poll `dekit screen --json`, which gives the current screen, without history and without a way to type into the task. dekit marks the RPC as "not public yet and may still change", so nothing outside dekit can build on it.
+- **Workaround:** Portplane's Output panel shows `dekit screen --json` once a second while it is open ([ADR-0021](adr/0021-task-output.md)). The interactive terminal waits for this.
+
 ## portless
 
 ### `portless list --json`
@@ -25,6 +32,15 @@ Portplane never forks dekit or portless (vision, principle 1). When it needs som
 - **Ask:** `portless list --json` printing the active routes with `hostname`, `url`, `port`, `pid`, `registeredAt` and whether each is a static alias, plus the proxy's port and TLS state.
 - **Why:** dashboards and agents need routes without reading `routes.json`, which is internal.
 - **Workaround:** Portplane reads `routes.json`, `proxy.port` and `proxy.tls` from the state directory ([ADR-0007](adr/0007-portless-state.md)).
+
+### `portless doctor --json` and `portless service status --json`
+
+- **State:** draft, not filed yet.
+- **Ask:**
+  - `portless doctor --json`: one object per check, with its name, a status (`ok`, `warn`, `fail`), a message, and the command that fixes it when there is one.
+  - `portless service status --json`: whether the service is installed, its state in the service manager, whether the proxy answers, its port, TLS and TLDs, the options it was installed with, and the Node path it runs with and whether that path exists.
+- **Why:** dashboards and agents need to show a diagnosis and offer fixes without parsing text written for people, which changes between releases.
+- **Workaround:** Portplane parses the text with one parser per output format, tested against fixtures from each supported version, and shows the raw text when parsing fails ([ADR-0023](adr/0023-portless-cli.md)).
 
 ## Framework tools that ignore `PORT`
 
