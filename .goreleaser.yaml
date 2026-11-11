@@ -40,6 +40,18 @@ builds:
       - -X github.com/akamachinecode/portplane/internal/buildinfo.version={{.Version}}
       - -X github.com/akamachinecode/portplane/internal/buildinfo.commit={{.Commit}}
       - -X github.com/akamachinecode/portplane/internal/buildinfo.date={{.Date}}
+  # The Linux window: loads GTK 4 and WebKitGTK at run time, so it builds
+  # without CGO and portplane itself stays static (ADR-0018).
+  - id: window
+    main: ./cmd/portplane-window
+    binary: portplane-window
+    goos: [linux]
+    goarch: [amd64, arm64]
+    env:
+      - CGO_ENABLED=0
+    flags: [-trimpath]
+    ldflags:
+      - -s -w
 
 archives:
   - id: default
@@ -54,7 +66,7 @@ archives:
 
 nfpms:
   - id: packages
-    ids: [others]
+    ids: [others, window]
     package_name: portplane
     file_name_template: "{{ .ConventionalFileName }}"
     vendor: Portplane contributors
@@ -64,9 +76,15 @@ nfpms:
     license: Apache-2.0
     formats: [deb, rpm]
     bindir: /usr/bin
+    # The window needs WebKitGTK 6.0; without it the UI opens in the browser.
+    overrides:
+      deb:
+        recommends: [libwebkitgtk-6.0-4, libadwaita-1-0]
+      rpm:
+        recommends: ["libwebkitgtk-6.0.so.4()(64bit)", "libadwaita-1.so.0()(64bit)"]
     contents:
-      - src: packaging/linux/portplane.desktop
-        dst: /usr/share/applications/portplane.desktop
+      - src: packaging/linux/dev.portplane.app.desktop
+        dst: /usr/share/applications/dev.portplane.app.desktop
       - src: build/icons/portplane.png
         dst: /usr/share/icons/hicolor/256x256/apps/portplane.png
 
