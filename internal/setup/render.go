@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"strings"
 
 	"go.yaml.in/yaml/v3"
@@ -57,8 +58,11 @@ func renderFragment(tasks []genTask, _ Options) string {
 
 // fragmentDir turns a folder-relative dir into a fragment-relative one.
 func fragmentDir(dir string) string {
-	if dir == "." || dir == "" {
+	switch {
+	case dir == "." || dir == "":
 		return ".."
+	case filepath.IsAbs(dir) || filepath.VolumeName(dir) != "":
+		return dir // another drive on Windows: no relative path exists
 	}
 	return "../" + dir
 }
@@ -104,9 +108,12 @@ func parseFragment(b []byte) map[string]fragEntry {
 		if t == nil || strings.HasSuffix(path, "/") {
 			continue
 		}
-		dir := strings.TrimPrefix(strings.TrimPrefix(t.Cwd, ".."), "/")
-		if dir == "" {
-			dir = "."
+		dir := t.Cwd
+		if !filepath.IsAbs(dir) && filepath.VolumeName(dir) == "" {
+			dir = strings.TrimPrefix(strings.TrimPrefix(dir, ".."), "/")
+			if dir == "" {
+				dir = "."
+			}
 		}
 		g := genTask{Path: path, Dir: dir, Cmd: t.Cmd, Deps: t.Deps, Job: t.Type == "job"}
 		e := fragEntry{Sig: g.signature()}
@@ -122,14 +129,16 @@ func oldName(old map[string]fragEntry, task string) string {
 	return old[task].Name
 }
 
-// ensureLoad returns dekit.yaml with a load entry for the fragment, adding it with as
-// small an edit as possible: a new file, an appended item in an existing
-// block list, or a load: block at the end of the file.
-func ensureLoad(before string) (string, error) {
-	rel := FragmentRel
+// ensureLoad returns dekit.yaml with a load entry for rel (a path relative to
+// dekit.yaml), adding it with as small an edit as possible: a new file, an
+// appended item in an existing block list, or a load: block at the end of
+// the file. Every edit is re-read to check that only the entry was added;
+// anything unusual is left to the user.
+func ensureLoad(before, rel string) (string, error) {
 	if strings.TrimSpace(before) == "" {
 		return "# dekit project: https://dekit.run. Portplane's generated tasks live in " + rel + ".\nload:\n  - " + rel + "\n", nil
 	}
+	byHand := fmt.Errorf("add %q under load: in dekit.yaml by hand", rel)
 	var doc yaml.Node
 	if err := yaml.Unmarshal([]byte(before), &doc); err != nil {
 		return "", fmt.Errorf("dekit.yaml is not valid YAML: %w", err)
@@ -138,56 +147,94 @@ func ensureLoad(before string) (string, error) {
 		return "", errors.New("dekit.yaml has no top-level mapping")
 	}
 	top := doc.Content[0]
+	if top.Style&yaml.FlowStyle != 0 {
+		return "", byHand
+	}
 	var load *yaml.Node
 	for i := 0; i+1 < len(top.Content); i += 2 {
 		if top.Content[i].Value == "load" {
 			load = top.Content[i+1]
 		}
 	}
+	prev, err := loadEntries(before)
+	if err != nil {
+		return "", byHand
+	}
+	for _, e := range prev {
+		if strings.TrimPrefix(e, "./") == rel {
+			return before, nil
+		}
+	}
 	text := before
 	if !strings.HasSuffix(text, "\n") {
 		text += "\n"
 	}
-	if load == nil {
-		return text + "load:\n  - " + rel + "\n", nil
-	}
-	if load.Kind != yaml.SequenceNode {
-		return "", errors.New("dekit.yaml: load is not a list; add " + rel + " to it by hand")
-	}
-	for _, item := range load.Content {
-		if item.Kind == yaml.ScalarNode && strings.TrimPrefix(item.Value, "./") == rel {
-			return before, nil
-		}
-		if item.Kind == yaml.MappingNode {
-			for i := 0; i+1 < len(item.Content); i += 2 {
-				if item.Content[i].Value == "file" && strings.TrimPrefix(item.Content[i+1].Value, "./") == rel {
-					return before, nil
-				}
+	var out string
+	switch {
+	case load == nil:
+		out = text + "load:\n  - " + rel + "\n"
+	case load.Kind != yaml.SequenceNode || load.Style&yaml.FlowStyle != 0 || len(load.Content) == 0:
+		return "", byHand
+	default:
+		last := 0
+		for _, item := range load.Content {
+			if l := maxLine(item); l > last {
+				last = l
 			}
 		}
+		lines := strings.SplitAfter(text, "\n")
+		first := load.Content[0]
+		if first.Line < 1 || first.Line > len(lines) || last > len(lines) {
+			return "", byHand
+		}
+		// Indent the new item like the first one: up to its dash.
+		head := lines[first.Line-1]
+		if first.Column-1 <= len(head) {
+			head = head[:first.Column-1]
+		}
+		dash := strings.LastIndex(head, "-")
+		if dash < 0 {
+			return "", byHand
+		}
+		entry := strings.Repeat(" ", dash) + "- " + rel + "\n"
+		out = strings.Join(lines[:last], "") + entry + strings.Join(lines[last:], "")
 	}
-	if load.Style&yaml.FlowStyle != 0 || len(load.Content) == 0 {
-		return "", errors.New("dekit.yaml: load is written inline; add " + rel + " to it by hand, or turn it into a block list")
+	got, err := loadEntries(out)
+	if err != nil || len(got) != len(prev)+1 || got[len(got)-1] != rel {
+		return "", byHand
 	}
-	last := 0
-	for _, item := range load.Content {
-		if l := maxLine(item); l > last {
-			last = l
+	for i := range prev {
+		if got[i] != prev[i] {
+			return "", byHand
 		}
 	}
-	lines := strings.SplitAfter(text, "\n")
-	indent := strings.Repeat(" ", load.Content[0].Column-3)
-	if load.Content[0].Column < 3 {
-		indent = ""
+	return out, nil
+}
+
+// loadEntries lists the files a dekit.yaml loads, in order.
+func loadEntries(text string) ([]string, error) {
+	var doc struct {
+		Load []yaml.Node `yaml:"load"`
 	}
-	entry := indent + "- " + rel + "\n"
-	out := strings.Join(lines[:last], "") + entry + strings.Join(lines[last:], "")
-	// Check the edit parses and contains the entry.
-	var check struct {
-		Load []any `yaml:"load"`
+	if err := yaml.Unmarshal([]byte(text), &doc); err != nil {
+		return nil, err
 	}
-	if err := yaml.Unmarshal([]byte(out), &check); err != nil {
-		return "", fmt.Errorf("could not add the load entry safely; add %s to dekit.yaml by hand", rel)
+	var out []string
+	for _, n := range doc.Load {
+		switch n.Kind {
+		case yaml.ScalarNode:
+			out = append(out, n.Value)
+		case yaml.MappingNode:
+			file := ""
+			for i := 0; i+1 < len(n.Content); i += 2 {
+				if n.Content[i].Value == "file" {
+					file = n.Content[i+1].Value
+				}
+			}
+			out = append(out, file)
+		default:
+			return nil, errors.New("unexpected load entry")
+		}
 	}
 	return out, nil
 }

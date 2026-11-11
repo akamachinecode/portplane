@@ -191,19 +191,19 @@ func TestHandWrittenTasksWin(t *testing.T) {
 }
 
 func TestEnsureLoad(t *testing.T) {
-	got, err := ensureLoad("tasks:\n  a:\n    cmd: x\n")
+	got, err := ensureLoad("tasks:\n  a:\n    cmd: x\n", FragmentRel)
 	if err != nil || got != "tasks:\n  a:\n    cmd: x\nload:\n  - .portplane/tasks.yaml\n" {
 		t.Fatalf("append: %q %v", got, err)
 	}
 	same := "load:\n- .portplane/tasks.yaml\n"
-	if got, _ := ensureLoad(same); got != same {
+	if got, _ := ensureLoad(same, FragmentRel); got != same {
 		t.Fatalf("already there: %q", got)
 	}
-	got, err = ensureLoad("load:\n- file: a.yaml\n  at: web\ntasks: {}\n")
+	got, err = ensureLoad("load:\n- file: a.yaml\n  at: web\ntasks: {}\n", FragmentRel)
 	if err != nil || got != "load:\n- file: a.yaml\n  at: web\n- .portplane/tasks.yaml\ntasks: {}\n" {
 		t.Fatalf("mapping items: %q %v", got, err)
 	}
-	if _, err := ensureLoad("load: [a.yaml]\n"); err == nil {
+	if _, err := ensureLoad("load: [a.yaml]\n", FragmentRel); err == nil {
 		t.Fatal("inline lists are left to the user")
 	}
 }
@@ -266,4 +266,144 @@ func TestParseWorktrees(t *testing.T) {
 	if len(got) != 2 || got[0].Worktree != "" || got[1].Worktree != "shop-feat" || got[1].Branch != "feat" {
 		t.Fatalf("got %+v", got)
 	}
+}
+
+func TestEnsureLoadOddLayouts(t *testing.T) {
+	got, err := ensureLoad("load:\n  -   other.yaml\ntasks: {}\n", FragmentRel)
+	if err != nil || got != "load:\n  -   other.yaml\n  - .portplane/tasks.yaml\ntasks: {}\n" {
+		t.Fatalf("wide dash: %q %v", got, err)
+	}
+	if _, err := ensureLoad("{tasks: {a: {cmd: x}}}\n", FragmentRel); err == nil {
+		t.Fatal("an inline document is left to the user")
+	}
+	got, err = ensureLoad("tasks: {}\n", "sub/.portplane/tasks.yaml")
+	if err != nil || !strings.HasSuffix(got, "load:\n  - sub/.portplane/tasks.yaml\n") {
+		t.Fatalf("nested fragment: %q %v", got, err)
+	}
+}
+
+// writePkg adds a package with a dev script.
+func writePkg(t *testing.T, dir, name, dev string) {
+	t.Helper()
+	write(t, filepath.Join(dir, "package.json"), `{"name":"`+name+`","scripts":{"dev":"`+dev+`"}}`)
+}
+
+func TestCollisionsWithHandWrittenConfig(t *testing.T) {
+	folder := t.TempDir()
+	// A repo already configured by hand, with its own folder entry and an
+	// install job written as the field notes say.
+	writePkg(t, filepath.Join(folder, "subs", "web"), "subs-web", "vite")
+	write(t, filepath.Join(folder, "subs", "package.json"), `{"name":"subs","workspaces":["web","admin"]}`)
+	writePkg(t, filepath.Join(folder, "subs", "admin"), "admin", "vite")
+	// A task named like a repo: nothing may go under it.
+	writePkg(t, filepath.Join(folder, "shop"), "shop", "next dev")
+	// Two repos with the same label, and duplicate package names.
+	writePkg(t, filepath.Join(folder, "My_App"), "a", "vite")
+	writePkg(t, filepath.Join(folder, "my-app"), "b", "vite")
+	write(t, filepath.Join(folder, "dekit.yaml"), `tasks:
+  subs/:
+  subs/install:
+    type: job
+    cwd: subs
+    cmd: pnpm install
+  subs/web:
+    cwd: subs/web
+    cmd: [portless, subs, pnpm, run, dev]
+    deps: [subs/install]
+  shop:
+    cmd: echo hand
+`)
+	p, err := Propose(context.Background(), folder, Overrides{Names: map[string]string{"subs/admin": ""}}, Options{GOOS: "linux"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	frag := p.Files[0].After
+	for _, bad := range []string{"\n  subs/:\n", "subs/install:", "\n  shop/"} {
+		if strings.Contains(frag, bad) {
+			t.Fatalf("fragment must not contain %q:\n%s", bad, frag)
+		}
+	}
+	apps := map[string]AppProposal{}
+	for _, a := range p.Apps {
+		apps[a.Task] = a
+	}
+	if a := apps["subs/subs-web"]; a.Status != "manual" || a.Dir != "subs/web" {
+		t.Fatalf("the hand-written app (same folder) is left alone: %+v", apps)
+	}
+	if a := apps["subs/admin"]; a.Name != "admin.subs" || !strings.Contains(frag, `deps: ["subs/install"]`) {
+		t.Fatalf("admin reuses the hand install and keeps its name when the override is empty: %+v\n%s", a, frag)
+	}
+	if _, ok := apps["shop-2/web"]; !ok {
+		t.Fatalf("a repo whose name is a task moves aside: %v", keys(apps))
+	}
+	if _, ok := apps["my-app/web"]; !ok {
+		t.Fatalf("first my-app: %v", keys(apps))
+	}
+	if a, ok := apps["my-app-2/web"]; !ok || a.Name != "my-app-2" {
+		t.Fatalf("second my-app gets its own folder and name: %+v %v", a, keys(apps))
+	}
+	if _, err := Apply(context.Background(), folder, p.Digest, Overrides{Names: map[string]string{"subs/admin": ""}}, Options{GOOS: "linux"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := dekit.LoadConfig(folder); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestNamesAndPathsNeverCollide(t *testing.T) {
+	folder := t.TempDir()
+	shop := filepath.Join(folder, "shop")
+	write(t, filepath.Join(shop, "package.json"), `{"name":"shop","workspaces":["apps/*","svc/*"]}`)
+	writePkg(t, filepath.Join(shop, "apps", "api"), "@a/api", "vite")
+	writePkg(t, filepath.Join(shop, "svc", "api"), "@b/api", "vite")
+	writePkg(t, filepath.Join(shop, "apps", "install"), "install", "vite")
+	p, err := Propose(context.Background(), folder, Overrides{}, Options{GOOS: "linux"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	seenTask, seenName := map[string]bool{}, map[string]bool{}
+	for _, a := range p.Apps {
+		if seenTask[a.Task] || seenName[a.Name] {
+			t.Fatalf("duplicate %s / %s in %+v", a.Task, a.Name, p.Apps)
+		}
+		seenTask[a.Task], seenName[a.Name] = true, true
+	}
+	if !seenName["api-2.shop"] || !seenTask["shop/install-2"] {
+		t.Fatalf("names %v tasks %v", seenName, seenTask)
+	}
+}
+
+func TestFolderInsideAParentProject(t *testing.T) {
+	parent := t.TempDir()
+	write(t, filepath.Join(parent, "dekit.yaml"), "tasks:\n  db:\n    cmd: [postgres]\n")
+	sub := filepath.Join(parent, "clients")
+	writePkg(t, filepath.Join(sub, "site"), "site", "astro dev")
+	p, err := Propose(context.Background(), sub, Overrides{}, Options{GOOS: "linux"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.Root != parent || p.Files[1].Path != filepath.Join(parent, "dekit.yaml") || !strings.Contains(p.Files[1].After, "  - clients/.portplane/tasks.yaml\n") {
+		t.Fatalf("root %s, file %s:\n%s", p.Root, p.Files[1].Path, p.Files[1].After)
+	}
+	if _, err := os.Stat(filepath.Join(sub, "dekit.yaml")); err == nil {
+		t.Fatal("no nested dekit.yaml")
+	}
+	if _, err := Apply(context.Background(), sub, p.Digest, Overrides{}, Options{GOOS: "linux"}); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := dekit.LoadConfig(parent)
+	if err != nil || cfg.Task("db") == nil || cfg.Task("site/web") == nil {
+		t.Fatalf("parent sees both: %v %+v", err, cfg)
+	}
+	if got := cfg.Task("site/web").Dir; got != filepath.Join(sub, "site") {
+		t.Fatalf("cwd resolves from the fragment: %s", got)
+	}
+}
+
+func keys(m map[string]AppProposal) []string {
+	var out []string
+	for k := range m {
+		out = append(out, k)
+	}
+	return out
 }

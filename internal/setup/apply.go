@@ -13,6 +13,7 @@ var ErrStale = errors.New("the folder changed since this proposal was made: scan
 // Result says what Apply wrote.
 type Result struct {
 	Written []string `json:"written"`
+	Root    string   `json:"root"` // the dekit project to reload
 }
 
 // Apply writes the proposal for folder, but only if it is still exactly the
@@ -25,7 +26,7 @@ func Apply(ctx context.Context, folder, digest string, ov Overrides, opt Options
 	if digest == "" || p.Digest != digest {
 		return nil, ErrStale
 	}
-	res := &Result{Written: []string{}}
+	res := &Result{Written: []string{}, Root: p.Root}
 	for _, f := range p.Files {
 		if !f.Changed {
 			continue
@@ -39,6 +40,11 @@ func Apply(ctx context.Context, folder, digest string, ov Overrides, opt Options
 }
 
 func writeAtomic(path string, b []byte) error {
+	// A symlinked dekit.yaml (kept in dotfiles, say) stays a symlink: write
+	// to the file it points to.
+	if real, err := filepath.EvalSymlinks(path); err == nil {
+		path = real
+	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}

@@ -53,7 +53,10 @@ type FileChange struct {
 
 // Proposal is everything a scan found and would write.
 type Proposal struct {
-	Folder   string        `json:"folder"`
+	Folder string `json:"folder"`
+	// Root is the dekit project the tasks join: the folder itself, or the
+	// project above it when the folder has no dekit.yaml of its own.
+	Root     string        `json:"root"`
 	Apps     []AppProposal `json:"apps"`
 	Warnings []string      `json:"warnings"`
 	Change   Change        `json:"change"`
@@ -84,24 +87,34 @@ func Propose(ctx context.Context, folder string, ov Overrides, opt Options) (*Pr
 	if opt.GOOS == "" {
 		opt.GOOS = runtime.GOOS
 	}
-	p := &Proposal{Folder: folder, Apps: []AppProposal{}, Warnings: []string{}, Change: Change{Added: []string{}, Changed: []string{}, Removed: []string{}}}
+	// The tasks join the dekit project the folder belongs to: its own
+	// dekit.yaml, or the nearest one above (a nested dekit.yaml would hide
+	// the parent's tasks), or a new one in the folder.
+	root := folder
+	if _, err := os.Stat(filepath.Join(folder, dekit.ConfigFile)); err != nil {
+		if up := dekit.FindAbove(filepath.Dir(folder)); up != "" {
+			root = up
+		}
+	}
+	p := &Proposal{Folder: folder, Root: root, Apps: []AppProposal{}, Warnings: []string{}, Change: Change{Added: []string{}, Changed: []string{}, Removed: []string{}}}
 
 	fragPath := filepath.Join(folder, filepath.FromSlash(FragmentRel))
 	previous, _ := os.ReadFile(fragPath)
 	oldFrag := parseFragment(previous)
-	manual := manualTasks(folder, fragPath)
+	pl := newPlanner(root, fragPath)
 
 	var tasks []genTask
 	for _, repo := range FindRepos(ctx, folder) {
-		tasks = append(tasks, proposeRepo(folder, repo, oldFrag, manual, ov, opt, p)...)
+		tasks = append(tasks, pl.repo(folder, repo, oldFrag, ov, opt, p)...)
 	}
 
 	content := renderFragment(tasks, opt)
 	p.Files = append(p.Files, FileChange{Path: fragPath, Before: string(previous), After: content, Created: len(previous) == 0, Changed: string(previous) != content})
 
-	dekitPath := filepath.Join(folder, dekit.ConfigFile)
+	dekitPath := filepath.Join(root, dekit.ConfigFile)
 	before, _ := os.ReadFile(dekitPath)
-	after, err := ensureLoad(string(before))
+	loadRel := filepath.ToSlash(mustRel(root, fragPath))
+	after, err := ensureLoad(string(before), loadRel)
 	if err != nil {
 		return nil, err
 	}
@@ -156,6 +169,14 @@ func Propose(ctx context.Context, folder string, ov Overrides, opt Options) (*Pr
 	return p, nil
 }
 
+func mustRel(base, target string) string {
+	r, err := filepath.Rel(base, target)
+	if err != nil {
+		return target
+	}
+	return r
+}
+
 // genTask is a task to write.
 type genTask struct {
 	Path    string
@@ -177,81 +198,226 @@ func (t genTask) signature() string {
 // behaviour under a coding agent).
 var agentEnv = []string{"AI_AGENT", "AGENT", "CLAUDECODE", "CODEX_THREAD_ID", "CURSOR_TRACE_ID"}
 
-func proposeRepo(folder string, repo Repo, oldFrag map[string]fragEntry, manual map[string]bool, ov Overrides, opt Options, p *Proposal) []genTask {
-	var tasks []genTask
+// planner hands out task paths and portless names that collide with nothing:
+// not with hand-written tasks or folders, not with each other, and never a
+// task under a task (dekit rejects all of these).
+type planner struct {
+	handTasks   map[string]bool // task paths written by hand
+	handFolders map[string]bool // folder entries written by hand (no slash)
+	handDirs    map[string]bool // folders a hand-written portless task serves
+	tasks       map[string]bool // every task path in use
+	folders     map[string]bool // every folder path in use (no slash)
+	names       map[string]bool // every portless name in use
+}
+
+func newPlanner(root, fragPath string) *planner {
+	pl := &planner{handTasks: map[string]bool{}, handFolders: map[string]bool{}, handDirs: map[string]bool{}, tasks: map[string]bool{}, folders: map[string]bool{}, names: map[string]bool{}}
+	cfg, err := dekit.LoadConfig(root)
+	if err != nil || cfg == nil {
+		return pl
+	}
+	fromFragment := map[string]bool{}
+	for _, t := range cfg.Tasks {
+		if t.File == fragPath {
+			fromFragment[t.Path] = true
+			continue
+		}
+		pl.handTasks[t.Path] = true
+		pl.tasks[t.Path] = true
+		if w := portless.ParseCommand(t.Cmd); w != nil {
+			if t.Dir != "" {
+				pl.handDirs[filepath.Clean(t.Dir)] = true
+			}
+			if w.Name != "" {
+				pl.names[strings.TrimSuffix(w.Name, ".localhost")] = true
+			}
+		}
+	}
+	for _, f := range cfg.Folders {
+		// Folders the fragment itself declared are ours to redeclare.
+		mine := false
+		for t := range fromFragment {
+			if strings.HasPrefix(t, f+"/") {
+				mine = true
+			}
+		}
+		if !mine {
+			pl.handFolders[f] = true
+			pl.folders[f] = true
+		}
+	}
+	return pl
+}
+
+// free reports whether a task can live at path.
+func (pl *planner) freeTask(path string) bool {
+	if pl.tasks[path] || pl.folders[path] {
+		return false
+	}
+	// No task above it, and nothing below it.
+	for i := range path {
+		if path[i] == '/' && pl.tasks[path[:i]] {
+			return false
+		}
+	}
+	for t := range pl.tasks {
+		if strings.HasPrefix(t, path+"/") {
+			return false
+		}
+	}
+	for f := range pl.folders {
+		if strings.HasPrefix(f, path+"/") {
+			return false
+		}
+	}
+	return true
+}
+
+// freeFolder reports whether a new folder entry can live at path.
+func (pl *planner) freeFolder(path string) bool {
+	if pl.tasks[path] || pl.folders[path] {
+		return false
+	}
+	for i := range path {
+		if path[i] == '/' && pl.tasks[path[:i]] {
+			return false
+		}
+	}
+	return true
+}
+
+// unique returns base, or base-2, base-3… when taken.
+func unique(base string, free func(string) bool) string {
+	if free(base) {
+		return base
+	}
+	for i := 2; ; i++ {
+		if c := fmt.Sprintf("%s-%d", base, i); free(c) {
+			return c
+		}
+	}
+}
+
+// uniqueName makes a portless name unique by suffixing its first label.
+func (pl *planner) uniqueName(name string) string {
+	if !pl.names[name] {
+		pl.names[name] = true
+		return name
+	}
+	first, rest, _ := strings.Cut(name, ".")
+	for i := 2; ; i++ {
+		c := fmt.Sprintf("%s-%d", first, i)
+		if rest != "" {
+			c += "." + rest
+		}
+		if !pl.names[c] {
+			pl.names[c] = true
+			return c
+		}
+	}
+}
+
+func (pl *planner) repo(folder string, repo Repo, oldFrag map[string]fragEntry, ov Overrides, opt Options, p *Proposal) []genTask {
+	var out []genTask
+	// The project folder: reuse a folder written by hand (its tasks are
+	// checked one by one), otherwise a free one.
 	project := repo.Name
-	usedNames := map[string]bool{}
-	tasks = append(tasks, genTask{Path: project + "/", Folder: true})
+	projectNew := true
+	if pl.handFolders[project] {
+		projectNew = false
+	} else {
+		project = unique(project, pl.freeFolder)
+		pl.folders[project] = true
+	}
+	projectEmitted := false
+	label := strings.ReplaceAll(project, "/", "-") // the project's part of URLs
+
 	for _, co := range repo.Checkouts {
 		pkgs := FindPackages(co.Dir)
 		if len(pkgs) == 0 {
 			continue
 		}
 		prefix := project + "/"
+		wt := ""
+		wtFolder := ""
 		if co.Worktree != "" {
-			prefix += co.Worktree + "/"
-			tasks = append(tasks, genTask{Path: strings.TrimSuffix(prefix, "/") + "/", Folder: true})
+			wt = unique(project+"/"+co.Worktree, pl.freeFolder)
+			pl.folders[wt] = true
+			wtFolder = wt
+			prefix = wt + "/"
+			wt = strings.TrimPrefix(wt, project+"/")
 		}
+
+		// One install job per checkout; a hand-written one is reused.
 		installPath := prefix + "install"
-		pm := pkgs[0].PackageManager
+		reuseInstall := pl.handTasks[installPath]
+		if !reuseInstall {
+			installPath = unique(installPath, pl.freeTask)
+			pl.tasks[installPath] = true
+		}
 		install := genTask{
 			Path: installPath, Label: "install", Job: true, Dir: rel(folder, co.Dir),
-			Cmd:     command(opt, installCommand(pm, co.Dir)),
+			Cmd:     command(opt, installCommand(pkgs[0].PackageManager, co.Dir)),
 			Comment: "One install per checkout before any app starts (field notes: parallel installs fail).",
 		}
+
 		var appTasks []genTask
 		mainTaken := false
 		for _, pkg := range pkgs {
 			appName := Label(pkg.Name)
-			if pkg.Name == "" || pkg.Dir == co.Dir {
+			if pkg.Name == "" {
 				appName = Label(filepath.Base(pkg.Dir))
 			}
 			if pkg.Dir == co.Dir {
 				appName = "web"
 			}
-			task := prefix + appName
-			for i := 2; usedNames[task]; i++ {
-				task = fmt.Sprintf("%s%s-%d", prefix, appName, i)
+			candidate := prefix + appName
+			ap := AppProposal{
+				Project: project, Worktree: wt, Dir: rel(folder, pkg.Dir), Package: pkg.Name,
+				Framework: pkg.Framework, PackageManager: pkg.PackageManager,
 			}
-			usedNames[task] = true
+			if pl.handTasks[candidate] || pl.handDirs[filepath.Clean(pkg.Dir)] {
+				ap.Task, ap.Status, ap.Skipped = candidate, "manual", true
+				ap.Notes = append(ap.Notes, "Already configured by hand in dekit.yaml; Portplane leaves it alone.")
+				p.Apps = append(p.Apps, ap)
+				continue
+			}
+			task := unique(candidate, pl.freeTask)
+			pl.tasks[task] = true
+			ap.Task = task
+			leaf := task[strings.LastIndex(task, "/")+1:]
 
 			isMain := !mainTaken && (pkg.Dir == co.Dir || mainNames[appName])
 			if isMain {
 				mainTaken = true
 			}
-			name := appName + "." + project
-			if isMain {
-				name = project
-			}
-			if co.Worktree != "" {
-				name = appName + "." + co.Worktree + "." + project
-				if isMain {
-					name = co.Worktree + "." + project
-				}
+			name := leaf + "." + label
+			switch {
+			case wt != "" && isMain:
+				name = wt + "." + label
+			case wt != "":
+				name = leaf + "." + wt + "." + label
+			case isMain:
+				name = label
 			}
 			if old := oldName(oldFrag, task); old != "" {
 				name = old // keep a name the user edited in the fragment
 			}
-			if n, ok := ov.Names[task]; ok && Label(strings.ReplaceAll(n, ".", "-")) != "" {
-				name = cleanName(n)
+			if n, ok := ov.Names[task]; ok {
+				if c := cleanName(n); c != "" {
+					name = c
+				}
 			}
-			ap := AppProposal{
-				Task: task, Project: project, Worktree: co.Worktree, Name: name,
-				Hostname: name + ".localhost", Dir: rel(folder, pkg.Dir), Package: pkg.Name,
-				Framework: pkg.Framework, PackageManager: pkg.PackageManager,
+			if final := pl.uniqueName(name); final != name {
+				ap.Notes = append(ap.Notes, fmt.Sprintf("%s.localhost is already used, so this app gets %s.localhost.", name, final))
+				name = final
 			}
-			if manual[task] || manualDir(folder, pkg.Dir, manual) {
-				ap.Status, ap.Skipped = "manual", true
-				ap.Notes = append(ap.Notes, "Already configured by hand in dekit.yaml; Portplane leaves it alone.")
-				p.Apps = append(p.Apps, ap)
-				continue
-			}
+			ap.Name, ap.Hostname = name, name+".localhost"
 			argv, notes := devCommand(pkg, name)
 			ap.Command = command(opt, argv)
 			ap.Notes = append(ap.Notes, notes...)
 			if ov.Skip[task] {
-				ap.Skipped = true
-				ap.Status = "skipped"
+				ap.Skipped, ap.Status = true, "skipped"
 				p.Apps = append(p.Apps, ap)
 				continue
 			}
@@ -264,8 +430,18 @@ func proposeRepo(folder string, repo Repo, oldFrag map[string]fragEntry, manual 
 		if len(appTasks) == 0 {
 			continue
 		}
-		tasks = append(tasks, install)
-		tasks = append(tasks, appTasks...)
+		// Folder entries only for folders that get tasks, declared once.
+		if projectNew && !projectEmitted {
+			out = append(out, genTask{Path: project + "/", Folder: true})
+			projectEmitted = true
+		}
+		if wtFolder != "" {
+			out = append(out, genTask{Path: wtFolder + "/", Folder: true})
+		}
+		if !reuseInstall {
+			out = append(out, install)
+		}
+		out = append(out, appTasks...)
 	}
 	// Warnings that apply to the whole project.
 	auth, cms := false, false
@@ -282,12 +458,12 @@ func proposeRepo(folder string, repo Repo, oldFrag map[string]fragEntry, manual 
 		}
 	}
 	if auth && countApps(p.Apps, project) > 1 {
-		p.Warnings = append(p.Warnings, fmt.Sprintf("%s: apps on sibling subdomains share a login only with a parent cookie domain (%s.localhost). Check your auth library's cross-subdomain cookie setting.", project, project))
+		p.Warnings = append(p.Warnings, fmt.Sprintf("%s: apps on sibling subdomains share a login only with a parent cookie domain (%s.localhost). Check your auth library's cross-subdomain cookie setting.", project, label))
 	}
 	if cms {
-		p.Warnings = append(p.Warnings, fmt.Sprintf("%s: add the new https://*.%s.localhost origins to your CMS's CORS settings, or its API calls will fail.", project, project))
+		p.Warnings = append(p.Warnings, fmt.Sprintf("%s: add the new https://*.%s.localhost origins to your CMS's CORS settings, or its API calls will fail.", project, label))
 	}
-	return tasks
+	return out
 }
 
 var mainNames = map[string]bool{"web": true, "app": true, "site": true, "www": true, "frontend": true, "website": true}
@@ -382,7 +558,11 @@ func devCommand(pkg Package, name string) ([]string, []string) {
 			case "react-router":
 				inner = exec("react-router", "dev")
 			}
-			notes = append(notes, fmt.Sprintf("The dev script pins port %s, which would win over portless; Portplane calls the framework directly instead.", pkg.HardPort))
+			if pkg.Framework == "node" {
+				notes = append(notes, fmt.Sprintf("The dev script pins port %s, but portless routes to the PORT it sets: remove the fixed port from the script (or read process.env.PORT) for the URL to work.", pkg.HardPort))
+			} else {
+				notes = append(notes, fmt.Sprintf("The dev script pins port %s, which would win over portless; Portplane calls the framework directly instead.", pkg.HardPort))
+			}
 		}
 		if pkg.Framework == "node" {
 			notes = append(notes, "Unknown dev server: it must listen on the PORT variable for its URL to work.")
@@ -405,28 +585,4 @@ func command(opt Options, argv []string) []string {
 		quoted[i] = a
 	}
 	return []string{"cmd", "/c", strings.Join(quoted, " ")}
-}
-
-// manualTasks are the task paths declared outside the generated fragment.
-func manualTasks(folder, fragPath string) map[string]bool {
-	out := map[string]bool{}
-	cfg, err := dekit.LoadConfig(folder)
-	if err != nil || cfg == nil {
-		return out
-	}
-	for _, t := range cfg.Tasks {
-		if t.File != fragPath {
-			out[t.Path] = true
-			if t.Dir != "" && portless.ParseCommand(t.Cmd) != nil {
-				out["dir:"+t.Dir] = true
-			}
-		}
-	}
-	return out
-}
-
-// manualDir reports a hand-written task that already serves this folder
-// through portless.
-func manualDir(_ string, dir string, manual map[string]bool) bool {
-	return manual["dir:"+dir]
 }

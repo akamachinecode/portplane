@@ -107,6 +107,9 @@ func findBelow(folder string) []string {
 	return roots
 }
 
+// FindAbove returns the nearest folder at or above dir with a dekit.yaml.
+func FindAbove(dir string) string { return findAbove(dir) }
+
 func findAbove(dir string) string {
 	for d := dir; ; {
 		if fi, err := os.Stat(filepath.Join(d, ConfigFile)); err == nil && !fi.IsDir() {

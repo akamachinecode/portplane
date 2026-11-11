@@ -89,10 +89,10 @@ func cmdSetup(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stdout, "wrote", w)
 	}
 	if dk.Available() {
-		err := dk.Reload(ctx, folder)
+		err := dk.Reload(ctx, res.Root)
 		switch {
 		case errors.Is(err, dekit.ErrRunnerDown):
-			fmt.Fprintf(stdout, "Start the apps with: dekit -C %s up, or from Portplane.\n", folder)
+			fmt.Fprintf(stdout, "Start the apps with: dekit -C %s up, or from Portplane.\n", res.Root)
 		case err != nil:
 			fmt.Fprintln(stderr, "portplane: dekit reload:", err)
 			return 1

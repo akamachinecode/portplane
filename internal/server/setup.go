@@ -93,7 +93,7 @@ func SetupHandlers(d SetupDeps) map[string]http.HandlerFunc {
 			}
 			out := applyResponse{Written: res.Written}
 			if len(res.Written) > 0 && d.Reload != nil {
-				up, err := d.Reload(r.Context(), folder)
+				up, err := d.Reload(r.Context(), res.Root)
 				out.Reloaded = up && err == nil
 				if err != nil {
 					out.ReloadError = err.Error()
