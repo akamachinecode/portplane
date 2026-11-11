@@ -60,6 +60,8 @@ archives:
       - goos: windows
         formats: [zip]
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    # Linux archives also carry portplane-window (ADR-0018).
+    allow_different_binary_count: true
     files:
       - LICENSE
       - README.md
