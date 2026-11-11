@@ -100,7 +100,7 @@ Quality:
 - [x] Generator applying the field-note defaults: run from the app folder, `<pm> run <script>`, a single install job per checkout, agent variables unset, the cross-platform wrapper from ADR-0010. (`portless alias` jobs for servers that cannot be wrapped are recognised when written by hand.)
 - [x] Preview as a diff, write only after confirmation (digest-checked), never touch hand-written config.
 - [x] Re-scan: new apps and worktrees appear as a proposed diff.
-- [ ] Add an app by hand from the UI (command and folder); after v1 (ADR-0014). A hand-written task in `dekit.yaml` works today.
+- [ ] Add an app by hand from the UI (command and folder); moved to M5.3. A hand-written task in `dekit.yaml` works today.
 - [x] Warnings the app cannot fix: parent cookie domain, CORS allowlists.
 
 **Exit:** on a fresh machine with Node, the setup flow takes a real monorepo with worktrees from nothing to every app reachable at its stable URL, with no hand edits.
@@ -125,11 +125,107 @@ Quality:
 - [x] Start at login on each OS.
 - [x] Installers on GitHub Releases: macOS `.dmg` (unsigned), Linux `.tar.gz`, `.deb` and `.rpm`, Windows `.zip` or `.msi`, all with cosign-signed checksums.
 - [x] A one-line install script per OS that verifies the checksum, plus our own Homebrew tap (needs a `homebrew-tap` repository and a token; not set up yet).
-- [ ] Update notice: none in v1 (no network calls; see docs/security.md). Revisit after v1.
+- [ ] Update notice: on a click, or automatically when the user turns it on (ADR-0025); comes with M5.
 
 **Exit:** a user installs from the landing page or GitHub Releases, the app starts at login, and the tray reflects the real state.
 
-## Phase 7: v1.0 release
+## Phase 7: M5, guided install and a full GUI for dekit and portless
+
+Someone without dekit, without portless and maybe without Node.js downloads Portplane and reaches their first app at `https://<name>.localhost` without opening a terminal. After that, everything they would do with `dekit` or `portless` in a terminal has a button or a form in the app. The decisions are ADR-0019 to ADR-0025.
+
+Each step ships on its own. Order: M5.0, then M5.1; M5.2 and M5.3 can run in parallel; then M5.4, M5.5 and M5.6.
+
+The milestone is done when:
+
+1. **From nothing to the first app in under 5 minutes** on fresh Fedora, Ubuntu, macOS and Windows: from opening Portplane to the first app at `https://….localhost` with a trusted certificate. The admin password is asked once, for the proxy.
+2. **Every daily dekit and portless operation** has a button or a form in the app.
+3. **Terminal users lose nothing.** The config stays in `dekit.yaml`, and portless keeps its own state. Portplane keeps no copy of either.
+4. **Nothing privileged runs** without an explicit click and the system's password dialog, and no downloaded binary runs without a checksum check (ADR-0019 explains the one exception, dekit's install script).
+5. **Every new screen** has loading, empty and error states, a mock scenario and a test.
+
+### M5.0: Foundations
+
+- [x] ADR-0019 to ADR-0025.
+- [ ] Find dekit and portless on every check, not once at start, so "Re-check" sees a tool installed while Portplane runs.
+- [ ] See folders added with `portplane folders add` without a restart.
+- [ ] One piece of advice for the proxy everywhere (the banner and Setup disagree today).
+- [ ] A way into Setup from the main view when dekit is missing; a first run that checks the tools and starts the scan.
+- [ ] Quick start and stop in the tray; the Folders button opens a dialog named Folders.
+- [ ] New checks: CA trust in the system and in browsers, port 443, git and the package manager.
+- [ ] Jobs: long operations streamed as `event: job` on the existing event stream (ADR-0024).
+- [ ] The app shell: sidebar, hash router and command palette, with today's views inside (ADR-0024).
+- [ ] Privileged steps through the system's dialog, argv only, per OS (ADR-0020).
+- [ ] Parsers for `portless doctor` and `portless service status`, with fixtures per version (ADR-0023).
+
+**Done when:** installing dekit with Portplane open shows up on "Re-check"; every view has its own address; tests pass on the three platforms.
+
+### M5.1: Onboarding
+
+- [ ] Full-window onboarding on first run that resumes where it stopped, with "Skip for now" (read-only mode and a "Finish setup" notice).
+- [ ] System check, all at once: dekit, Node.js, portless, git, port 443, the proxy service (including a Node path that no longer exists), the CA in the system and in each browser, `/etc/hosts`.
+- [ ] Install dekit, a private Node 24 when needed, and portless, with stages and output (ADR-0019).
+- [ ] The proxy's admin step through the system's dialog, and the no-password option on port 1355 (ADR-0020).
+- [ ] Browser trust for Firefox and Chrome profiles, after a spike per browser and distribution.
+- [ ] Folders, with suggestions such as `~/code`, `~/src` and `~/projects`; then the existing scan, review and write.
+- [ ] First start: pick apps, run `dekit up` and start them, with live progress until each one is on.
+- [ ] Last screen: Ctrl/⌘K, start at login, the tray icon (and the AppIndicator extension on GNOME).
+
+**Done when:** criterion 1 holds, checked by hand on Fedora, Ubuntu, macOS and Windows from a clean user account.
+
+### M5.2: portless center
+
+- [ ] Proxy: state, start and stop, install, reinstall and uninstall the service, and its options (port, HTTPS, TLDs, wildcard, LAN, own certificate).
+- [ ] Routes: every route with its owner, type, age and state; prune stale routes; kill orphaned servers, after a confirmation that lists them.
+- [ ] Aliases: add, edit and remove; "Give this port a URL" from Other ports.
+- [ ] Rename any app's URL wherever its name lives: Portplane's fragment, `dekit.yaml`, `portless.json`, `package.json` or an alias.
+- [ ] `portless.json` editor.
+- [ ] Certificates: the CA's fingerprint, expiry and where it is trusted; trust, trust in browsers, export, regenerate.
+- [ ] `/etc/hosts`: state, sync and clean.
+- [ ] Diagnosis from `doctor`, with a fix for each failure; update and uninstall portless.
+
+**Done when:** every portless command has a place in the app, except sharing (`--tailscale`, `--funnel`, `--ngrok`, `--cloudflare`), `compose` and `mcp`.
+
+### M5.3: dekit center
+
+- [ ] Runners: list with state and warnings; up, down, stop, restart, upgrade and clean; the host runner.
+- [ ] Every task state and mark (pinned, vetoed, needed by); kill, veto, force restart and remove; bulk actions; restart a whole project.
+- [ ] App detail drawer with "why" (`dekit why --json`) and the task's dependencies.
+- [ ] Task and project forms, a YAML tab with dekit's schema, and the reload review (ADR-0022).
+- [ ] Add an app by hand, in any language, and run a one-off command (`dekit spawn`).
+- [ ] dekit itself: version, how it was installed, kernel, update, and dekit's help inside the app.
+
+**Done when:** every dekit command has a place in the app, except `attach` (M5.4) and what is left out on purpose: `mprocs`, `runner run` and the settings of dekit's own TUI.
+
+### M5.4: Output
+
+- [ ] Output panel, phase 1: the task's screen from `dekit screen --json` while the panel is open (ADR-0021).
+- [ ] Upstream request for a stable attach RPC ([upstream.md](upstream.md)).
+- [ ] Phase 2, an interactive terminal, once dekit publishes it.
+
+**Done when:** the live output of any app is visible without a terminal.
+
+### M5.5: Polish
+
+- [ ] Health view in place of the scattered banners, with a fix for each problem; export a diagnosis without secrets.
+- [ ] System notifications (on by default for failures only); favourites in the tray.
+- [ ] Dense table mode, favourites, filters and keyboard shortcuts.
+- [ ] Theme (system, light, dark) and density (comfortable, compact).
+- [ ] Check for updates (ADR-0025).
+- [ ] Accessibility: AA contrast checked with a tool, full keyboard navigation, ARIA on tables and panels.
+- [ ] Performance: first paint under 300 ms in the native window; virtual lists past 200 rows.
+
+**Done when:** criterion 5 holds and the accessibility review passes.
+
+### M5.6: Extensions
+
+- [ ] Sharing: Tailscale, Funnel, ngrok and Cloudflare.
+- [ ] Compose projects and their routes.
+- [ ] LAN mode, with the CA exported for phones.
+- [ ] Remote parity: the agent protocol carries setup, config and output.
+
+**Done when:** set for each extension when it is planned.
+
+## Phase 8: v1.0 release
 
 - [ ] Namespaces claimed for `portplane`: domain, npm, Homebrew tap, winget.
 - [x] Landing page (GitHub Pages) with the pitch, screenshots and a download button that picks the right installer for the visitor's OS.
