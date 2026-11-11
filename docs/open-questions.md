@@ -37,9 +37,9 @@ Questions the M5 ADRs leave to a spike. An answer that changes a decision become
 | # | Question | Blocks |
 |---|---|---|
 | S1 | **Browser trust.** Which browsers ignore the system's trust store, per OS and per packaging (snap, flatpak), and does a per-profile NSS entry fix each one? ([ADR-0020](adr/0020-privileged-steps.md)) | M5.1 |
-| S2 | **Windows elevation.** How the environment reaches portless and how its output comes back through UAC ([ADR-0020](adr/0020-privileged-steps.md)) | M5.1 on Windows |
+| S2 | **Windows elevation.** Answered: UAC starts Portplane's own `elevated-run` helper, which gets the environment as arguments and writes the output to a file Portplane follows ([ADR-0020](adr/0020-privileged-steps.md)). Still to try on a Windows machine. | — |
 | S3 | **Root-owned binaries.** Should privileged steps run a root-owned copy of Node and portless, instead of the user's? Part of the security review ([ADR-0020](adr/0020-privileged-steps.md)) | M5.1 |
-| S4 | **YAML round trip.** What yaml.v3 changes outside the edited task on real `dekit.yaml` files, and whether flow lists can be edited safely ([ADR-0022](adr/0022-edit-dekit-config.md)) | M5.3 |
+| S4 | **YAML round trip.** Answered: writing the whole tree back changes lines outside the task, so Portplane writes back only the edited entry's lines; flow values keep their style ([ADR-0022](adr/0022-edit-dekit-config.md)) | — |
 | S5 | **Reload review.** Whether `dekit reload --json` has a format we can rely on ([ADR-0022](adr/0022-edit-dekit-config.md)) | M5.3 |
 
 ## Waiting on upstream

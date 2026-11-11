@@ -57,12 +57,13 @@ Facts:
 
 - **Which steps.** Only the portless commands listed above, with arguments built by Portplane from the user's choices. The API endpoint that starts one takes the choices ("the service on 443, with HTTPS"), never a command, so the page cannot ask for anything else.
 - **Before the dialog.** The button says what will happen ("Asks for your password: installs a service that starts the proxy when your computer starts"). A confirmation then shows the argv, one argument per line, and the environment that goes with it.
-- **Argv only.** argv[0] is an absolute path, because the elevated side gets a minimal `PATH`. portless runs on Node, so the argv names that Node and portless's entry script by absolute path.
-- **Environment.** `HOME`, `PORTLESS_STATE_DIR`, `SUDO_UID` and `SUDO_GID`, with the user's values, so portless keeps its state in the user's home and hands its files back to the user, as under `sudo`. Nothing else.
+- **Argv only.** argv[0] is portless's absolute path, because the elevated side gets a minimal `PATH`. The user's `PATH` goes with it, so portless's `#!/usr/bin/env node` line finds the same Node the user runs (`internal/privileged`).
+- **Environment.** `HOME`, `PORTLESS_STATE_DIR` (when set), `SUDO_USER`, `SUDO_UID`, `SUDO_GID` and `PATH`, with the user's values, so portless keeps its state in the user's home and hands its files back to the user, as under `sudo`. portless reads `SUDO_USER` to decide whose home it serves. Nothing else.
 - **Per system:**
   - **Linux:** `pkexec /usr/bin/env HOME=… PORTLESS_STATE_DIR=… SUDO_UID=… SUDO_GID=… <node> <portless> service install …`. The output streams live.
-  - **macOS:** `osascript` with a fixed script that quotes each argument with `quoted form of` and runs the result through `do shell script … with administrator privileges`. The arguments, the `env` assignments included, reach `osascript` as separate arguments. The output shows when the step ends.
-  - **Windows:** UAC through `ShellExecuteEx` with `runas`. A spike before M5.1 decides how the environment reaches portless and how the output comes back.
+  - **macOS:** `osascript` with a fixed script that quotes each argument with `quoted form of` and runs the result through `do shell script … with administrator privileges`. Every argument reaches `osascript` as an argument of its own.
+  - **Windows:** UAC through `ShellExecuteEx` with `runas`.
+  - **macOS and Windows** cannot hand the program's output back, so what they start as administrator is Portplane itself, as a hidden helper: `portplane elevated-run --out <file> --code <file> --env K=V … -- <argv>`. It runs the argv with that environment, appends the output to a file and writes the exit status to another. Portplane creates both files beforehand in a private temporary folder and follows the output as it grows, so the output streams live there too.
 - **After the step.** Each step is a job (ADR-0024). Portplane then checks the result itself: the service answers, the CA is trusted, `https://portplane.localhost` loads.
 - **Fallback.** When no dialog can open (no polkit agent, a Mac whose management blocks it), or when the user prefers, Portplane shows the same command with `sudo`, to copy, as before.
 - **Without admin rights.** "No password (port 1355)" starts the proxy as the user on port 1355, and URLs carry the port: `https://web.localhost:1355`. On Linux, ports 80 and 443 without root need a `sysctl` change, itself an admin step, so 1355 is the option that needs no password at all.
@@ -73,7 +74,6 @@ Facts:
 
 - On Linux, polkit's dialog names the program it runs, which is `/usr/bin/env`, not portless. Portplane's confirmation is where the user reads the real command.
 - macOS still goes through one shell, the one `do shell script` starts. AppleScript does the quoting, not Portplane, and tests cover spaces, quotes and `$` in arguments.
-- On macOS the output appears only when the step ends.
 - The programs that run as root, Node and portless, can live in folders the user can write: Portplane's data folder, a user-owned npm prefix, Homebrew. A program running as the user could change them before the next elevated step, or before the service restarts. `sudo portless service install` with a user-installed Node has the same weakness today. The security review before M5.1 decides whether privileged steps need a root-owned copy.
 - The API cannot tell a click from a script in the page. The per-run token (ADR-0008) keeps other sites out, and the password dialog is the last check.
 - Three mechanisms to build and test, and the Windows one not tried yet.

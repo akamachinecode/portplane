@@ -67,8 +67,13 @@ func SetKey(src []byte, path []string, key string, value any) ([]byte, error) {
 			if err != nil {
 				return err
 			}
-			// Keep the comments that were on the old value.
-			n.LineComment, n.HeadComment, n.FootComment = m.Content[j+1].LineComment, m.Content[j+1].HeadComment, m.Content[j+1].FootComment
+			// Keep the comments that were on the old value, and its style
+			// (a flow list stays a flow list).
+			old := m.Content[j+1]
+			n.LineComment, n.HeadComment, n.FootComment = old.LineComment, old.HeadComment, old.FootComment
+			if old.Kind == n.Kind && old.Kind != yaml.ScalarNode {
+				n.Style = old.Style
+			}
 			m.Content[j+1] = n
 			return nil
 		}

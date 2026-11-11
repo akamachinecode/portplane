@@ -47,10 +47,10 @@ Facts:
 **Forms for tasks and projects, written back node by node with yaml.v3, always behind a diff and dekit's reload review. Where a node-level edit could change meaning, the form is read-only and offers "Open in editor".**
 
 - **Where it writes.** A task from Portplane's fragment is edited in the fragment, freely. A hand-written task is edited in the file that declares it.
-- **How it writes.** Portplane parses the file into yaml.v3 nodes, changes only the nodes of the edited fields and writes the tree back. The rest keeps its comments, key order, tags and quoting. A spike on real files before M5.3 checks what the encoder still changes, such as blank lines and indentation. If it changes lines outside the edited task, Portplane writes back only the edited task's lines and leaves the rest of the file byte for byte.
+- **How it writes.** Portplane parses the file into yaml.v3 nodes and changes only the nodes of the edited fields. It then writes back only the lines of the edited entry (one task, say), at the same indentation, and leaves every other byte of the file as it was (`internal/dekit/edit.go`). Inside the entry, yaml.v3 keeps comments, key order, tags, quoting and flow style; it may change spacing, such as two spaces before a comment or the indentation of a block list. The spike on this (S4) found that writing the whole tree back changed lines outside the task, which is why only the entry's lines are written.
 - **Read-only, with "Open in editor"**, when the edited part:
   - uses `!js`;
-  - is in flow style (`{…}` or `[…]`);
+  - is a key inside a flow mapping (`{…}`), which has no line of its own (a flow value as a whole, such as `cmd: [pnpm, run, dev]`, can be replaced and keeps its style);
   - uses YAML anchors or aliases;
   - comes through a `load` that Portplane cannot map back to one file and one place in it.
 
@@ -70,7 +70,7 @@ Facts:
 **Cost we accept:**
 
 - Portplane's YAML reader and writer must agree with dekit's parser. Tests use real configs. This widens the gap ADR-0006 already accepts.
-- Some valid files are read-only in the app. That includes common flow lists such as `cmd: [pnpm, run, dev]`, until the spike shows flow nodes can be edited safely.
+- Some valid files are read-only in the app: `!js` values, anchors and aliases, keys inside flow mappings.
 - Writing a node back may change spacing inside the edited task. The diff shows it, and the user can cancel.
 - CodeMirror, a new UI dependency, loaded only with the editor.
 

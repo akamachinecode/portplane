@@ -71,6 +71,16 @@ func blockAround(s, from, to string) [3]string {
 	return [3]string{s[:i], s[i:j], s[j:]}
 }
 
+func TestFlowListKeepsItsStyle(t *testing.T) {
+	out, err := SetKey([]byte(handWritten), []string{"tasks", "worker"}, "cmd", []string{"node", "worker.js", "--watch"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(out), `cmd: ["node", "worker.js", "--watch"]`) && !strings.Contains(string(out), "cmd: [node, worker.js, --watch]") {
+		t.Fatalf("flow list became block:\n%s", out)
+	}
+}
+
 func TestSetKeyAddsAndRemoves(t *testing.T) {
 	out, err := SetKey([]byte(handWritten), []string{"tasks", "worker"}, "autostart", true)
 	if err != nil {

@@ -478,7 +478,7 @@ func (r *Run) flush() {
 	r.m.publish(j)
 }
 
-// isST reports whether s[i:] starts with the string terminator ESC \\.
+// isST reports whether s[i:] starts with the string terminator: ESC and a backslash.
 func isST(s string, i int) bool { return s[i] == 0x1b && i+1 < len(s) && s[i+1] == '\\' }
 
 // stripANSI removes terminal colour and cursor sequences.
