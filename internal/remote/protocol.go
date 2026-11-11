@@ -14,6 +14,7 @@ import (
 	"os"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -224,6 +225,15 @@ func serveControl(ctx context.Context, ctl net.Conn, a agent.Agent) error {
 	}
 }
 
+func expandHome(p string) string {
+	if p == "~" || strings.HasPrefix(p, "~/") {
+		if home, err := os.UserHomeDir(); err == nil {
+			return home + p[1:]
+		}
+	}
+	return p
+}
+
 func dispatch(ctx context.Context, a agent.Agent, m message, watch func()) (any, error) {
 	switch m.Method {
 	case "hello":
@@ -244,7 +254,23 @@ func dispatch(ctx context.Context, a agent.Agent, m message, watch func()) (any,
 		if err := json.Unmarshal(m.Params, &p); err != nil {
 			return nil, err
 		}
-		return struct{}{}, a.SetFolders(ctx, p.Folders)
+		// Apply the folders that exist and name the missing ones, so one
+		// moved folder does not hide the rest of the machine.
+		var ok, missing []string
+		for _, f := range p.Folders {
+			if fi, err := os.Stat(expandHome(f)); err == nil && fi.IsDir() {
+				ok = append(ok, f)
+			} else {
+				missing = append(missing, f)
+			}
+		}
+		if err := a.SetFolders(ctx, ok); err != nil {
+			return nil, err
+		}
+		if len(missing) > 0 {
+			return nil, fmt.Errorf("not found on this machine: %s", strings.Join(missing, ", "))
+		}
+		return struct{}{}, nil
 	case "act":
 		var p actParams
 		if err := json.Unmarshal(m.Params, &p); err != nil {

@@ -133,7 +133,11 @@ func cmdServe(args []string, stdout, stderr io.Writer) int {
 		},
 	})
 	fwd := remote.NewForwarder(pl)
-	defer fwd.Close()
+	// Agents stop before their forwards close, so no snapshot reopens one.
+	defer func() {
+		h.Close()
+		fwd.Close()
+	}()
 	machines := &remote.Manager{Hub: h, Store: store, Forward: fwd, Binaries: remote.ReleaseBinary}
 	if err := machines.Start(); err != nil {
 		fmt.Fprintln(stderr, "portplane: machines:", err)

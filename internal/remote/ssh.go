@@ -153,7 +153,7 @@ func (s *SSH) Install(ctx context.Context) (string, error) {
 			return "", err
 		}
 		defer func() { _ = f.Close() }()
-		upload := fmt.Sprintf(`set -e; d="%s"; mkdir -p "$d"; cat > "$d/portplane.part"; chmod 755 "$d/portplane.part"; mv "$d/portplane.part" "$d/portplane"; (sha256sum "$d/portplane" 2>/dev/null || shasum -a 256 "$d/portplane") | cut -d' ' -f1`, dir)
+		upload := fmt.Sprintf(`set -e; d="%s"; mkdir -p "$d"; t="$d/portplane.part.$$"; cat > "$t"; chmod 755 "$t"; mv "$t" "$d/portplane"; (sha256sum "$d/portplane" 2>/dev/null || shasum -a 256 "$d/portplane") | cut -d' ' -f1`, dir)
 		uctx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 		got, err := s.run(uctx, f, upload)
 		cancel()
@@ -195,6 +195,13 @@ func fileSHA256(path string) (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+// Reset forgets the cached start command, so the next Connect installs again.
+func (s *SSH) Reset() {
+	s.mu.Lock()
+	s.remoteCmd = ""
+	s.mu.Unlock()
 }
 
 // Connect installs the agent if needed and starts it, returning its stdio.

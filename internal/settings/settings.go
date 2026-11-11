@@ -54,6 +54,10 @@ func (s *Store) Path() string { return s.path }
 func (s *Store) Load() (Settings, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	return s.load()
+}
+
+func (s *Store) load() (Settings, error) {
 	var st Settings
 	b, err := os.ReadFile(s.path)
 	if errors.Is(err, fs.ErrNotExist) {
@@ -75,6 +79,10 @@ func (s *Store) Load() (Settings, error) {
 func (s *Store) Save(st Settings) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	return s.save(st)
+}
+
+func (s *Store) save(st Settings) error {
 	if st.Folders == nil {
 		st.Folders = []string{}
 	}
@@ -102,13 +110,17 @@ func (s *Store) Save(st Settings) error {
 }
 
 // Update loads, applies fn and saves.
+// The whole read-modify-write holds the lock, so concurrent updates never
+// lose each other's changes.
 func (s *Store) Update(fn func(*Settings) error) (Settings, error) {
-	st, err := s.Load()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	st, err := s.load()
 	if err != nil {
 		return st, err
 	}
 	if err := fn(&st); err != nil {
 		return st, err
 	}
-	return st, s.Save(st)
+	return st, s.save(st)
 }

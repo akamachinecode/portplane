@@ -3,6 +3,7 @@ package remote
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -21,6 +22,7 @@ import (
 // Router is what forwarding needs from portless.
 type Router interface {
 	Available() bool
+	Routes() []portless.Route
 	Alias(ctx context.Context, name string, port int) error
 	RemoveAlias(ctx context.Context, name string) error
 	Proxy() portless.Proxy
@@ -32,14 +34,18 @@ type Router interface {
 type Forwarder struct {
 	router Router
 
-	mu      sync.Mutex
-	entries map[string]*forward // machine + "|" + remote port
+	mu       sync.Mutex
+	entries  map[string]*forward // machine + "|" + remote port
+	closed   map[string]bool     // machines removed: no new forwards
+	ensureMu sync.Mutex          // one forward created at a time
 }
 
 type forward struct {
 	machine    string
 	remotePort int
-	remoteHost string
+	remoteHost string // the app's hostname; "" for apps without one and on-demand ports
+	onDemand   bool   // opened from "other ports", not for a running app
+	agent      agent.Agent
 	alias      string // portless name, "" without portless
 	url        string
 	ln         net.Listener
@@ -48,13 +54,17 @@ type forward struct {
 
 // NewForwarder returns a forwarder; router may be nil (plain loopback URLs).
 func NewForwarder(router Router) *Forwarder {
-	return &Forwarder{router: router, entries: map[string]*forward{}}
+	return &Forwarder{router: router, entries: map[string]*forward{}, closed: map[string]bool{}}
 }
 
 // Wrap returns an agent whose snapshots carry RemoteURL for running apps,
 // opening and closing forwards as apps start and stop.
 func (f *Forwarder) Wrap(a agent.Agent, machineLabel string) agent.Agent {
-	return &forwardingAgent{Agent: a, f: f, label: Label(machineLabel)}
+	label := Label(machineLabel)
+	f.mu.Lock()
+	delete(f.closed, label) // added (again)
+	f.mu.Unlock()
+	return &forwardingAgent{Agent: a, f: f, label: label}
 }
 
 type forwardingAgent struct {
@@ -102,7 +112,7 @@ func (w *forwardingAgent) SetInterval(d time.Duration) {
 
 // OpenPort forwards any port of a machine on demand (for "other ports").
 func (w *forwardingAgent) OpenPort(ctx context.Context, port int) (string, error) {
-	fw, err := w.f.ensure(ctx, w.Agent, w.label, port, "")
+	fw, err := w.f.ensure(ctx, w.Agent, w.label, port, "", true)
 	if err != nil {
 		return "", err
 	}
@@ -111,7 +121,9 @@ func (w *forwardingAgent) OpenPort(ctx context.Context, port int) (string, error
 
 func key(machine string, port int) string { return machine + "|" + strconv.Itoa(port) }
 
-// sync opens forwards for running apps and closes the rest.
+// sync opens forwards for running apps and closes the rest. A forward is
+// stale when its app stopped, when another app took its port, or when it
+// belongs to an agent that was replaced.
 func (f *Forwarder) sync(a agent.Agent, label string, s model.MachineSnapshot) model.MachineSnapshot {
 	want := map[string]model.App{}
 	if s.Machine.Status == "online" {
@@ -127,7 +139,11 @@ func (f *Forwarder) sync(a agent.Agent, label string, s model.MachineSnapshot) m
 		if fw.machine != label {
 			continue
 		}
-		if _, ok := want[k]; !ok && fw.remoteHost != "" {
+		app, running := want[k]
+		switch {
+		case fw.agent != a,
+			!running && !fw.onDemand,
+			running && (fw.onDemand || fw.remoteHost != app.Hostname):
 			stale = append(stale, fw)
 			delete(f.entries, k)
 		}
@@ -139,16 +155,12 @@ func (f *Forwarder) sync(a agent.Agent, label string, s model.MachineSnapshot) m
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	for _, app := range want {
-		host := app.Hostname
-		if host == "" {
-			host = "app-" + strconv.Itoa(app.Port)
-		}
-		_, _ = f.ensure(ctx, a, label, app.Port, host)
+		_, _ = f.ensure(ctx, a, label, app.Port, app.Hostname, false)
 	}
 	return f.decorate(s)
 }
 
-// decorate fills RemoteURL from the open forwards.
+// decorate fills RemoteURL from the forwards opened for these very apps.
 func (f *Forwarder) decorate(s model.MachineSnapshot) model.MachineSnapshot {
 	label := Label(s.Machine.ID)
 	f.mu.Lock()
@@ -156,7 +168,8 @@ func (f *Forwarder) decorate(s model.MachineSnapshot) model.MachineSnapshot {
 	apps := make([]model.App, len(s.Apps))
 	copy(apps, s.Apps)
 	for i := range apps {
-		if fw, ok := f.entries[key(label, apps[i].Port)]; ok && apps[i].Port > 0 && apps[i].State == model.StateOn {
+		fw, ok := f.entries[key(label, apps[i].Port)]
+		if ok && apps[i].Port > 0 && apps[i].State == model.StateOn && !fw.onDemand && fw.remoteHost == apps[i].Hostname {
 			apps[i].RemoteURL = fw.url
 		}
 	}
@@ -164,14 +177,28 @@ func (f *Forwarder) decorate(s model.MachineSnapshot) model.MachineSnapshot {
 	return s
 }
 
-func (f *Forwarder) ensure(ctx context.Context, a agent.Agent, label string, port int, remoteHost string) (*forward, error) {
+var errMachineClosed = errors.New("machine removed")
+
+func (f *Forwarder) ensure(ctx context.Context, a agent.Agent, label string, port int, remoteHost string, onDemand bool) (*forward, error) {
+	f.ensureMu.Lock()
+	defer f.ensureMu.Unlock()
 	k := key(label, port)
 	f.mu.Lock()
-	if fw, ok := f.entries[k]; ok {
+	if f.closed[label] {
 		f.mu.Unlock()
-		return fw, nil
+		return nil, errMachineClosed
 	}
-	f.mu.Unlock()
+	if fw, ok := f.entries[k]; ok {
+		if fw.agent == a && (onDemand || (!fw.onDemand && fw.remoteHost == remoteHost)) {
+			f.mu.Unlock()
+			return fw, nil
+		}
+		delete(f.entries, k)
+		f.mu.Unlock()
+		f.stop(fw)
+	} else {
+		f.mu.Unlock()
+	}
 
 	var lc net.ListenConfig
 	ln, err := lc.Listen(ctx, "tcp", "127.0.0.1:0")
@@ -179,39 +206,54 @@ func (f *Forwarder) ensure(ctx context.Context, a agent.Agent, label string, por
 		return nil, err
 	}
 	localPort := ln.Addr().(*net.TCPAddr).Port
-	fw := &forward{machine: label, remotePort: port, remoteHost: remoteHost, ln: ln, url: "http://127.0.0.1:" + strconv.Itoa(localPort)}
+	fw := &forward{machine: label, remotePort: port, remoteHost: remoteHost, onDemand: onDemand, agent: a, ln: ln, url: "http://127.0.0.1:" + strconv.Itoa(localPort)}
 	upstreamHost := remoteHost
-	if upstreamHost == "" || strings.HasPrefix(upstreamHost, "app-") {
+	if upstreamHost == "" {
 		upstreamHost = "localhost:" + strconv.Itoa(port)
 	}
 	if f.router != nil && f.router.Available() {
 		name := aliasName(remoteHost, port, label)
-		if err := f.router.Alias(ctx, name, localPort); err == nil {
-			fw.alias = name
-			proxy := f.router.Proxy()
-			fw.url = proxy.URL(name + ".localhost")
-			waitRoute(ctx, proxy, name+".localhost")
+		if !f.routedByLocalApp(name + ".localhost") {
+			if err := f.router.Alias(ctx, name, localPort); err == nil {
+				fw.alias = name
+				proxy := f.router.Proxy()
+				fw.url = proxy.URL(name + ".localhost")
+				waitRoute(ctx, proxy, name+".localhost")
+			}
 		}
 	}
-	publicHost := ""
+	allowed := map[string]bool{"127.0.0.1:" + strconv.Itoa(localPort): true, "localhost:" + strconv.Itoa(localPort): true}
+	https := false
 	if u, err := url.Parse(fw.url); err == nil {
-		publicHost = u.Host
+		allowed[u.Host] = true
+		https = u.Scheme == "https"
 	}
 	fw.srv = &http.Server{
-		Handler:           proxyHandler(a, port, upstreamHost, publicHost),
+		Handler:           proxyHandler(a, port, upstreamHost, allowed, https, fw.url),
 		ReadHeaderTimeout: 30 * time.Second,
 	}
 	go func() { _ = fw.srv.Serve(ln) }()
 
 	f.mu.Lock()
-	if existing, ok := f.entries[k]; ok {
+	if f.closed[label] {
 		f.mu.Unlock()
 		f.stop(fw)
-		return existing, nil
+		return nil, errMachineClosed
 	}
 	f.entries[k] = fw
 	f.mu.Unlock()
 	return fw, nil
+}
+
+// routedByLocalApp reports whether portless already routes host to a live
+// local app: a remote alias must never take its name.
+func (f *Forwarder) routedByLocalApp(host string) bool {
+	for _, r := range f.router.Routes() {
+		if r.Hostname == host && r.PID > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 // aliasName is "<remote name>.<machine>": web.shop.localhost on box becomes
@@ -225,8 +267,14 @@ func aliasName(remoteHost string, port int, machine string) string {
 }
 
 // proxyHandler forwards HTTP (and WebSocket upgrades) through the agent,
-// presenting the remote app's own hostname so dev servers accept it.
-func proxyHandler(a agent.Agent, port int, upstreamHost, publicHost string) http.Handler {
+// presenting the remote app's own hostname so dev servers accept it. It
+// answers only to its own names: anything else could be a rebound page
+// trying to reach the remote app through the trusted hostname.
+func proxyHandler(a agent.Agent, port int, upstreamHost string, allowed map[string]bool, https bool, public string) http.Handler {
+	publicHost := ""
+	if u, err := url.Parse(public); err == nil {
+		publicHost = u.Host
+	}
 	transport := &http.Transport{
 		DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
 			return a.Dial(ctx, port)
@@ -243,12 +291,18 @@ func proxyHandler(a agent.Agent, port int, upstreamHost, publicHost string) http
 				pr.Out.Header.Set("Origin", "http://"+upstreamHost)
 			}
 			pr.SetXForwarded()
+			if https {
+				pr.Out.Header.Set("X-Forwarded-Proto", "https") // TLS ends at the portless proxy
+			}
 		},
 		Transport: transport,
 		ModifyResponse: func(resp *http.Response) error {
 			if loc := resp.Header.Get("Location"); loc != "" && publicHost != "" {
 				if u, err := url.Parse(loc); err == nil && u.Host == upstreamHost {
 					u.Host = publicHost
+					if https {
+						u.Scheme = "https"
+					}
 					resp.Header.Set("Location", u.String())
 				}
 			}
@@ -258,7 +312,13 @@ func proxyHandler(a agent.Agent, port int, upstreamHost, publicHost string) http
 			http.Error(w, fmt.Sprintf("Portplane could not reach port %d on the remote machine: %v", port, err), http.StatusBadGateway)
 		},
 	}
-	return rp
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !allowed[strings.ToLower(r.Host)] {
+			http.Error(w, "forbidden host", http.StatusForbidden)
+			return
+		}
+		rp.ServeHTTP(w, r)
+	})
 }
 
 // waitRoute waits (briefly) until the portless proxy serves a new alias: it
@@ -317,6 +377,7 @@ func (f *Forwarder) stop(fw *forward) {
 
 func (f *Forwarder) closeMachine(label string) {
 	f.mu.Lock()
+	f.closed[label] = true
 	var list []*forward
 	for k, fw := range f.entries {
 		if fw.machine == label {

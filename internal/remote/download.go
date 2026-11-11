@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/akamachinecode/portplane/internal/buildinfo"
@@ -23,12 +24,16 @@ import (
 // ReleaseBase is where release archives live.
 const ReleaseBase = "https://github.com/akamachinecode/portplane/releases/download"
 
+var downloadMu sync.Mutex
+
 var releaseVersion = regexp.MustCompile(`^v?\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$`)
 
 // ReleaseBinary returns a cached portplane binary for goos/goarch of this
 // exact release, downloading the archive and checking it against the
 // release's checksums.txt. Development builds cannot do this.
 func ReleaseBinary(ctx context.Context, goos, goarch string) (string, error) {
+	downloadMu.Lock() // two machines of one platform: download once
+	defer downloadMu.Unlock()
 	version := strings.TrimPrefix(buildinfo.Version(), "v")
 	if !releaseVersion.MatchString(version) || strings.Contains(version, "SNAPSHOT") {
 		return "", fmt.Errorf("this is a development build (%s): install portplane on the remote machine, or use a release", buildinfo.Version())
@@ -113,11 +118,11 @@ func extract(tgz []byte, dst string) error {
 		if filepath.Base(h.Name) != "portplane" || h.Typeflag != tar.TypeReg {
 			continue
 		}
-		tmp := dst + ".part"
-		f, err := os.OpenFile(tmp, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o755)
+		f, err := os.CreateTemp(filepath.Dir(dst), "portplane.*.part")
 		if err != nil {
 			return err
 		}
+		defer func() { _ = os.Remove(f.Name()) }()
 		if _, err := io.Copy(f, io.LimitReader(tr, 200<<20)); err != nil {
 			_ = f.Close()
 			return err
@@ -125,6 +130,9 @@ func extract(tgz []byte, dst string) error {
 		if err := f.Close(); err != nil {
 			return err
 		}
-		return os.Rename(tmp, dst)
+		if err := os.Chmod(f.Name(), 0o755); err != nil {
+			return err
+		}
+		return os.Rename(f.Name(), dst) // only a complete file ever has the final name
 	}
 }

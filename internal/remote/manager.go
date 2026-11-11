@@ -109,6 +109,15 @@ func (m *Manager) Add(ctx context.Context, host, name string, folders []string) 
 
 // Update changes a machine's name or folders.
 func (m *Manager) Update(ctx context.Context, id, name string, folders []string) (settings.Machine, error) {
+	// Folders go to the machine first: if it rejects them, nothing is saved.
+	m.mu.Lock()
+	a := m.agents[id]
+	m.mu.Unlock()
+	if a != nil && folders != nil {
+		if err := a.SetFolders(ctx, cleanList(folders)); err != nil {
+			return settings.Machine{}, err
+		}
+	}
 	var mc settings.Machine
 	found := false
 	_, err := m.Store.Update(func(st *settings.Settings) error {
@@ -132,14 +141,8 @@ func (m *Manager) Update(ctx context.Context, id, name string, folders []string)
 	if err != nil {
 		return mc, err
 	}
-	m.mu.Lock()
-	a := m.agents[id]
-	m.mu.Unlock()
 	if a != nil {
 		a.SetName(mc.Name)
-		if err := a.SetFolders(ctx, mc.Folders); err != nil {
-			return mc, err
-		}
 	}
 	return mc, nil
 }

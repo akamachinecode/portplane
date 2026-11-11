@@ -47,6 +47,7 @@ type Agent struct {
 	watchers map[chan model.MachineSnapshot]struct{}
 	interval time.Duration
 	hello    Hello
+	warning  string // shown on the machine while online (missing folders)
 
 	wmu    sync.Mutex
 	closed chan struct{}
@@ -162,29 +163,58 @@ func (a *Agent) session() error {
 		a.mu.Unlock()
 	}()
 
+	// Calls made while setting up end as soon as the connection does.
+	live, lost := context.WithCancel(ctx)
+	defer lost()
 	readErr := make(chan error, 1)
-	go func() { readErr <- a.read(ctl) }()
+	go func() {
+		err := a.read(ctl)
+		lost()
+		readErr <- err
+	}()
+	fail := func(err error) error {
+		select {
+		case rerr := <-readErr:
+			return rerr // the connection's own error says more
+		default:
+			return err
+		}
+	}
 
-	hctx, hcancel := context.WithTimeout(ctx, 20*time.Second)
+	hctx, hcancel := context.WithTimeout(live, 20*time.Second)
 	var hello Hello
 	err = a.call(hctx, "hello", Hello{Protocol: Protocol}, &hello)
 	hcancel()
 	if err != nil {
-		return fmt.Errorf("agent handshake: %w", err)
+		// The cached start command may be stale (binary removed): install
+		// again on the next attempt.
+		if r, ok := a.conn.(interface{ Reset() }); ok {
+			r.Reset()
+		}
+		return fmt.Errorf("agent handshake: %w", fail(err))
 	}
 	a.mu.Lock()
 	a.hello = hello
 	folders := append([]string{}, a.folders...)
 	interval := a.interval
 	a.mu.Unlock()
-	if err := a.call(ctx, "setFolders", foldersParams{Folders: folders}, nil); err != nil {
-		return err
+	// A folder missing on that machine is a warning, not a lost machine:
+	// the agent applies the others.
+	warn := ""
+	if err := a.call(live, "setFolders", foldersParams{Folders: folders}, nil); err != nil {
+		if live.Err() != nil {
+			return fail(err)
+		}
+		warn = err.Error()
 	}
+	a.mu.Lock()
+	a.warning = warn
+	a.mu.Unlock()
 	if interval > 0 {
-		_ = a.call(ctx, "setInterval", intervalParams{Millis: interval.Milliseconds()}, nil)
+		_ = a.call(live, "setInterval", intervalParams{Millis: interval.Milliseconds()}, nil)
 	}
-	if err := a.call(ctx, "watch", nil, nil); err != nil {
-		return err
+	if err := a.call(live, "watch", nil, nil); err != nil {
+		return fail(err)
 	}
 	select {
 	case err := <-readErr:
@@ -220,10 +250,10 @@ func (a *Agent) read(ctl net.Conn) error {
 				continue
 			}
 			a.mu.Lock()
-			h, name := a.hello, a.name
+			h, name, warn := a.hello, a.name, a.warning
 			a.mu.Unlock()
 			s.Machine.ID, s.Machine.Name, s.Machine.Local = a.id, name, false
-			s.Machine.Status, s.Machine.Error = "online", ""
+			s.Machine.Status, s.Machine.Error = "online", warn
 			if s.Machine.Agent == "" {
 				s.Machine.Agent = h.Version
 			}
@@ -349,14 +379,15 @@ func (a *Agent) Excerpt(ctx context.Context, runner, task string) (model.Excerpt
 
 // SetFolders changes the remote folders (kept for reconnects).
 func (a *Agent) SetFolders(ctx context.Context, folders []string) error {
+	err := a.call(ctx, "setFolders", foldersParams{Folders: folders}, nil)
+	if err != nil && !errors.Is(err, ErrOffline) {
+		return err // rejected: keep the old folders
+	}
 	a.mu.Lock()
 	a.folders = append([]string{}, folders...)
+	a.warning = ""
 	a.mu.Unlock()
-	err := a.call(ctx, "setFolders", foldersParams{Folders: folders}, nil)
-	if errors.Is(err, ErrOffline) {
-		return nil // applied on the next connect
-	}
-	return err
+	return nil // applied now, or on the next connect
 }
 
 // Folders returns the remote folders.
