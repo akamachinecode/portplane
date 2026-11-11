@@ -31,6 +31,7 @@ type Hub struct {
 	order   []string
 	version uint64
 	subs    map[chan model.Snapshot]struct{}
+	quiet   int        // observers that do not need fast collection (the tray)
 	paceMu  sync.Mutex // serialises pacing decisions
 }
 
@@ -187,9 +188,28 @@ func (h *Hub) repace() {
 	h.paceMu.Lock()
 	defer h.paceMu.Unlock()
 	h.mu.Lock()
-	active := len(h.subs) > 0
+	active := len(h.subs)-h.quiet > 0
 	h.mu.Unlock()
 	h.paceAll(active)
+}
+
+// Observe delivers the merged snapshot now and on every change until ctx
+// ends, without making agents collect faster (for the tray icon).
+func (h *Hub) Observe(ctx context.Context) <-chan model.Snapshot {
+	c := make(chan model.Snapshot, 1)
+	h.mu.Lock()
+	h.subs[c] = struct{}{}
+	h.quiet++
+	c <- h.snapshotLocked()
+	h.mu.Unlock()
+	go func() {
+		<-ctx.Done()
+		h.mu.Lock()
+		delete(h.subs, c)
+		h.quiet--
+		h.mu.Unlock()
+	}()
+	return c
 }
 
 func (h *Hub) paceAll(active bool) {

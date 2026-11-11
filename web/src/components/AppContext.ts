@@ -1,6 +1,6 @@
 import { createContext, useContext } from "react";
 import type { Api } from "../api/client";
-import type { Info } from "../api/types";
+import type { Info, Machine } from "../api/types";
 import type { Pending } from "../hooks/usePending";
 import type { Toaster } from "../hooks/useToasts";
 
@@ -10,6 +10,11 @@ export interface AppCtx {
   toast: Toaster;
   pending: Pending;
   openSettings(): void;
+  /** Opens setup for a watched folder on this computer. */
+  openSetup(folder: string): void;
+  openAddMachine(): void;
+  openEditMachine(id: string): void;
+  openRemoveMachine(machine: Machine): void;
 }
 
 export const AppContext = createContext<AppCtx | null>(null);

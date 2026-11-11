@@ -3,6 +3,8 @@ module github.com/akamachinecode/portplane
 go 1.27
 
 require (
+	fyne.io/systray v1.12.2
+	github.com/godbus/dbus/v5 v5.1.0
 	github.com/hashicorp/yamux v0.1.2
 	github.com/shirou/gopsutil/v4 v4.26.10
 	go.yaml.in/yaml/v3 v3.0.6

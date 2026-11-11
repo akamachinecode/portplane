@@ -1,7 +1,10 @@
 import { useState } from "react";
+import { errorText } from "../api/errors";
 import type { MachineSnapshot, Port } from "../api/types";
 import { shortenPath, sortOtherPorts } from "../lib/format";
-import { Icon } from "./Icon";
+import { openResolved } from "../lib/popup";
+import { useApp } from "./AppContext";
+import { Icon, Spinner } from "./Icon";
 
 const ALL_INTERFACES = new Set(["0.0.0.0", "::", "*", "[::]"]);
 
@@ -26,7 +29,45 @@ function writeOpen(machine: string, open: boolean) {
   }
 }
 
-function PortRow({ port, local, home }: { port: Port; local: boolean; home: string | undefined }) {
+/**
+ * A port on another machine opens through a tunnel the hub makes on demand
+ * (ADR-0016). The window opens blank during the click, so popup blockers
+ * allow it, and gets its address when the tunnel is up.
+ */
+function RemoteOpen({ machine, machineName, port }: { machine: string; machineName: string; port: number }) {
+  const { api, toast } = useApp();
+  const [busy, setBusy] = useState(false);
+  const open = () => {
+    if (busy) return;
+    setBusy(true);
+    openResolved(
+      () => api.openPort(machine, port),
+      {
+        open: () => window.open("", "_blank"),
+        openElsewhere: (url) => api.open("local", [url]),
+      },
+      `Opening port ${port} on ${machineName}…`,
+    )
+      .catch((err: unknown) => toast.error(`Couldn't open port ${port} on ${machineName}: ${errorText(err)}`))
+      .finally(() => setBusy(false));
+  };
+  return (
+    <button
+      type="button"
+      className="btn btn-sm"
+      onClick={open}
+      aria-busy={busy || undefined}
+      aria-disabled={busy || undefined}
+      title={`Open port ${port} on ${machineName} through SSH`}
+    >
+      {busy ? <Spinner /> : <Icon name="open" size={13} />}
+      Open
+    </button>
+  );
+}
+
+function PortRow({ port, ms, home }: { port: Port; ms: MachineSnapshot; home: string | undefined }) {
+  const local = ms.machine.local;
   const dir = port.dir ? shortenPath(port.dir, home) : undefined;
   // port.url names a portless alias when one points here; it is only
   // meaningful on the machine that reported it.
@@ -53,7 +94,7 @@ function PortRow({ port, local, home }: { port: Port; local: boolean; home: stri
             localhost:{port.port}
           </a>
         ) : (
-          <span className="addr addr-idle">localhost:{port.port}</span>
+          ms.machine.status === "online" && <RemoteOpen machine={ms.machine.id} machineName={ms.machine.name} port={port.port} />
         )}
       </span>
     </li>
@@ -90,7 +131,7 @@ export function OtherPorts({ ms, home }: { ms: MachineSnapshot; home: string | u
           <h4 className="others-group">In your folders</h4>
           <ul className="port-list">
             {inside.map((p) => (
-              <PortRow key={`${p.address}:${p.port}`} port={p} local={ms.machine.local} home={home} />
+              <PortRow key={`${p.address}:${p.port}`} port={p} ms={ms} home={home} />
             ))}
           </ul>
         </>
@@ -100,7 +141,7 @@ export function OtherPorts({ ms, home }: { ms: MachineSnapshot; home: string | u
           {inside.length > 0 && <h4 className="others-group">Elsewhere</h4>}
           <ul className="port-list">
             {outside.map((p) => (
-              <PortRow key={`${p.address}:${p.port}`} port={p} local={ms.machine.local} home={home} />
+              <PortRow key={`${p.address}:${p.port}`} port={p} ms={ms} home={home} />
             ))}
           </ul>
         </>

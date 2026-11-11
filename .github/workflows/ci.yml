@@ -136,6 +136,14 @@ jobs:
       - run: goreleaser release --snapshot --clean --skip=sign,publish
       - name: Smoke test the darwin binary
         run: ./dist/darwin_darwin_arm64*/portplane version
+      - name: The macOS app was packaged and sealed
+        run: |
+          ls -la dist/*.dmg
+          mnt=$(mktemp -d)
+          hdiutil attach -nobrowse -readonly -mountpoint "$mnt" dist/portplane_*_darwin_arm64.dmg >/dev/null
+          codesign --verify --deep --strict --verbose=2 "$mnt/Portplane.app"
+          "$mnt/Portplane.app/Contents/MacOS/portplane" version
+          hdiutil detach "$mnt" >/dev/null
 
   integration:
     name: Integration (real dekit)

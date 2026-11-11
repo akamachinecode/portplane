@@ -6,17 +6,29 @@ See which local dev servers are running across all your project folders, and acr
 
 **Status:** early development, not ready for daily use yet. The [roadmap](docs/roadmap.md) tracks the way to v1.0. The single-machine prototype that started the project lives in [`prototype/`](prototype/README.md).
 
-## Try it
+![Portplane showing a monorepo with running, starting and failed apps](docs/images/portplane-dark.png)
 
-Portplane reads the `dekit.yaml` files in the folders you give it, and asks [dekit](https://dekit.run) and [portless](https://github.com/vercel-labs/portless) for the live state.
+## Install
 
 ```sh
-mise run build                       # from a clone; releases come later
-./bin/portplane folders add ~/code   # where your projects (and their dekit.yaml) live
-./bin/portplane                      # opens https://portplane.localhost
-./bin/portplane ls                   # the same view in the terminal
-./bin/portplane restart shop/web     # or start/stop an app or a whole project ("shop/")
+curl -fsSL https://akamachinecode.github.io/portplane/install.sh | sh      # macOS, Linux
+irm https://akamachinecode.github.io/portplane/install.ps1 | iex            # Windows (beta)
 ```
+
+Or download the macOS app (`.dmg`), `.deb`, `.rpm` or `.zip` from [Releases](https://github.com/akamachinecode/portplane/releases). See the [install guide](docs/install.md) for first-launch prompts and verifying downloads.
+
+## Use it
+
+```sh
+portplane folders add ~/code   # where your projects (and their dekit.yaml) live
+portplane                      # opens https://portplane.localhost, with a menu-bar or tray icon
+portplane setup ~/code         # no dekit config yet? propose one for every app it finds
+portplane ls                   # the same view in the terminal
+portplane restart shop/web     # start, stop or restart an app or a whole project ("shop/")
+portplane autostart on         # start at login
+```
+
+Add other machines from the window (**Add a machine**): any host in `~/.ssh/config` or your Tailscale network. Their apps open at `https://<app>.<machine>.localhost`. To generate dekit config from the window, use **Settings → Set up…** on a folder.
 
 Without dekit or portless, Portplane still lists the ports open on your machine and the folder each one serves.
 
@@ -28,6 +40,7 @@ Without dekit or portless, Portplane still lists the ports open on your machine 
 - [Roadmap to v1.0](docs/roadmap.md)
 - [Architecture decision records](docs/adr/README.md)
 - [Upstream proposals](docs/upstream.md)
+- [Security model](docs/security.md) · [Troubleshooting](docs/troubleshooting.md)
 
 ## Contributing
 

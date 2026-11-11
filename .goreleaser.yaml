@@ -5,6 +5,10 @@ version: 2
 
 project_name: portplane
 
+before:
+  hooks:
+    - go run ./scripts/genicons -out build/icons
+
 builds:
   - id: darwin
     main: ./cmd/portplane
@@ -14,6 +18,10 @@ builds:
     env:
       - CGO_ENABLED=1 # tray icon (ADR-0004)
     flags: [-trimpath]
+    hooks:
+      post:
+        - cmd: packaging/macos/app.sh "{{ .Path }}" "{{ .Arch }}" "{{ .Version }}"
+          output: true
     ldflags:
       - -s -w
       - -X github.com/akamachinecode/portplane/internal/buildinfo.version={{.Version}}
@@ -56,9 +64,16 @@ nfpms:
     license: Apache-2.0
     formats: [deb, rpm]
     bindir: /usr/bin
+    contents:
+      - src: packaging/linux/portplane.desktop
+        dst: /usr/share/applications/portplane.desktop
+      - src: build/icons/portplane.png
+        dst: /usr/share/icons/hicolor/256x256/apps/portplane.png
 
 checksum:
   name_template: checksums.txt
+  extra_files:
+    - glob: ./dist/*.dmg
 
 signs:
   - id: cosign
@@ -75,6 +90,8 @@ changelog:
   disable: true # release-please writes the changelog and the release notes
 
 release:
+  extra_files:
+    - glob: ./dist/*.dmg
   mode: keep-existing
   prerelease: auto
   footer: |

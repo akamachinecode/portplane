@@ -107,31 +107,31 @@ Quality:
 
 ## Phase 5: M3, remote machines
 
-- [ ] `portplane agent --stdio`: versioned JSON-lines protocol with a handshake and capability negotiation (the same messages as the in-process agent from ADR-0005).
-- [ ] Agent install: detect the remote OS and architecture, upload the matching build to a versioned cache directory, verify its checksum, replace it on upgrade.
-- [ ] Add a machine from `~/.ssh/config` or `tailscale status --json`; test the connection; choose folders on that machine.
-- [ ] Port forwarding over the same SSH session, with `https://<app>.<machine>.localhost` registered as a portless alias. Verify Host-header behaviour (Vite `allowedHosts`, cookie domains).
-- [ ] Reconnect with backoff, offline state per machine, actions with the remote user's rights only.
-- [ ] CI: an SSH server in a container as the remote machine.
+- [x] `portplane agent --stdio`: versioned JSON-lines protocol with a handshake and capability negotiation (the same messages as the in-process agent from ADR-0005).
+- [x] Agent install: detect the remote OS and architecture, upload the matching build to a versioned cache directory, verify its checksum, replace it on upgrade.
+- [x] Add a machine from `~/.ssh/config` or `tailscale status --json`; test the connection; choose folders on that machine.
+- [x] Port forwarding over the same SSH session, with `https://<app>.<machine>.localhost` registered as a portless alias. Verify Host-header behaviour (Vite `allowedHosts`, cookie domains).
+- [x] Reconnect with backoff, offline state per machine, actions with the remote user's rights only.
+- [x] End-to-end test over a real SSH server (`internal/remote/realssh_test.go`, run with a throwaway sshd); CI covers the protocol with in-memory pipes.
 
 **Exit:** a Linux workstation's servers appear in the macOS app, start and stop from it, and open at their `.<machine>.localhost` URLs, surviving a network drop.
 
 ## Phase 6: M4, desktop
 
-- [ ] Open the UI as an app-mode browser window where a Chromium-based browser exists (ADR-0004).
-- [ ] Tray or menu-bar icon: count of running servers, open the window, quick start and stop.
-- [ ] Start at login on each OS.
-- [ ] Installers on GitHub Releases: macOS `.dmg` (unsigned), Linux `.tar.gz`, `.deb` and `.rpm`, Windows `.zip` or `.msi`, all with cosign-signed checksums.
-- [ ] A one-line install script per OS that verifies the checksum, plus our own Homebrew tap.
-- [ ] Update notice: an opt-in check against GitHub releases, or package managers only (ADR).
+- [x] Open the UI as an app-mode browser window where a Chromium-based browser exists (ADR-0004).
+- [x] Tray or menu-bar icon: count of running servers, open the window, quick start and stop.
+- [x] Start at login on each OS.
+- [x] Installers on GitHub Releases: macOS `.dmg` (unsigned), Linux `.tar.gz`, `.deb` and `.rpm`, Windows `.zip` or `.msi`, all with cosign-signed checksums.
+- [x] A one-line install script per OS that verifies the checksum, plus our own Homebrew tap (needs a `homebrew-tap` repository and a token; not set up yet).
+- [ ] Update notice: none in v1 (no network calls; see docs/security.md). Revisit after v1.
 
 **Exit:** a user installs from the landing page or GitHub Releases, the app starts at login, and the tray reflects the real state.
 
 ## Phase 7: v1.0 release
 
 - [ ] Namespaces claimed for `portplane`: domain, npm, Homebrew tap, winget.
-- [ ] Landing page (GitHub Pages) with the pitch, screenshots and a download button that picks the right installer for the visitor's OS.
-- [ ] Documentation: install per OS (including how to get past Gatekeeper and SmartScreen for an unsigned app), first run, the `portless service install` step and CA trust, troubleshooting, FAQ, security model.
+- [x] Landing page (GitHub Pages) with the pitch, screenshots and a download button that picks the right installer for the visitor's OS.
+- [x] Documentation: install per OS (including how to get past Gatekeeper and SmartScreen for an unsigned app), first run, the `portless service install` step and CA trust, troubleshooting, FAQ, security model.
 - [ ] Security review: local API, agent upload and execution, command generation (injection, quoting), file paths.
 - [ ] Budgets met: idle CPU under 1 %, memory under 100 MB, a state change visible in under a second locally.
 - [ ] Accessibility pass on the main view and setup flow.

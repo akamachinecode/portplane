@@ -1,0 +1,140 @@
+import { useEffect, useId, useRef, useSyncExternalStore, type ReactNode } from "react";
+import { Icon, Spinner } from "./Icon";
+
+// Open modal dialogs, in opening order. Everything outside the topmost one
+// is inert and under its backdrop, so toasts render inside it (see Toasts).
+let openDialogs: HTMLDialogElement[] = [];
+const dialogListeners = new Set<() => void>();
+
+function setOpenDialogs(next: HTMLDialogElement[]) {
+  openDialogs = next;
+  for (const l of dialogListeners) l();
+}
+
+/** The topmost open modal dialog, or null. */
+export function useTopDialog(): HTMLDialogElement | null {
+  return useSyncExternalStore(
+    (l) => {
+      dialogListeners.add(l);
+      return () => dialogListeners.delete(l);
+    },
+    () => openDialogs[openDialogs.length - 1] ?? null,
+  );
+}
+
+interface Props {
+  open: boolean;
+  onClose(): void;
+  title: ReactNode;
+  /** Under the title row, e.g. the setup steps. */
+  head?: ReactNode;
+  footer?: ReactNode;
+  size?: "sm" | "md" | "full";
+  /**
+   * Esc and a click on the backdrop close the dialog. Turn it off while a
+   * request that can't be undone runs, or where edits would be lost.
+   */
+  dismissable?: boolean;
+  children: ReactNode;
+}
+
+/** A modal on the native <dialog>: focus trapping, Esc and the top layer come free. */
+export function Dialog({ open, onClose, title, head, footer, size = "md", dismissable = true, children }: Props) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
+
+  useEffect(() => {
+    const d = ref.current;
+    if (!d) return;
+    if (open && !d.open) d.showModal();
+    else if (!open && d.open) d.close();
+    if (open) setOpenDialogs([...openDialogs.filter((x) => x !== d), d]);
+    return () => setOpenDialogs(openDialogs.filter((x) => x !== d));
+  }, [open]);
+
+  return (
+    <dialog
+      ref={ref}
+      className={`dialog dialog-${size}`}
+      aria-labelledby={titleId}
+      onCancel={(e) => {
+        // Esc: React gets this before the dialog closes itself
+        e.preventDefault();
+        if (dismissable) onClose();
+      }}
+      onClose={() => {
+        if (open) onClose();
+      }}
+      onClick={(e) => {
+        // a click on the backdrop lands on the dialog element itself
+        if (dismissable && e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="dialog-frame">
+        <header className="dialog-head">
+          <h2 id={titleId} className="dialog-title">
+            {title}
+          </h2>
+          <button type="button" className="icon-btn" aria-label="Close" onClick={onClose}>
+            <Icon name="close" />
+          </button>
+        </header>
+        {head}
+        <div className="dialog-main">{children}</div>
+        {footer && <footer className="dialog-foot">{footer}</footer>}
+      </div>
+    </dialog>
+  );
+}
+
+/** Asks before something that can't be undone. */
+export function ConfirmDialog({
+  open,
+  title,
+  children,
+  confirmLabel,
+  busy,
+  error,
+  onConfirm,
+  onClose,
+}: {
+  open: boolean;
+  title: ReactNode;
+  children: ReactNode;
+  confirmLabel: string;
+  busy: boolean;
+  error: string | null;
+  onConfirm(): void;
+  onClose(): void;
+}) {
+  return (
+    <Dialog
+      open={open}
+      onClose={() => {
+        if (!busy) onClose();
+      }}
+      title={title}
+      size="sm"
+      dismissable={!busy}
+      footer={
+        <>
+          <span className="spacer" />
+          <button type="button" className="btn btn-ghost" onClick={onClose} disabled={busy}>
+            Cancel
+          </button>
+          <button type="button" className="btn btn-danger" onClick={onConfirm} disabled={busy} aria-busy={busy || undefined}>
+            {busy && <Spinner />}
+            {confirmLabel}
+          </button>
+        </>
+      }
+    >
+      {children}
+      {error && (
+        <p className="field-error" role="alert">
+          {error}
+        </p>
+      )}
+    </Dialog>
+  );
+}

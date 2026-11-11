@@ -30,31 +30,46 @@ export function FirstRun() {
 
 /** Folders are set, but none holds a dekit.yaml. */
 export function NoApps({ ms }: { ms: MachineSnapshot }) {
-  const { openSettings } = useApp();
+  const { openSettings, openSetup, openEditMachine } = useApp();
+  const local = ms.machine.local;
   return (
     <section className="panel" aria-labelledby={`no-apps-${ms.machine.id}`}>
       <h3 id={`no-apps-${ms.machine.id}`} className="panel-title">
         No dev servers found yet
       </h3>
       <p className="panel-text">
-        Portplane reads <code>dekit.yaml</code> files in these folders, and none of them has one:
+        Portplane reads <code>dekit.yaml</code> files in {ms.folders.length === 1 ? "this folder" : "these folders"}, and{" "}
+        {ms.folders.length === 1 ? "it has none" : "none of them has one"}
+        {local ? ". Setup can find your apps and write one for you." : "."}
       </p>
       <ul className="panel-folders">
         {ms.folders.map((f) => (
-          <li key={f} className="mono">
-            {f}
+          <li key={f} className="panel-folder">
+            <span className="mono">{f}</span>
+            {local && (
+              <button type="button" className="btn btn-sm btn-primary" onClick={() => openSetup(f)}>
+                <Icon name="wand" size={14} />
+                Set up this folder
+              </button>
+            )}
           </li>
         ))}
       </ul>
-      <p className="panel-text">
-        Add a <code>dekit.yaml</code> to a project, or pick other folders. Setting projects up from here comes in a later version.
-      </p>
-      {ms.machine.local && (
-        <button type="button" className="btn" onClick={openSettings}>
-          <Icon name="folder" size={14} />
-          Edit folders
-        </button>
+      {local ? (
+        <p className="panel-text">
+          You see every change before anything is written, and the result is plain dekit config you can keep using without
+          Portplane.
+        </p>
+      ) : (
+        <p className="panel-text">
+          Add a <code>dekit.yaml</code> to a project on that machine, or watch other folders there. Setting up other machines from
+          here comes in a later version.
+        </p>
       )}
+      <button type="button" className="btn" onClick={local ? openSettings : () => openEditMachine(ms.machine.id)}>
+        <Icon name="folder" size={14} />
+        Edit folders
+      </button>
     </section>
   );
 }

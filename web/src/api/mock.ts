@@ -1,12 +1,26 @@
 import type { Api, PickResult } from "./client";
 import { ApiError } from "./errors";
 import type { FeedHandlers } from "./events";
-import type { App, Excerpt, Info, MachineSnapshot, Port, Settings, Snapshot, Target, Verb } from "./types";
+import { createMockSetup } from "./mockSetup";
+import type {
+  App,
+  Excerpt,
+  Info,
+  MachineCandidate,
+  MachineSettings,
+  MachineSnapshot,
+  Port,
+  Settings,
+  Snapshot,
+  Target,
+  Verb,
+} from "./types";
 
 // A realistic snapshot for tests and for `?mock` in dev builds (main.tsx loads
 // this module only when import.meta.env.DEV). `?mock=<scenario>` picks a
 // variant:
-//   default    two projects, worktrees, running, starting and failed apps
+//   default    two projects, worktrees, running, starting and failed apps;
+//              a remote machine online with apps, and one offline
 //   degraded   portless missing and one dekit runner down
 //   readonly   neither dekit nor portless: only other ports
 //   empty      folders without any dekit.yaml
@@ -80,6 +94,63 @@ export function groupForMock(apps: App[]): MachineSnapshot["projects"] {
   return projects.map(({ order: _order, ...p }) => p);
 }
 
+const REMOTE_ROOT = "/home/dev/src";
+
+function remoteApp(p: Partial<App> & Pick<App, "task" | "label" | "state" | "order">): App {
+  return { id: `${REMOTE_ROOT}#${p.task}`, runner: REMOTE_ROOT, kind: "service", project: "shop", ...p };
+}
+
+/** A Linux box reached over SSH, with a project running (ADR-0015, ADR-0016). */
+export function mockRemote(): MachineSnapshot {
+  const apps: App[] = [
+    remoteApp({ task: "shop/install", label: "install", kind: "job", dir: `${REMOTE_ROOT}/shop`, state: "done", rawState: "exited", order: 0 }),
+    remoteApp({ task: "shop/web", label: "web", dir: `${REMOTE_ROOT}/shop/apps/web`, deps: ["shop/install"], state: "on", rawState: "running", url: "https://shop.localhost", hostname: "shop.localhost", remoteUrl: "https://shop.box.localhost", port: 4310, ports: [4310], pid: 2210, order: 1 }),
+    remoteApp({ task: "shop/api", label: "api", dir: `${REMOTE_ROOT}/shop/apps/api`, deps: ["shop/install"], state: "on", rawState: "running", url: "https://api.shop.localhost", hostname: "api.shop.localhost", remoteUrl: "https://api.shop.box.localhost", port: 4311, ports: [4311], pid: 2214, order: 2 }),
+    remoteApp({ task: "shop/worker", label: "worker", dir: `${REMOTE_ROOT}/shop/apps/worker`, deps: ["shop/install"], state: "off", rawState: "stopped", hostname: "worker.shop.localhost", order: 3 }),
+  ];
+  return {
+    machine: { id: "box", name: "box", local: false, hostname: "box", os: "linux", arch: "arm64", status: "online", agent: "0.0.0-mock" },
+    tools: { dekit: "0.10.3", portless: "0.16.0", proxyRunning: true, proxyHttps: true, proxyPort: 443 },
+    folders: [REMOTE_ROOT],
+    runners: [{ root: REMOTE_ROOT, name: "src", up: true }],
+    apps,
+    otherPorts: [
+      { port: 5432, address: "127.0.0.1", pid: 812, process: "postgres", inFolder: false },
+      { port: 8080, address: "0.0.0.0", pid: 3012, process: "node", dir: `${REMOTE_ROOT}/scratch`, project: "scratch", inFolder: true },
+    ],
+    projects: groupForMock(apps),
+    updatedAt: UPDATED,
+  };
+}
+
+/** A machine that was added but can't be reached right now. */
+export function mockOffline(): MachineSnapshot {
+  return {
+    machine: { id: "mini", name: "mac-mini", local: false, status: "offline", error: "ssh: connect to host mac-mini.local port 22: Operation timed out" },
+    tools: { proxyRunning: false, proxyHttps: false },
+    folders: ["/Users/dev/code"],
+    runners: [],
+    apps: [],
+    otherPorts: [],
+    projects: [],
+    updatedAt: UPDATED,
+  };
+}
+
+const MOCK_MACHINES: MachineSettings[] = [
+  { id: "box", name: "box", host: "box", folders: [REMOTE_ROOT] },
+  { id: "mini", name: "mac-mini", host: "dev@mac-mini.local", folders: ["/Users/dev/code"] },
+];
+
+export const MOCK_CANDIDATES: MachineCandidate[] = [
+  { host: "box", name: "box", source: "ssh-config" },
+  { host: "build", name: "build", source: "ssh-config" },
+  { host: "pi", name: "pi", source: "ssh-config" },
+  { host: "mac-mini", name: "mac-mini", source: "tailscale", os: "macOS", online: false },
+  { host: "box", name: "box", source: "tailscale", os: "linux", online: true },
+  { host: "pi", name: "pi", source: "tailscale", os: "linux", online: true },
+];
+
 export function mockSnapshot(scenario: Scenario = "default"): Snapshot {
   const apps = scenario === "empty" || scenario === "nofolders" || scenario === "readonly" ? [] : mockApps();
   const ms: MachineSnapshot = {
@@ -106,6 +177,7 @@ export function mockSnapshot(scenario: Scenario = "default"): Snapshot {
   if (scenario === "readonly") {
     ms.tools = { proxyRunning: false, proxyHttps: false };
   }
+  if (scenario === "default") return { machines: [ms, mockRemote(), mockOffline()], version: 1 };
   return { machines: [ms], version: 1 };
 }
 
@@ -126,10 +198,19 @@ const EXCERPT: Excerpt = {
   command: "dekit -C ~/code screen my-monorepo/admin",
 };
 
+/** Test and debug hooks of the mock, on top of the Api. */
+export interface MockControls {
+  /** Edits the folder behind setup's back: the next write gets a 409. */
+  touchSetupFolder(): void;
+}
+
 /** An in-memory Api: actions change the mock snapshot after a short delay, like dekit would. */
-export function createMockApi(scenario: Scenario = "default"): Api {
+export function createMockApi(scenario: Scenario = "default"): Api & MockControls {
   let snapshot = mockSnapshot(scenario);
   let folders = [...snapshot.machines[0].folders];
+  let machines: MachineSettings[] = scenario === "default" ? structuredClone(MOCK_MACHINES) : [];
+  let autostart = false;
+  const setup = createMockSetup(scenario === "empty" || scenario === "readonly" || scenario === "nofolders" ? "fresh" : "existing", ROOT);
   const listeners = new Set<FeedHandlers>();
   let nextPid = 50000;
   let nextPort = 4600;
@@ -138,18 +219,21 @@ export function createMockApi(scenario: Scenario = "default"): Api {
     snapshot = { ...snapshot, version: snapshot.version + 1 };
     for (const l of listeners) l.onSnapshot(snapshot);
   };
-  const update = (fn: (ms: MachineSnapshot) => void) => {
-    const ms = structuredClone(snapshot.machines[0]);
+  const update = (fn: (ms: MachineSnapshot) => void, machine = "local") => {
+    const i = snapshot.machines.findIndex((m) => m.machine.id === machine);
+    if (i < 0) return;
+    const ms = structuredClone(snapshot.machines[i]);
     fn(ms);
     ms.projects = groupForMock(ms.apps);
     ms.updatedAt = new Date().toISOString();
-    snapshot = { ...snapshot, machines: [ms] };
+    snapshot = { ...snapshot, machines: snapshot.machines.map((m, j) => (j === i ? ms : m)) };
     emit();
   };
-  const setState = (ids: Set<string>, patch: (a: App) => Partial<App>) =>
+  const setState = (machine: string, ids: Set<string>, patch: (a: App) => Partial<App>) =>
     update((ms) => {
       ms.apps = ms.apps.map((a) => (ids.has(a.id) ? { ...a, ...patch(a) } : a));
-    });
+    }, machine);
+  const machineSnap = (id: string) => snapshot.machines.find((m) => m.machine.id === id);
   const later = (ms: number, fn: () => void) => setTimeout(fn, ms);
 
   const matches = (t: Target, a: App) =>
@@ -170,27 +254,43 @@ export function createMockApi(scenario: Scenario = "default"): Api {
   };
 
   const delay = <T>(value: T, ms = 150) => new Promise<T>((r) => setTimeout(() => r(value), ms));
+  const abortable = (ms: number, signal?: AbortSignal) =>
+    new Promise<void>((resolve, reject) => {
+      const t = setTimeout(resolve, ms);
+      signal?.addEventListener("abort", () => {
+        clearTimeout(t);
+        reject(new DOMException("The request was cancelled", "AbortError"));
+      });
+    });
+  const machineError = (id: string) => new ApiError(`unknown machine "${id}"`, 400);
 
   return {
     info: () => delay<Info>({ version: "0.0.0-mock", os: "linux", arch: "amd64", url: "https://portplane.localhost", picker: true }),
     snapshot: () => delay(snapshot),
     async act(target, verb: Verb) {
       await delay(undefined, 200);
-      const ids = new Set(snapshot.machines[0].apps.filter((a) => matches(target, a)).map((a) => a.id));
+      const m = target.machine;
+      const ids = new Set((machineSnap(m)?.apps ?? []).filter((a) => matches(target, a)).map((a) => a.id));
       if (ids.size === 0) throw new ApiError("no task matches this target", 404);
       if (verb === "stop") {
-        setState(ids, () => ({ state: "stopping", rawState: "stopping" }));
-        later(900, () => setState(ids, (a) => ({ state: a.kind === "job" ? "done" : "off", rawState: "stopped", pid: undefined, port: undefined, ports: undefined, url: undefined, detail: undefined })));
+        setState(m, ids, () => ({ state: "stopping", rawState: "stopping" }));
+        later(900, () => setState(m, ids, (a) => ({ state: a.kind === "job" ? "done" : "off", rawState: "stopped", pid: undefined, port: undefined, ports: undefined, url: undefined, remoteUrl: undefined, detail: undefined })));
         return;
       }
-      setState(ids, () => ({ state: "starting", rawState: "running", detail: "waiting for port" }));
-      later(1600, () => setState(ids, (a) => (a.kind === "job" ? { state: "done", rawState: "exited", detail: undefined } : running(a))));
+      setState(m, ids, () => ({ state: "starting", rawState: "running", detail: "waiting for port" }));
+      later(1600, () =>
+        setState(m, ids, (a) => {
+          if (a.kind === "job") return { state: "done", rawState: "exited", detail: undefined };
+          const up = running(a);
+          return m === "local" || !a.hostname ? up : { ...up, remoteUrl: `https://${a.hostname.replace(/\.localhost$/, "")}.${m}.localhost` };
+        }),
+      );
     },
-    async runnerUp(_machine, root) {
+    async runnerUp(machine, root) {
       await delay(undefined, 400);
       update((ms) => {
         ms.runners = ms.runners.map((r) => (r.root === root ? { ...r, up: true, error: undefined } : r));
-      });
+      }, machine);
     },
     excerpt: () => delay(EXCERPT, 300),
     open: () => delay(undefined),
@@ -216,6 +316,102 @@ export function createMockApi(scenario: Scenario = "default"): Api {
       return { folders };
     },
     pickFolder: () => delay<PickResult>({ kind: "picked", path: `${HOME}/projects` }, 600),
+
+    setupCheck: () => delay(setup.check(snapshot.machines[0].tools), 350),
+    async setupScan(folder, overrides) {
+      await delay(undefined, 500);
+      if (!folders.includes(folder)) throw new ApiError("set up only folders Portplane watches: add it in Settings first", 400);
+      return setup.scan(folder, overrides);
+    },
+    async setupApply(folder, digest, overrides) {
+      await delay(undefined, 600);
+      if (!folders.includes(folder)) throw new ApiError("set up only folders Portplane watches: add it in Settings first", 400);
+      const { written, tasks } = setup.apply(folder, digest, overrides);
+      const runner = machineSnap("local")?.runners.find((r) => r.root === folder);
+      if (written.length && !runner) {
+        // A folder without dekit config until now: its runner appears, down,
+        // with the new tasks. (Folders set up before keep their mock apps.)
+        update((ms) => {
+          ms.runners.push({ root: folder, name: folder.split("/").pop() ?? folder, up: false });
+          ms.apps = [...ms.apps, ...tasks];
+        });
+      }
+      return { written, reloaded: written.length > 0 && !!runner?.up };
+    },
+
+    machines: () => delay(structuredClone(machines)),
+    machineCandidates: () => delay(structuredClone(MOCK_CANDIDATES), 700),
+    async addMachine(req, signal) {
+      await abortable(2600, signal);
+      const host = req.host.trim();
+      if (!host || host.startsWith("-") || /[\s'"`$;|&]/.test(host)) {
+        throw new ApiError("enter an SSH host, such as an alias from ~/.ssh/config or user@host", 400);
+      }
+      if (host === "build") throw new ApiError("ssh: Could not resolve hostname build: Name or service not known", 400);
+      const dup = machines.find((m) => m.host === host);
+      if (dup) throw new ApiError(`${host} is already added as ${dup.name}`, 400);
+      const name = req.name.trim() || host.replace(/^.*@/, "").replace(/\..*$/, "");
+      let id = name.toLowerCase().replace(/[^a-z0-9-]+/g, "-");
+      for (let i = 2; id === "local" || machines.some((m) => m.id === id); i++) id = `${name.toLowerCase()}-${i}`;
+      const mc: MachineSettings = { id, name, host, folders: req.folders.map((f) => f.trim()).filter(Boolean) };
+      machines = [...machines, mc];
+      const placeholder: MachineSnapshot = {
+        machine: { id, name, local: false, status: "connecting" },
+        tools: { proxyRunning: false, proxyHttps: false },
+        folders: mc.folders,
+        runners: [],
+        apps: [],
+        otherPorts: [],
+        projects: [],
+        updatedAt: new Date().toISOString(),
+      };
+      snapshot = { ...snapshot, machines: [...snapshot.machines, placeholder] };
+      emit();
+      later(1500, () =>
+        update((ms) => {
+          ms.machine = { ...ms.machine, status: "online", hostname: host.replace(/^.*@/, ""), os: "linux", arch: "amd64", agent: "0.0.0-mock" };
+          ms.tools = { dekit: "0.10.3", portless: "0.16.0", proxyRunning: true, proxyHttps: true, proxyPort: 443 };
+          ms.otherPorts = [{ port: 22, address: "0.0.0.0", process: "sshd", inFolder: false }];
+        }, id),
+      );
+      return mc;
+    },
+    async updateMachine(id, req) {
+      await delay(undefined, 300);
+      const mc = machines.find((m) => m.id === id);
+      if (!mc) throw machineError(id);
+      const next: MachineSettings = { ...mc, name: req.name?.trim() || mc.name, folders: req.folders.map((f) => f.trim()).filter(Boolean) };
+      machines = machines.map((m) => (m.id === id ? next : m));
+      update((ms) => {
+        ms.machine.name = next.name;
+        ms.folders = next.folders;
+      }, id);
+      return next;
+    },
+    async removeMachine(id) {
+      await delay(undefined, 300);
+      if (!machines.some((m) => m.id === id)) throw machineError(id);
+      machines = machines.filter((m) => m.id !== id);
+      snapshot = { ...snapshot, machines: snapshot.machines.filter((m) => m.machine.id !== id) };
+      emit();
+    },
+    async openPort(machine, port) {
+      await delay(undefined, 700);
+      if (machine === "local") return `http://localhost:${port}`;
+      const ms = machineSnap(machine);
+      if (!ms) throw machineError(machine);
+      if (ms.machine.status !== "online") throw new ApiError("machine is offline", 400);
+      return `http://127.0.0.1:${41000 + (port % 1000)}`;
+    },
+
+    autostart: () => delay({ enabled: autostart }),
+    async setAutostart(enabled) {
+      await delay(undefined, 250);
+      autostart = enabled;
+      return { enabled };
+    },
+    touchSetupFolder: () => setup.touch(),
+
     subscribe(handlers) {
       listeners.add(handlers);
       handlers.onStatus("connecting");
