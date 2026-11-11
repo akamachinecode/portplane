@@ -381,7 +381,13 @@ func (a *Agent) Excerpt(ctx context.Context, runner, task string) (model.Excerpt
 func (a *Agent) SetFolders(ctx context.Context, folders []string) error {
 	err := a.call(ctx, "setFolders", foldersParams{Folders: folders}, nil)
 	if err != nil && !errors.Is(err, ErrOffline) {
-		return err // rejected: keep the old folders
+		// Rejected: the agent already applied the folders that exist, so
+		// put the old ones back (best effort) and keep them.
+		a.mu.Lock()
+		old := append([]string{}, a.folders...)
+		a.mu.Unlock()
+		_ = a.call(ctx, "setFolders", foldersParams{Folders: old}, nil)
+		return err
 	}
 	a.mu.Lock()
 	a.folders = append([]string{}, folders...)

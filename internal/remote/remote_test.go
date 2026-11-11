@@ -387,3 +387,51 @@ func (b *blockingAgent) SetFolders(ctx context.Context, f []string) error {
 	}
 	return b.fakeAgent.SetFolders(ctx, f)
 }
+
+func TestRejectedFoldersAreRolledBack(t *testing.T) {
+	fa := &fakeAgent{snap: online()}
+	conn := ConnectorFunc(func(context.Context) (io.ReadWriteCloser, error) {
+		client, server := connPair()
+		go func() { _ = Serve(context.Background(), server, fa) }()
+		return client, nil
+	})
+	a1, a2 := t.TempDir(), t.TempDir()
+	a := NewAgent("box", "box", []string{a1, a2}, conn)
+	defer func() { _ = a.Close() }()
+	waitSnapshot(t, a.Watch(context.Background()), "online")
+	if err := a.SetFolders(context.Background(), []string{a1, "/definitely/missing"}); err == nil {
+		t.Fatal("a missing folder must be reported")
+	}
+	fa.mu.Lock()
+	got := fa.folders
+	fa.mu.Unlock()
+	if len(got) != 2 || got[0] != a1 || got[1] != a2 {
+		t.Fatalf("the remote must keep the old folders: %v", got)
+	}
+	if f := a.Folders(); len(f) != 2 {
+		t.Fatalf("the client keeps the old folders: %v", f)
+	}
+}
+
+func TestOnDemandForwardClosesWhenThePortGoes(t *testing.T) {
+	f := NewForwarder(nil)
+	defer f.Close()
+	fa := &fakeAgent{}
+	w := f.Wrap(fa, "box").(*forwardingAgent)
+	if _, err := w.OpenPort(context.Background(), 5432); err != nil {
+		t.Fatal(err)
+	}
+	snap := online()
+	snap.OtherPorts = []model.Port{{Port: 5432}}
+	f.sync(fa, "box", snap)
+	if len(f.entries) != 1 {
+		t.Fatal("still listening: keep it")
+	}
+	f.sync(fa, "box", online())
+	f.mu.Lock()
+	n := len(f.entries)
+	f.mu.Unlock()
+	if n != 0 {
+		t.Fatal("the port is gone: close the forward")
+	}
+}

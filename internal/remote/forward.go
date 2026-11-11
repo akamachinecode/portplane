@@ -34,10 +34,24 @@ type Router interface {
 type Forwarder struct {
 	router Router
 
-	mu       sync.Mutex
-	entries  map[string]*forward // machine + "|" + remote port
-	closed   map[string]bool     // machines removed: no new forwards
-	ensureMu sync.Mutex          // one forward created at a time
+	mu        sync.Mutex
+	entries   map[string]*forward    // machine + "|" + remote port
+	closed    map[string]bool        // machines removed: no new forwards
+	closedAll bool                   // Close was called
+	locks     map[string]*sync.Mutex // per machine: one change to its forwards at a time
+}
+
+// lock serialises forward changes per machine (machines never wait on each
+// other's aliases).
+func (f *Forwarder) lock(label string) *sync.Mutex {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	m, ok := f.locks[label]
+	if !ok {
+		m = &sync.Mutex{}
+		f.locks[label] = m
+	}
+	return m
 }
 
 type forward struct {
@@ -54,7 +68,7 @@ type forward struct {
 
 // NewForwarder returns a forwarder; router may be nil (plain loopback URLs).
 func NewForwarder(router Router) *Forwarder {
-	return &Forwarder{router: router, entries: map[string]*forward{}, closed: map[string]bool{}}
+	return &Forwarder{router: router, entries: map[string]*forward{}, closed: map[string]bool{}, locks: map[string]*sync.Mutex{}}
 }
 
 // Wrap returns an agent whose snapshots carry RemoteURL for running apps,
@@ -133,6 +147,12 @@ func (f *Forwarder) sync(a agent.Agent, label string, s model.MachineSnapshot) m
 			}
 		}
 	}
+	listening := map[int]bool{}
+	for _, p := range s.OtherPorts {
+		listening[p.Port] = true
+	}
+	mu := f.lock(label)
+	mu.Lock()
 	f.mu.Lock()
 	var stale []*forward
 	for k, fw := range f.entries {
@@ -143,7 +163,8 @@ func (f *Forwarder) sync(a agent.Agent, label string, s model.MachineSnapshot) m
 		switch {
 		case fw.agent != a,
 			!running && !fw.onDemand,
-			running && (fw.onDemand || fw.remoteHost != app.Hostname):
+			running && (fw.onDemand || fw.remoteHost != app.Hostname),
+			fw.onDemand && s.Machine.Status == "online" && !listening[fw.remotePort]:
 			stale = append(stale, fw)
 			delete(f.entries, k)
 		}
@@ -152,6 +173,7 @@ func (f *Forwarder) sync(a agent.Agent, label string, s model.MachineSnapshot) m
 	for _, fw := range stale {
 		f.stop(fw)
 	}
+	mu.Unlock()
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	for _, app := range want {
@@ -180,11 +202,12 @@ func (f *Forwarder) decorate(s model.MachineSnapshot) model.MachineSnapshot {
 var errMachineClosed = errors.New("machine removed")
 
 func (f *Forwarder) ensure(ctx context.Context, a agent.Agent, label string, port int, remoteHost string, onDemand bool) (*forward, error) {
-	f.ensureMu.Lock()
-	defer f.ensureMu.Unlock()
+	mu := f.lock(label)
+	mu.Lock()
+	defer mu.Unlock()
 	k := key(label, port)
 	f.mu.Lock()
-	if f.closed[label] {
+	if f.closed[label] || f.closedAll {
 		f.mu.Unlock()
 		return nil, errMachineClosed
 	}
@@ -235,7 +258,7 @@ func (f *Forwarder) ensure(ctx context.Context, a agent.Agent, label string, por
 	go func() { _ = fw.srv.Serve(ln) }()
 
 	f.mu.Lock()
-	if f.closed[label] {
+	if f.closed[label] || f.closedAll {
 		f.mu.Unlock()
 		f.stop(fw)
 		return nil, errMachineClosed
@@ -302,6 +325,8 @@ func proxyHandler(a agent.Agent, port int, upstreamHost string, allowed map[stri
 					u.Host = publicHost
 					if https {
 						u.Scheme = "https"
+					} else {
+						u.Scheme = "http"
 					}
 					resp.Header.Set("Location", u.String())
 				}
@@ -391,8 +416,20 @@ func (f *Forwarder) closeMachine(label string) {
 	}
 }
 
-// Close stops every forward and removes every alias.
+// Close stops every forward and removes every alias, after any forward
+// being created finishes (so its alias is removed too).
 func (f *Forwarder) Close() {
+	f.mu.Lock()
+	f.closedAll = true
+	locks := make([]*sync.Mutex, 0, len(f.locks))
+	for _, m := range f.locks {
+		locks = append(locks, m)
+	}
+	f.mu.Unlock()
+	for _, m := range locks {
+		m.Lock()
+		m.Unlock() //nolint:staticcheck // waiting for in-flight work
+	}
 	f.mu.Lock()
 	list := make([]*forward, 0, len(f.entries))
 	for k, fw := range f.entries {
