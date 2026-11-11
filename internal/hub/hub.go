@@ -63,9 +63,8 @@ func (h *Hub) Add(id string, a agent.Agent, placeholder model.Machine) {
 		h.order = append(h.order, id)
 	}
 	h.agents[id] = &entry{agent: a, cancel: cancel, snap: emptySnapshot(placeholder)}
-	active := len(h.subs) > 0
 	h.mu.Unlock()
-	h.pace(a, active)
+	h.repace()
 	h.publish()
 	go func() {
 		for s := range a.Watch(ctx) {

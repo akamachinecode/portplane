@@ -320,3 +320,48 @@ func TestSameCommandInSeveralFoldersUsesTheCwd(t *testing.T) {
 		t.Fatal("a prefix that is not a folder must be refused")
 	}
 }
+
+func TestHiddenTaskKeepsItsPorts(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, root+"/dekit.yaml", `tasks:
+  shop/web:
+    cwd: apps/web
+    cmd: pnpm dev
+  shop/api:
+    cwd: apps/api
+    cmd: pnpm dev
+`)
+	for _, d := range []string{"apps/web", "apps/api"} {
+		if err := os.MkdirAll(filepath.Join(root, d), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	dk := &fakeDekit{
+		runners: []dekit.RunnerRecord{{PID: 100, Root: root, Running: true}},
+		states: map[string][]dekit.TaskState{root: {
+			{Path: "shop/web", Kind: "service", State: "ready"},
+			{Path: "shop/api", Kind: "service", State: "ready"},
+		}},
+	}
+	osf := fakeOS{
+		listeners: []osinfo.Listener{{Port: 3000, PID: 111}, {Port: 3001, PID: 121}},
+		procs: map[int]osinfo.Proc{
+			110: {PID: 110, PPID: 100, Cmdline: []string{"pnpm", "dev"}},
+			111: {PID: 111, PPID: 110, Cmdline: []string{"node", "web.js"}},
+			120: {PID: 120, PPID: 100, Cmdline: []string{"pnpm", "dev"}},
+			121: {PID: 121, PPID: 120, Cmdline: []string{"node", "api.js"}},
+		},
+		cwds: map[int]string{110: root + "/apps/web", 120: root + "/apps/api"},
+	}
+	// Only apps/web is chosen: shop/api is hidden but still owns :3001.
+	l := NewLocal(Options{Folders: []string{root + "/apps/web"}, Dekit: dk, Portless: fakeRouter{}, OS: osf})
+	snap := l.collect(context.Background())
+	if len(snap.Apps) != 1 || snap.Apps[0].Task != "shop/web" || !reflect.DeepEqual(snap.Apps[0].Ports, []int{3000}) {
+		t.Fatalf("apps: %+v", snap.Apps)
+	}
+	for _, p := range snap.OtherPorts {
+		if p.Port == 3001 {
+			t.Fatal("a hidden task's port is not an other port")
+		}
+	}
+}

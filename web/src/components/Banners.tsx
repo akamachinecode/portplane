@@ -58,7 +58,7 @@ export function RunnerBanners({ ms, home }: { ms: MachineSnapshot; home: string 
               title={
                 r.up ? (
                   <>
-                    dekit reported a problem for <strong>{r.name}</strong>
+                    Problem reading <strong>{r.name}</strong>
                   </>
                 ) : (
                   <>

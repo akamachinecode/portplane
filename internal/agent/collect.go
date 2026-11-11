@@ -43,7 +43,8 @@ type task struct {
 	state  *dekit.TaskState
 	order  int
 	app    model.App
-	rootPI int // pid of the process dekit started for it
+	rootPI int  // pid of the process dekit started for it
+	hidden bool // outside the chosen folders (Project.Within)
 }
 
 // collect builds one machine snapshot. It never fails as a whole: problems
@@ -106,13 +107,16 @@ func (l *Local) collect(ctx context.Context) model.MachineSnapshot {
 		joined := joinTasks(cfg, states)
 		for _, t := range joined {
 			t.root = p.Root
+			// Every task takes part in matching processes, so a hidden one
+			// keeps its own ports; only the shown ones become apps.
+			byRoot[p.Root] = append(byRoot[p.Root], t)
 			if len(p.Within) > 0 && (t.cfg == nil || !p.Shows(t.cfg.Dir)) {
+				t.hidden = true
 				continue
 			}
 			t.order = order
 			order++
 			tasks = append(tasks, t)
-			byRoot[p.Root] = append(byRoot[p.Root], t)
 		}
 	}
 
@@ -164,6 +168,9 @@ func (l *Local) collect(ctx context.Context) model.MachineSnapshot {
 		if owner == nil {
 			unowned = append(unowned, ln)
 			continue
+		}
+		if owner.hidden {
+			continue // a task outside the chosen folders: not shown anywhere
 		}
 		owner.app.Ports = appendUnique(owner.app.Ports, ln.Port)
 		if owner.app.PID == 0 {
@@ -278,7 +285,7 @@ func matchTask(ctx context.Context, cache *osinfo.Cache, tasks []*task, pid int)
 		cwd := filepath.Clean(cache.Cwd(ctx, pid))
 		var match *task
 		for _, t := range best {
-			if t.cfg.Dir != "" && filepath.Clean(t.cfg.Dir) == cwd {
+			if t.cfg.Dir != "" && sameDir(t.cfg.Dir, cwd) {
 				if match != nil {
 					return nil
 				}
@@ -328,6 +335,18 @@ func cmdScore(cmdline, argv []string) int {
 		return n // arguments match, program name differs (wrapper or shim)
 	}
 	return 0
+}
+
+// sameDir compares folders, also through symlinks (/var and /private/var on
+// macOS).
+func sameDir(a, b string) bool {
+	a, b = filepath.Clean(a), filepath.Clean(b)
+	if a == b {
+		return true
+	}
+	ra, errA := filepath.EvalSymlinks(a)
+	rb, errB := filepath.EvalSymlinks(b)
+	return errA == nil && errB == nil && ra == rb
 }
 
 func progName(p string) string {
