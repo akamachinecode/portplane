@@ -15,7 +15,4 @@ func TestCount(t *testing.T) {
 	if c != (Counts{Running: 2, Starting: 1, Failed: 1}) || c.Summary() != "2 running · 1 starting · 1 failed" {
 		t.Fatalf("%+v %q", c, c.Summary())
 	}
-	if itoa(42) != "42" || itoa(7) != "7" {
-		t.Fatal("itoa")
-	}
 }

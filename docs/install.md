@@ -63,4 +63,12 @@ portplane autostart on         # optional: start at login
 
 ## Uninstall
 
-Remove the binary (or the app), then, if you used them: `portplane autostart off` first, `~/.config/portplane` (settings) and `~/.cache/portplane`. On machines you added over SSH, Portplane only wrote `~/.cache/portplane`.
+Run `portplane autostart off` first if you turned it on, then remove the binary (or the app) and Portplane's own folders:
+
+| OS | Settings | Cache |
+|---|---|---|
+| macOS | `~/Library/Application Support/portplane` | `~/Library/Caches/portplane` |
+| Linux | `~/.config/portplane` | `~/.cache/portplane` |
+| Windows | `%AppData%\portplane` | `%LocalAppData%\portplane` |
+
+On machines you added over SSH, Portplane only wrote its cache folder (`~/.cache/portplane` on Linux, `~/Library/Caches/portplane` on macOS).

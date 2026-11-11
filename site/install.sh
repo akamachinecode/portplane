@@ -72,7 +72,19 @@ say "Installed $dir/portplane"
 
 case ":$PATH:" in
   *":$dir:"*) ;;
-  *) say "Add $dir to your PATH, for example: echo 'export PATH=\"$dir:\$PATH\"' >> ~/.profile" ;;
+  *)
+    case "$(basename "${SHELL:-sh}")" in
+      zsh) rc="~/.zprofile" ;;
+      bash) rc="~/.bashrc" ;;
+      fish) rc="" ;;
+      *) rc="~/.profile" ;;
+    esac
+    if [ -z "$rc" ]; then
+      say "Add $dir to your PATH: fish_add_path $dir"
+    else
+      say "Add $dir to your PATH: echo 'export PATH=\"$dir:\$PATH\"' >> $rc  (then open a new terminal)"
+    fi
+    ;;
 esac
 say ""
 say "Next: portplane folders add ~/code && portplane"

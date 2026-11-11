@@ -43,6 +43,9 @@ func Enable() error {
 	if strings.Contains(exe, "go-build") {
 		return fmt.Errorf("refusing to start a temporary go run build at login (%s); install portplane first", exe)
 	}
+	if strings.Contains(exe, "/AppTranslocation/") || strings.HasPrefix(exe, "/Volumes/") {
+		return fmt.Errorf("running from the disk image (%s): move Portplane to Applications first, then turn this on", exe)
+	}
 	return enable(exe)
 }
 

@@ -4,8 +4,8 @@ package tray
 
 import (
 	"context"
-	"os"
 	"runtime"
+	"strconv"
 
 	"fyne.io/systray"
 
@@ -18,8 +18,8 @@ func Available() bool {
 	case "darwin", "windows":
 		return true
 	}
-	// Linux and BSDs: needs a desktop session bus (StatusNotifierItem).
-	return os.Getenv("DBUS_SESSION_BUS_ADDRESS") != "" && (os.Getenv("DISPLAY") != "" || os.Getenv("WAYLAND_DISPLAY") != "")
+	// Linux and BSDs: needs a session bus with a StatusNotifier host.
+	return statusNotifierHost()
 }
 
 func setIcon(lit int) {
@@ -38,6 +38,7 @@ func setIcon(lit int) {
 
 func run(ctx context.Context, o Options) {
 	onReady := func() {
+		watchReopen(ctx, o.Open)
 		setIcon(0)
 		systray.SetTooltip("Portplane")
 		status := systray.AddMenuItem("Starting…", "")
@@ -63,9 +64,18 @@ func run(ctx context.Context, o Options) {
 					c := Count(s)
 					status.SetTitle(c.Summary())
 					systray.SetTooltip("Portplane: " + c.Summary())
+					if o.Autostart != nil { // it may have changed in the UI or the CLI
+						if on, err := o.Autostart(); err == nil && on != login.Checked() {
+							if on {
+								login.Check()
+							} else {
+								login.Uncheck()
+							}
+						}
+					}
 					if runtime.GOOS == "darwin" {
 						if c.Running > 0 {
-							systray.SetTitle(" " + itoa(c.Running))
+							systray.SetTitle(" " + strconv.Itoa(c.Running))
 						} else {
 							systray.SetTitle("")
 						}
@@ -109,11 +119,4 @@ func run(ctx context.Context, o Options) {
 		}()
 	}
 	systray.Run(onReady, func() {})
-}
-
-func itoa(n int) string {
-	if n < 10 {
-		return string(rune('0' + n))
-	}
-	return itoa(n/10) + string(rune('0'+n%10))
 }

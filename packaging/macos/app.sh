@@ -15,8 +15,22 @@ sed "s/__VERSION__/$version/g" "$root/packaging/macos/Info.plist" > "$app/Conten
 ln -s /Applications "$work/Portplane/Applications"
 out="$root/dist/portplane_${version}_darwin_${arch}.dmg"
 rm -f "$out"
-if command -v hdiutil >/dev/null; then
-  hdiutil create -quiet -volname "Portplane" -srcfolder "$work/Portplane" -ov -format UDZO "$out"
-else
+if ! command -v hdiutil >/dev/null; then
   echo "hdiutil not found: skipping $out (only built on macOS)" >&2
+  exit 0
 fi
+# Seal the whole bundle with an ad-hoc signature: Apple silicon refuses a
+# bundle whose Info.plist and resources are unsigned ("is damaged"), while an
+# ad-hoc signed one gets the usual "Open Anyway" (ADR-0012: no notarization).
+codesign --force --deep --sign - "$app"
+codesign --verify --deep --strict "$app"
+# goreleaser builds both architectures at once; hdiutil sometimes reports
+# "Resource busy" when two images are created together.
+for attempt in 1 2 3 4 5; do
+  if hdiutil create -quiet -volname "Portplane" -srcfolder "$work/Portplane" -ov -format UDZO "$out"; then
+    exit 0
+  fi
+  echo "hdiutil failed (attempt $attempt), retrying" >&2
+  sleep $((attempt * 3))
+done
+exit 1

@@ -47,6 +47,7 @@ func cmdServe(args []string, stdout, stderr io.Writer) int {
 		return 2
 	}
 
+	detachOwnConsole()
 	envpath.Enrich()
 
 	// One Portplane per user: a second start opens the first one's window.
