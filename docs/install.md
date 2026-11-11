@@ -71,4 +71,4 @@ Run `portplane autostart off` first if you turned it on, then remove the binary 
 | Linux | `~/.config/portplane` | `~/.cache/portplane` |
 | Windows | `%AppData%\portplane` | `%LocalAppData%\portplane` |
 
-On machines you added over SSH, Portplane only wrote its cache folder (`~/.cache/portplane` on Linux, `~/Library/Caches/portplane` on macOS).
+On Windows, the installer also added `%LocalAppData%\Programs\Portplane` to your user PATH. On machines you added over SSH, Portplane only wrote `~/.cache/portplane` (on macOS and Linux alike).

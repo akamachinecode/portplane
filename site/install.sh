@@ -74,8 +74,8 @@ case ":$PATH:" in
   *":$dir:"*) ;;
   *)
     case "$(basename "${SHELL:-sh}")" in
-      zsh) rc="~/.zprofile" ;;
-      bash) rc="~/.bashrc" ;;
+      zsh) rc="~/.zshrc" ;;
+      bash) if [ "$os" = darwin ]; then rc="~/.bash_profile"; else rc="~/.bashrc"; fi ;;
       fish) rc="" ;;
       *) rc="~/.profile" ;;
     esac
