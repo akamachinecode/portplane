@@ -22,6 +22,10 @@ linters:
           disabled: true
         - name: package-comments
           disabled: true
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters: [noctx]
 formatters:
   enable:
     - gofmt

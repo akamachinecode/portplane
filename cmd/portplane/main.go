@@ -14,11 +14,19 @@ import (
 const usage = `Portplane: every dev server, on every machine, in one window.
 
 Usage:
-  portplane <command> [flags]
+  portplane [command] [flags]
 
 Commands:
-  version     Print the version
-  help        Show this help
+  (none)        Start Portplane and open its window (same as "serve --open")
+  serve         Serve the UI on loopback (https://portplane.localhost with portless)
+  ls            List apps and their state on this machine
+  start <app>   Start an app, or every app of a project ("shop/")
+  stop <app>    Stop an app or a project
+  restart <app> Restart an app or a project
+  folders       List, add or remove the folders Portplane watches
+  port-exec     Run a command with {PORT} and {HOST} filled from the environment
+  version       Print the version
+  help          Show this help
 
 Run "portplane <command> -h" for a command's flags.
 `
@@ -29,10 +37,19 @@ func main() {
 
 func run(args []string, stdout, stderr io.Writer) int {
 	if len(args) == 0 {
-		fmt.Fprint(stderr, usage)
-		return 2
+		return cmdServe([]string{"--open"}, stdout, stderr)
 	}
 	switch args[0] {
+	case "serve":
+		return cmdServe(args[1:], stdout, stderr)
+	case "ls", "list":
+		return cmdList(args[1:], stdout, stderr)
+	case "start", "stop", "restart":
+		return cmdAct(args[0], args[1:], stdout, stderr)
+	case "folders":
+		return cmdFolders(args[1:], stdout, stderr)
+	case "port-exec":
+		return cmdPortExec(args[1:], stderr)
 	case "version", "--version", "-v":
 		return cmdVersion(args[1:], stdout, stderr)
 	case "help", "-h", "--help":
@@ -53,8 +70,7 @@ func cmdVersion(args []string, stdout, stderr io.Writer) int {
 	}
 	info := buildinfo.Get()
 	if *asJSON {
-		enc := json.NewEncoder(stdout)
-		if err := enc.Encode(info); err != nil {
+		if err := json.NewEncoder(stdout).Encode(info); err != nil {
 			return 1
 		}
 		return 0

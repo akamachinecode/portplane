@@ -136,3 +136,18 @@ jobs:
       - run: goreleaser release --snapshot --clean --skip=sign,publish
       - name: Smoke test the darwin binary
         run: ./dist/darwin_darwin_arm64*/portplane version
+
+  integration:
+    name: Integration (real dekit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - name: Install dekit
+        run: |
+          curl -fsSL https://dekit.run/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - run: go build -o bin/portplane ./cmd/portplane
+      - run: scripts/integration.sh bin/portplane

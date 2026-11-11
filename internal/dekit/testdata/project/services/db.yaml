@@ -1,0 +1,4 @@
+tasks:
+  db:
+    cmd: ["postgres", "-D", ".data/db"]
+    ready: {tcp: 5432}

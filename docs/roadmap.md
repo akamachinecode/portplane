@@ -56,7 +56,7 @@ Upstream, in parallel (drafts in [upstream.md](upstream.md)):
 ## Phase 2: Foundation
 
 - [x] `mise.toml` pinning Go, Node and pnpm.
-- [ ] Layout: `cmd/portplane`, `internal/{model,agent,collector,adapters/dekit,adapters/portless,api,setup}`, `web/`.
+- [x] Layout: `cmd/portplane`, `internal/{model,agent,collector,adapters/dekit,adapters/portless,api,setup}`, `web/`.
 - [x] The repo's own `dekit.yaml`, so contributors run the UI dev server and the app through dekit and portless (dogfooding).
 - [x] CI on macOS, Linux and Windows: Go lint and tests, web typecheck, lint and tests, DCO and Conventional Commit checks.
 - [x] Release pipeline dry run: release-please PRs, goreleaser snapshot builds for all targets, cosign-signed checksums.
@@ -67,28 +67,28 @@ Upstream, in parallel (drafts in [upstream.md](upstream.md)):
 
 Model and collection:
 
-- [ ] Domain model: machine → project → worktree → app → server, with states on, starting, failed, off and unknown, and the source of each fact (dekit, portless, OS).
-- [ ] OS collector on all three platforms: listening ports, owning PID, process working directory. Spike first on Windows working-directory support.
-- [ ] Project mapping: working directory → nearest `.git`; worktrees from `git worktree list --porcelain`.
-- [ ] dekit adapter: find configs in the chosen folders, read `dekit ls --json`, start, stop and restart by task or project, detect a stopped runner and offer `dekit up`.
-- [ ] portless adapter: URL per app, internal port, aliases.
-- [ ] State reconciliation: "on" needs both a live task and a listening port; "starting" shows the current step; "failed" shows the last error lines.
-- [ ] Change detection: file watching plus polling with backoff; push updates to the UI.
+- [x] Domain model: machine → project → worktree → app → server, with states on, starting, failed, off and unknown, and the source of each fact (dekit, portless, OS).
+- [x] OS collector on all three platforms: listening ports, owning PID, process working directory. Spike first on Windows working-directory support.
+- [x] Project mapping: working directory → nearest `.git`; worktrees from `git worktree list --porcelain`.
+- [x] dekit adapter: find configs in the chosen folders, read `dekit ls --json`, start, stop and restart by task or project, detect a stopped runner and offer `dekit up`.
+- [x] portless adapter: URL per app, internal port, aliases.
+- [x] State reconciliation: "on" needs both a live task and a listening port; "starting" shows the current step; "failed" shows the last error lines.
+- [x] Change detection: polling (2 s while the UI is open, 15 s otherwise) with config re-read on change; updates pushed to the UI over server-sent events.
 
 App and UI:
 
-- [ ] Single-instance lock; settings in the OS app-data directory; multiple folders.
-- [ ] Local API per ADR-0008, reachable at `https://portplane.localhost` through a portless alias.
-- [ ] Main view: grouped and ordered by activity, state at a glance, URL and port, project and worktree.
-- [ ] Actions: open, open everything running in a project, start, stop and restart per app and per project, stop all (project by project), copy URL, reveal folder.
-- [ ] "Other ports" section for servers not started by dekit.
-- [ ] Read-only mode when dekit or portless is missing.
-- [ ] Empty, loading and error states; keyboard navigation; light and dark themes.
+- [x] Single-instance lock; settings in the OS app-data directory; multiple folders.
+- [x] Local API per ADR-0008, reachable at `https://portplane.localhost` through a portless alias.
+- [x] Main view: grouped and ordered by activity, state at a glance, URL and port, project and worktree.
+- [x] Actions: open, open everything running in a project, start, stop and restart per app and per project, stop all (project by project), copy URL, reveal folder.
+- [x] "Other ports" section for servers not started by dekit.
+- [x] Read-only mode when dekit or portless is missing.
+- [x] Empty, loading and error states; keyboard navigation; light and dark themes.
 
 Quality:
 
-- [ ] Unit tests on recorded fixtures (`dekit ls --json`, `routes.json`, `lsof` and `/proc` samples).
-- [ ] Integration test in CI on Linux: real dekit and portless, a dummy server, assert the state transitions.
+- [x] Unit tests on recorded fixtures (`dekit ls --json`, `routes.json`, `lsof` and `/proc` samples).
+- [x] Integration test in CI on Linux: real dekit, a dummy server, assert the state transitions (`scripts/integration.sh`).
 
 **Exit:** feature parity with `prototype/` on macOS and Linux, plus multiple folders and Windows beta. The prototype is no longer needed day to day.
 
