@@ -1,6 +1,6 @@
 # ADR-0004: Serve the UI in the browser and add a tray icon; no embedded web view in v1
 
-- **Status:** Accepted
+- **Status:** Accepted. On macOS, the window is superseded by [ADR-0017](0017-native-window-macos.md) (a native window); the tray and the loopback server stand.
 - **Date:** 2026-11-11
 - **Resolves:** A3 in [open-questions.md](../open-questions.md)
 

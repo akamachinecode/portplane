@@ -23,6 +23,12 @@ The UI talks to the binary over HTTP on loopback ([ADR-0008](adr/0008-local-api-
 
 **Limit:** another user of the same computer can connect to loopback and read the token from the page. Portplane is meant for single-user developer machines.
 
+The running instance also writes its port and token to `<user cache dir>/portplane/instance.json` (readable only by you), so a second `portplane` can ask it to show its window instead of starting twice.
+
+## The window on macOS
+
+On macOS the UI opens in Portplane's own window, a system web view (WKWebView) that loads only `http://127.0.0.1:<port>` ([ADR-0017](adr/0017-native-window-macos.md)). Any other web address opens in your default browser, and other schemes are refused. The web view keeps nothing on disk.
+
 ## Remote machines
 
 - Reached only with your system `ssh`, your keys and your `~/.ssh/config` ([ADR-0015](adr/0015-remote-transport.md)). Portplane stores the host name, never credentials.
@@ -33,6 +39,7 @@ The UI talks to the binary over HTTP on loopback ([ADR-0008](adr/0008-local-api-
 ## What Portplane writes
 
 - Its settings: `<user config dir>/portplane/settings.json`.
+- While it runs: `<user cache dir>/portplane/instance.json` (port, URL and token), removed when it quits.
 - With your confirmation, after showing the diff: `<folder>/.portplane/tasks.yaml` and one `load:` line in `<folder>/dekit.yaml` ([ADR-0009](adr/0009-generated-config-location.md)).
 - With `autostart on`: a LaunchAgent, an XDG autostart file or a `Run` registry value.
 - portless aliases for itself and for open remote apps, removed when it quits.
