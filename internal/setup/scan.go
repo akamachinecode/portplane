@@ -51,7 +51,7 @@ var skipDirs = map[string]bool{"node_modules": true, ".git": true, "dist": true,
 // repository or package, else the repositories up to two levels below.
 func FindRepos(ctx context.Context, folder string) []Repo {
 	if isProjectRoot(folder) {
-		return []Repo{repoAt(ctx, folder)}
+		return []Repo{repoAt(ctx, folder, folder)}
 	}
 	var repos []Repo
 	entries, _ := os.ReadDir(folder)
@@ -64,7 +64,7 @@ func FindRepos(ctx context.Context, folder string) []Repo {
 			if isLinkedWorktree(dir) {
 				continue // listed under its main checkout
 			}
-			repos = append(repos, repoAt(ctx, dir))
+			repos = append(repos, repoAt(ctx, folder, dir))
 			continue
 		}
 		sub, _ := os.ReadDir(dir)
@@ -74,7 +74,7 @@ func FindRepos(ctx context.Context, folder string) []Repo {
 			}
 			d := filepath.Join(dir, s.Name())
 			if isProjectRoot(d) && !isLinkedWorktree(d) {
-				repos = append(repos, repoAt(ctx, d))
+				repos = append(repos, repoAt(ctx, folder, d))
 			}
 		}
 	}
@@ -96,9 +96,14 @@ func isLinkedWorktree(dir string) bool {
 	return err == nil && !fi.IsDir()
 }
 
-func repoAt(ctx context.Context, dir string) Repo {
+func repoAt(ctx context.Context, folder, dir string) Repo {
 	r := Repo{Name: Label(filepath.Base(dir)), Root: dir}
 	r.Checkouts = worktrees(ctx, dir)
+	// git reports canonical paths (/private/var on macOS, long names on
+	// Windows); keep the user's spelling so generated paths stay short.
+	for i := range r.Checkouts {
+		r.Checkouts[i].Dir = userPath(folder, dir, r.Checkouts[i].Dir)
+	}
 	if len(r.Checkouts) == 0 {
 		r.Checkouts = []Checkout{{Dir: dir}}
 	}
@@ -433,4 +438,23 @@ func Label(s string) string {
 		s = "app"
 	}
 	return s
+}
+
+// userPath rewrites a path git reported into the same form as dir (the
+// repository as found) or folder (the folder the user chose).
+func userPath(folder, dir, p string) string {
+	canon := func(x string) string {
+		if c, err := filepath.EvalSymlinks(x); err == nil {
+			return c
+		}
+		return filepath.Clean(x)
+	}
+	cp := canon(p)
+	if cp == canon(dir) {
+		return dir
+	}
+	if rel, err := filepath.Rel(canon(folder), cp); err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return filepath.Join(folder, rel)
+	}
+	return p
 }
