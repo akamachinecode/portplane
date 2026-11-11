@@ -30,5 +30,6 @@ Accepted ADRs are not rewritten. A decision that changes gets a new ADR that sup
 | [0011](0011-failures-not-logs.md) | Show the last lines of a failed app, never a log view | Accepted |
 | [0012](0012-tooling-and-releases.md) | mise, release-please, goreleaser and cosign; no OS code signing for v1 | Accepted |
 | [0013](0013-windows-support-level.md) | Windows is beta until someone uses it daily | Accepted |
+| [0014](0014-setup-scope.md) | Setup understands JavaScript workspaces in v1 and guides installs without running them | Accepted |
 
 Pending decisions are tracked in [../open-questions.md](../open-questions.md).

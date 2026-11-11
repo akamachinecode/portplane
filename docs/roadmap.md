@@ -94,14 +94,14 @@ Quality:
 
 ## Phase 4: M2, setup
 
-- [ ] Dependency check with an explanation and the exact install command per OS; privileged steps (`portless service install`) shown, never run silently.
-- [ ] Scanner: npm, pnpm, yarn and bun workspaces; Next, Vite, Astro, React Router, Nuxt, SvelteKit, Sanity, Remotion; dev script and hard-coded port detection.
-- [ ] Naming: `<app>.<worktree>.<project>.localhost`, with the main web app at `<worktree>.<project>.localhost`; every name editable.
-- [ ] Generator applying the field-note defaults: run from the app folder, `<pm> run <script>`, a single install job per monorepo, env spread, agent variables unset, `portless alias` jobs for servers that cannot be wrapped, the cross-platform wrapper from ADR-0010.
-- [ ] Preview as a diff, write only after confirmation, never touch hand-written config.
-- [ ] Re-scan: new apps and worktrees appear as a proposed diff.
-- [ ] Add an app by hand (command and folder).
-- [ ] Warnings the app cannot fix: parent cookie domain, CORS allowlists.
+- [x] Dependency check with an explanation and the exact install command per OS; privileged steps (`portless service install`) shown, never run silently.
+- [x] Scanner: npm, pnpm, yarn and bun workspaces; Next, Vite, Astro, React Router, Nuxt, SvelteKit, Sanity, Remotion; dev script and hard-coded port detection.
+- [x] Naming: `<app>.<worktree>.<project>.localhost`, with the main web app at `<worktree>.<project>.localhost`; names editable (in the fragment, kept across scans, or as overrides in the API).
+- [x] Generator applying the field-note defaults: run from the app folder, `<pm> run <script>`, a single install job per checkout, agent variables unset, the cross-platform wrapper from ADR-0010. (`portless alias` jobs for servers that cannot be wrapped are recognised when written by hand.)
+- [x] Preview as a diff, write only after confirmation (digest-checked), never touch hand-written config.
+- [x] Re-scan: new apps and worktrees appear as a proposed diff.
+- [ ] Add an app by hand from the UI (command and folder); after v1 (ADR-0014). A hand-written task in `dekit.yaml` works today.
+- [x] Warnings the app cannot fix: parent cookie domain, CORS allowlists.
 
 **Exit:** on a fresh machine with Node, the setup flow takes a real monorepo with worktrees from nothing to every app reachable at its stable URL, with no hand edits.
 
