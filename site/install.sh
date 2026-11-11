@@ -3,8 +3,8 @@
 #   curl -fsSL https://akamachinecode.github.io/portplane/install.sh | sh
 # PORTPLANE_VERSION=v0.2.0 picks a release; PORTPLANE_INSTALL_DIR picks the
 # folder (default ~/.local/bin). The archive is checked against the
-# release's checksums.txt, and against its cosign signature when cosign is
-# installed.
+# release's checksums.txt, and against its cosign signature when a working
+# cosign is installed (PORTPLANE_SKIP_SIGNATURE=1 skips that check).
 set -eu
 
 repo="akamachinecode/portplane"
@@ -55,13 +55,24 @@ fi
 [ "$expected" = "$actual" ] || die "checksum mismatch for $archive"
 say "Checksum OK"
 
-if command -v cosign >/dev/null 2>&1; then
-  curl -fsSL -o "$tmp/checksums.txt.sigstore.json" "$base/checksums.txt.sigstore.json" || die "could not download the signature"
-  cosign verify-blob --bundle "$tmp/checksums.txt.sigstore.json" \
-    --certificate-identity-regexp "^https://github.com/$repo/" \
-    --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-    "$tmp/checksums.txt" >/dev/null 2>&1 || die "cosign could not verify checksums.txt"
-  say "Signature OK"
+# A version manager can leave a cosign shim on the PATH that does not run
+# (mise or asdf with no version set). That counts as no cosign.
+if [ -n "${PORTPLANE_SKIP_SIGNATURE:-}" ]; then
+  say "Signature not checked (PORTPLANE_SKIP_SIGNATURE is set)"
+elif command -v cosign >/dev/null 2>&1; then
+  if cosign version >/dev/null 2>&1; then
+    curl -fsSL -o "$tmp/checksums.txt.sigstore.json" "$base/checksums.txt.sigstore.json" || die "could not download the signature"
+    if ! cosign verify-blob --bundle "$tmp/checksums.txt.sigstore.json" \
+      --certificate-identity-regexp "^https://github.com/$repo/" \
+      --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+      "$tmp/checksums.txt" >"$tmp/cosign.log" 2>&1; then
+      sed 's/^/  /' "$tmp/cosign.log" >&2
+      die "cosign could not verify checksums.txt (see above). An old cosign or a network that blocks sigstore.dev can cause this: update cosign to v2.5 or later, or set PORTPLANE_SKIP_SIGNATURE=1 to install with the checksum check only"
+    fi
+    say "Signature OK"
+  else
+    say "Signature not checked: cosign is on your PATH but does not run ($(command -v cosign))"
+  fi
 fi
 
 tar -xzf "$tmp/$archive" -C "$tmp" portplane

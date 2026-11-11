@@ -44,7 +44,7 @@ cosign verify-blob --bundle checksums.txt.sigstore.json \
 sha256sum --check --ignore-missing checksums.txt
 ```
 
-`install.sh` checks the SHA-256 always, and the signature too when `cosign` is installed.
+`install.sh` checks the SHA-256 always, and the signature too when a working `cosign` is installed (v2.5 or later). A `cosign` shim that does not run, such as one from mise or asdf with no version set, is treated as no `cosign`. If the signature check fails because your network blocks sigstore.dev, set `PORTPLANE_SKIP_SIGNATURE=1` to install with the checksum check only.
 
 ## What else you need
 
