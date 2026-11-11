@@ -24,6 +24,7 @@ Commands:
   stop <app>    Stop an app or a project
   restart <app> Restart an app or a project
   folders       List, add or remove the folders Portplane watches
+  setup <dir>   Find the dev servers in a folder and write dekit config for them
   port-exec     Run a command with {PORT} and {HOST} filled from the environment
   version       Print the version
   help          Show this help
@@ -48,6 +49,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return cmdAct(args[0], args[1:], stdout, stderr)
 	case "folders":
 		return cmdFolders(args[1:], stdout, stderr)
+	case "setup":
+		return cmdSetup(args[1:], stdout, stderr)
 	case "port-exec":
 		return cmdPortExec(args[1:], stderr)
 	case "version", "--version", "-v":

@@ -17,12 +17,14 @@ import (
 	"time"
 
 	"github.com/akamachinecode/portplane/internal/agent"
+	"github.com/akamachinecode/portplane/internal/dekit"
 	"github.com/akamachinecode/portplane/internal/desktop"
 	"github.com/akamachinecode/portplane/internal/hub"
 	"github.com/akamachinecode/portplane/internal/model"
 	"github.com/akamachinecode/portplane/internal/portless"
 	"github.com/akamachinecode/portplane/internal/server"
 	"github.com/akamachinecode/portplane/internal/settings"
+	"github.com/akamachinecode/portplane/internal/setup"
 	"github.com/akamachinecode/portplane/internal/webui"
 )
 
@@ -111,6 +113,21 @@ func cmdServe(args []string, stdout, stderr io.Writer) int {
 			return err
 		},
 	}
+	dk := dekit.NewCLI()
+	srv.Extra = server.SetupHandlers(server.SetupDeps{
+		Folders: local.Folders,
+		Facts: func(c context.Context) setup.Facts {
+			snap, _ := local.Snapshot(c)
+			return setup.GatherFacts(c, snap.Tools.Dekit, snap.Tools.Portless, snap.Tools.ProxyRunning)
+		},
+		Reload: func(c context.Context, root string) (bool, error) {
+			err := dk.Reload(c, root)
+			if errors.Is(err, dekit.ErrRunnerDown) {
+				return false, nil
+			}
+			return err == nil, err
+		},
+	})
 	httpSrv := &http.Server{
 		Handler:           srv.Handler(),
 		ReadHeaderTimeout: 10 * time.Second,
