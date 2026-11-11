@@ -1,0 +1,28 @@
+# A project that uses most of the config features Portplane reads.
+vars:
+  shared: {NODE_ENV: development}
+defaults:
+  env:
+    FROM_DEFAULTS: "1"
+load:
+  - services/*.yaml
+  - file: apps/web/tasks.yaml
+    at: web
+tasks:
+  shop/:
+    collapsed: true
+  shop/install:
+    type: job
+    cmd: pnpm install --frozen-lockfile
+  shop/api:
+    label: API
+    cwd: apps/api
+    cmd: ["portless", "api.shop", "pnpm", "run", "dev"]
+    deps: [shop/install]
+    ready: {tcp: "127.0.0.1:4100"}
+    env: {API_URL: "https://api.shop.localhost", AI_AGENT: null}
+  computed:
+    cmd: !js '["node", "server.js"]'
+    cwd: !js 'ctx.vars.dir'
+  plain:
+    cmd: "node -e 'console.log(1)'"

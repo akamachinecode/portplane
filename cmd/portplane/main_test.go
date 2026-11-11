@@ -38,3 +38,18 @@ func TestUnknownCommand(t *testing.T) {
 		t.Fatalf("exit %d, want 2", code)
 	}
 }
+
+func TestExpandPlaceholders(t *testing.T) {
+	env := map[string]string{"PORT": "4321"}
+	got, err := expandPlaceholders([]string{"sanity", "dev", "--port", "{PORT}", "--host", "{HOST}", "--url=http://{HOST}:{PORT}"}, func(k string) string { return env[k] })
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"sanity", "dev", "--port", "4321", "--host", "127.0.0.1", "--url=http://127.0.0.1:4321"}
+	if strings.Join(got, " ") != strings.Join(want, " ") {
+		t.Fatalf("got %q", got)
+	}
+	if _, err := expandPlaceholders([]string{"{PORT}"}, func(string) string { return "" }); err == nil {
+		t.Fatal("a missing PORT must be an error")
+	}
+}
