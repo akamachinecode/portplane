@@ -17,13 +17,13 @@ Decisions that are still pending, plus a short list of the ones already resolved
 - **R2, signing:** cosign-signed checksums, no Apple notarization or Windows code signing for v1, see [ADR-0012](adr/0012-tooling-and-releases.md).
 - **R3, Windows:** beta until someone uses it daily, see [ADR-0013](adr/0013-windows-support-level.md).
 - **R4, repo conventions:** mise, release-please, goreleaser, see [ADR-0012](adr/0012-tooling-and-releases.md).
+- **P3, scanner scope:** JavaScript workspaces and the common frameworks first, see [ADR-0014](adr/0014-setup-scope.md).
+- **P5, installing dependencies:** guide with exact commands, never install or run privileged steps, see [ADR-0014](adr/0014-setup-scope.md).
 
 ## Product
 
 | # | Question | Starting proposal | Blocks |
 |---|---|---|---|
-| P3 | **Which projects the scanner understands in v1** | JS/TS first: npm, pnpm, yarn and bun workspaces; Next, Vite, Astro, Remix/React Router, Nuxt, SvelteKit, Sanity and Remotion. Anything else can be added by hand (command + folder). Python, Ruby, PHP and Go detection later | M2 |
-| P5 | **Installing the dependencies.** Should the app install dekit, portless and Node 24, or guide the user | Guide: detect, explain, give the exact command per OS (one button where safe). Privileged steps (`portless service install`) are always shown, never run silently | M2 |
 | P6 | **Agents.** Expose an MCP server ("list servers", "URL of X", "start X") like Exhale does? portless already has `portless mcp` | Yes, as a small later milestone: it is the cleanest fix for agents starting duplicate servers | After M3 |
 | P7 | **Docker.** Show ports published by `docker ps` / Compose | Read-only, later | After M3 |
 
