@@ -28,7 +28,7 @@ portplane restart shop/web     # start, stop or restart an app or a whole projec
 portplane autostart on         # start at login
 ```
 
-Add other machines from the window (**Machines**): any host in `~/.ssh/config` or your Tailscale network. Their apps open at `https://<app>.<machine>.localhost`.
+Add other machines from the window (**Add a machine**): any host in `~/.ssh/config` or your Tailscale network. Their apps open at `https://<app>.<machine>.localhost`. To generate dekit config from the window, use **Settings → Set up…** on a folder.
 
 Without dekit or portless, Portplane still lists the ports open on your machine and the folder each one serves.
 
