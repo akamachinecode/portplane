@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.2.0](https://github.com/akamachinecode/portplane/compare/v0.1.0...v0.2.0) (2026-11-11)
+
+
+### Features
+
+* **desktop:** menu-bar app, start at login, installers, setup and machine screens (M4) ([#9](https://github.com/akamachinecode/portplane/issues/9)) ([cd563a3](https://github.com/akamachinecode/portplane/commit/cd563a3a69b97c25f2b200d9c839aa33827b8b5b))
+* **remote:** see and open dev servers on other machines over SSH (M3) ([#8](https://github.com/akamachinecode/portplane/issues/8)) ([e9abc88](https://github.com/akamachinecode/portplane/commit/e9abc88cfc7b8c1fbbb7cac672e8d712aeb42163))
+* **setup:** generate dekit config for every dev server in a folder (M2) ([#5](https://github.com/akamachinecode/portplane/issues/5)) ([04cfcd1](https://github.com/akamachinecode/portplane/commit/04cfcd1fb03c842cef9c367f8a454d127c7ef8c6))
+
 ## 0.1.0 (2026-11-11)
 
 
