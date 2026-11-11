@@ -11,6 +11,7 @@ See which local dev servers are running across all your project folders, and acr
 - [Open questions](docs/open-questions.md)
 - [Roadmap to v1.0](docs/roadmap.md)
 - [Architecture decision records](docs/adr/README.md)
+- [Upstream proposals](docs/upstream.md)
 
 ## Contributing
 
