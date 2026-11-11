@@ -32,6 +32,7 @@ type Task struct {
 	Autostart bool              // started by `dekit up`
 	Env       map[string]string // string values from the task's env (and defaults when it has none)
 	File      string            // the file that declares the task
+	Key       string            // the task's key in File, for editing it (EditBlock path ["tasks", Key])
 	Order     int               // declaration order across files
 }
 
@@ -135,7 +136,9 @@ func (l *loader) file(file string, top *yaml.Node, mount string) error {
 				l.cfg.FolderFiles[f] = append(l.cfg.FolderFiles[f], file)
 				continue
 			}
-			l.cfg.Tasks = append(l.cfg.Tasks, l.task(full, tasks.Content[i+1], dir, mount, file))
+			t := l.task(full, tasks.Content[i+1], dir, mount, file)
+			t.Key = key
+			l.cfg.Tasks = append(l.cfg.Tasks, t)
 		}
 	}
 	load := mapGet(top, "load")
