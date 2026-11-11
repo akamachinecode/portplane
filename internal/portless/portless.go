@@ -157,6 +157,39 @@ func (c *Client) RemoveAlias(ctx context.Context, name string) error {
 	return err
 }
 
+// runLong runs a portless command that may take a while (proxy start,
+// service status) and returns its output, colours removed, also when it
+// fails.
+func (c *Client) runLong(ctx context.Context, args ...string) (string, error) {
+	bin := c.Path()
+	if bin == "" {
+		return "", fmt.Errorf("portless is not installed")
+	}
+	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, bin, args...)
+	cmd.Env = append(os.Environ(), "NO_COLOR=1", "FORCE_COLOR=0")
+	if c.StateDir != "" && c.StateDir != StateDir() {
+		cmd.Env = append(cmd.Env, "PORTLESS_STATE_DIR="+c.StateDir)
+	}
+	cmd.WaitDelay = 2 * time.Second
+	var out bytes.Buffer
+	cmd.Stdout, cmd.Stderr = &out, &out
+	err := cmd.Run()
+	text := stripANSI(out.String())
+	if err != nil {
+		msg := strings.TrimSpace(text)
+		if msg == "" {
+			msg = err.Error()
+		}
+		if i := strings.LastIndex(msg, "Error:"); i >= 0 {
+			msg = strings.TrimSpace(msg[i+len("Error:"):])
+		}
+		return text, fmt.Errorf("portless %s: %s", strings.Join(args, " "), msg)
+	}
+	return text, nil
+}
+
 func (c *Client) run(ctx context.Context, args ...string) (string, error) {
 	bin := c.Path()
 	if bin == "" {
