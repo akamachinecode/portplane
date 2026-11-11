@@ -70,7 +70,7 @@ func TestCleanEnv(t *testing.T) {
 }
 
 func TestErrorsWithoutDekit(t *testing.T) {
-	c := &CLI{}
+	c := &CLI{Lookup: func(string) string { return "" }}
 	if _, err := c.List(context.Background(), "/p"); !errors.Is(err, ErrNotInstalled) {
 		t.Fatalf("got %v", err)
 	}

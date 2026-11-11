@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/akamachinecode/portplane/internal/envpath"
 )
 
 // ErrRunnerDown means the project's runner is not running (`dekit up` starts it).
@@ -24,14 +26,28 @@ type Exec func(ctx context.Context, env []string, name string, args ...string) (
 
 // CLI calls the dekit command line.
 type CLI struct {
-	Bin  string // path to dekit; empty when not installed
+	// Bin is dekit's path. Empty: dekit is looked up on PATH, again every
+	// few seconds, so one installed while Portplane runs is found.
+	Bin  string
 	Exec Exec
+	// Lookup finds a program; envpath.Lookup when nil.
+	Lookup func(name string) string
 }
 
-// NewCLI finds dekit on PATH.
+// NewCLI returns a CLI that finds dekit on PATH.
 func NewCLI() *CLI {
-	bin, _ := exec.LookPath("dekit")
-	return &CLI{Bin: bin, Exec: runProcess}
+	return &CLI{Exec: runProcess}
+}
+
+// Path is dekit's path now, or "" when it is not installed.
+func (c *CLI) Path() string {
+	if c.Bin != "" {
+		return c.Bin
+	}
+	if c.Lookup != nil {
+		return c.Lookup("dekit")
+	}
+	return envpath.Lookup("dekit")
 }
 
 func runProcess(ctx context.Context, env []string, name string, args ...string) ([]byte, []byte, error) {
@@ -45,15 +61,20 @@ func runProcess(ctx context.Context, env []string, name string, args ...string) 
 }
 
 // Available reports whether dekit was found.
-func (c *CLI) Available() bool { return c.Bin != "" }
+func (c *CLI) Available() bool { return c.Path() != "" }
 
 func (c *CLI) run(ctx context.Context, timeout time.Duration, args ...string) ([]byte, error) {
-	if c.Bin == "" {
+	bin := c.Path()
+	if bin == "" {
 		return nil, ErrNotInstalled
 	}
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	out, errb, err := c.Exec(ctx, CleanEnv(os.Environ()), c.Bin, args...)
+	run := c.Exec
+	if run == nil {
+		run = runProcess
+	}
+	out, errb, err := run(ctx, CleanEnv(os.Environ()), bin, args...)
 	if err != nil {
 		msg := strings.TrimSpace(string(errb))
 		if strings.Contains(msg, "Runner is not running") {

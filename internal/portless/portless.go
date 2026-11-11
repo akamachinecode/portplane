@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/akamachinecode/portplane/internal/envpath"
 )
 
 // Route is one active portless route.
@@ -54,18 +56,27 @@ func (p Proxy) URL(hostname string) string {
 
 // Client reads portless state and calls its CLI.
 type Client struct {
-	Bin      string // empty when portless is not installed
+	// Bin is portless's path. Empty: it is looked up on PATH, again every
+	// few seconds, so one installed while Portplane runs is found.
+	Bin      string
 	StateDir string
 }
 
-// New finds portless on PATH and its state directory.
+// New returns a client that finds portless on PATH, and its state directory.
 func New() *Client {
-	bin, _ := exec.LookPath("portless")
-	return &Client{Bin: bin, StateDir: StateDir()}
+	return &Client{StateDir: StateDir()}
+}
+
+// Path is portless's path now, or "" when it is not installed.
+func (c *Client) Path() string {
+	if c.Bin != "" {
+		return c.Bin
+	}
+	return envpath.Lookup("portless")
 }
 
 // Available reports whether the portless CLI was found.
-func (c *Client) Available() bool { return c.Bin != "" }
+func (c *Client) Available() bool { return c.Path() != "" }
 
 // StateDir is PORTLESS_STATE_DIR, else ~/.portless.
 func StateDir() string {
@@ -147,12 +158,13 @@ func (c *Client) RemoveAlias(ctx context.Context, name string) error {
 }
 
 func (c *Client) run(ctx context.Context, args ...string) (string, error) {
-	if c.Bin == "" {
+	bin := c.Path()
+	if bin == "" {
 		return "", fmt.Errorf("portless is not installed")
 	}
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, c.Bin, args...)
+	cmd := exec.CommandContext(ctx, bin, args...)
 	var out, errb bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &out, &errb
 	if err := cmd.Run(); err != nil {
