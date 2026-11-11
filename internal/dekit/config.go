@@ -37,12 +37,14 @@ type Task struct {
 
 // Config is a dekit project's parsed configuration.
 type Config struct {
-	Root     string   // the folder that holds dekit.yaml
-	File     string   // absolute path of dekit.yaml
-	Tasks    []Task   // in declaration order
-	Folders  []string // folder entries (paths without the trailing /)
-	Files    []string // dekit.yaml followed by every loaded fragment
-	Warnings []string // problems that did not stop parsing
+	Root    string   // the folder that holds dekit.yaml
+	File    string   // absolute path of dekit.yaml
+	Tasks   []Task   // in declaration order
+	Folders []string // folder entries (paths without the trailing /)
+	// FolderFiles lists, per folder, the files that declare it.
+	FolderFiles map[string][]string
+	Files       []string // dekit.yaml followed by every loaded fragment
+	Warnings    []string // problems that did not stop parsing
 }
 
 // Task returns the task at path, or nil.
@@ -125,7 +127,12 @@ func (l *loader) file(file string, top *yaml.Node, mount string) error {
 			key := tasks.Content[i].Value
 			full := joinPath(mount, key)
 			if strings.HasSuffix(key, "/") {
-				l.cfg.Folders = append(l.cfg.Folders, strings.TrimSuffix(full, "/"))
+				f := strings.TrimSuffix(full, "/")
+				l.cfg.Folders = append(l.cfg.Folders, f)
+				if l.cfg.FolderFiles == nil {
+					l.cfg.FolderFiles = map[string][]string{}
+				}
+				l.cfg.FolderFiles[f] = append(l.cfg.FolderFiles[f], file)
 				continue
 			}
 			l.cfg.Tasks = append(l.cfg.Tasks, l.task(full, tasks.Content[i+1], dir, mount, file))

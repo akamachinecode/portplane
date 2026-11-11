@@ -327,7 +327,7 @@ func TestCollisionsWithHandWrittenConfig(t *testing.T) {
 	for _, a := range p.Apps {
 		apps[a.Task] = a
 	}
-	if a := apps["subs/subs-web"]; a.Status != "manual" || a.Dir != "subs/web" {
+	if a := apps["subs/web"]; a.Status != "manual" || a.Dir != "subs/web" {
 		t.Fatalf("the hand-written app (same folder) is left alone: %+v", apps)
 	}
 	if a := apps["subs/admin"]; a.Name != "admin.subs" || !strings.Contains(frag, `deps: ["subs/install"]`) {
@@ -347,6 +347,14 @@ func TestCollisionsWithHandWrittenConfig(t *testing.T) {
 	}
 	if _, err := dekit.LoadConfig(folder); err != nil {
 		t.Fatal(err)
+	}
+	// Re-scanning must not declare the hand-written folder either.
+	again, err := Propose(context.Background(), folder, Overrides{Names: map[string]string{"subs/admin": ""}}, Options{GOOS: "linux"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if again.Files[0].Changed || strings.Contains(again.Files[0].After, "\n  subs/:\n") {
+		t.Fatalf("re-scan changed the fragment:\n%s", again.Files[0].After)
 	}
 }
 

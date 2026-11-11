@@ -202,31 +202,29 @@ var agentEnv = []string{"AI_AGENT", "AGENT", "CLAUDECODE", "CODEX_THREAD_ID", "C
 // not with hand-written tasks or folders, not with each other, and never a
 // task under a task (dekit rejects all of these).
 type planner struct {
-	handTasks   map[string]bool // task paths written by hand
-	handFolders map[string]bool // folder entries written by hand (no slash)
-	handDirs    map[string]bool // folders a hand-written portless task serves
-	tasks       map[string]bool // every task path in use
-	folders     map[string]bool // every folder path in use (no slash)
-	names       map[string]bool // every portless name in use
+	handTasks   map[string]string // task paths written by hand -> their folder
+	handFolders map[string]bool   // folder entries written by hand (no slash)
+	handDirs    map[string]string // folder a hand-written portless task serves -> its path
+	tasks       map[string]bool   // every task path in use
+	folders     map[string]bool   // every folder path in use (no slash)
+	names       map[string]bool   // every portless name in use
 }
 
 func newPlanner(root, fragPath string) *planner {
-	pl := &planner{handTasks: map[string]bool{}, handFolders: map[string]bool{}, handDirs: map[string]bool{}, tasks: map[string]bool{}, folders: map[string]bool{}, names: map[string]bool{}}
+	pl := &planner{handTasks: map[string]string{}, handFolders: map[string]bool{}, handDirs: map[string]string{}, tasks: map[string]bool{}, folders: map[string]bool{}, names: map[string]bool{}}
 	cfg, err := dekit.LoadConfig(root)
 	if err != nil || cfg == nil {
 		return pl
 	}
-	fromFragment := map[string]bool{}
 	for _, t := range cfg.Tasks {
 		if t.File == fragPath {
-			fromFragment[t.Path] = true
 			continue
 		}
-		pl.handTasks[t.Path] = true
+		pl.handTasks[t.Path] = filepath.Clean(t.Dir)
 		pl.tasks[t.Path] = true
 		if w := portless.ParseCommand(t.Cmd); w != nil {
 			if t.Dir != "" {
-				pl.handDirs[filepath.Clean(t.Dir)] = true
+				pl.handDirs[filepath.Clean(t.Dir)] = t.Path
 			}
 			if w.Name != "" {
 				pl.names[strings.TrimSuffix(w.Name, ".localhost")] = true
@@ -234,11 +232,12 @@ func newPlanner(root, fragPath string) *planner {
 		}
 	}
 	for _, f := range cfg.Folders {
-		// Folders the fragment itself declared are ours to redeclare.
-		mine := false
-		for t := range fromFragment {
-			if strings.HasPrefix(t, f+"/") {
-				mine = true
+		// A folder only the fragment declares is ours to redeclare; one
+		// declared anywhere else is the user's.
+		mine := true
+		for _, file := range cfg.FolderFiles[f] {
+			if file != fragPath {
+				mine = false
 			}
 		}
 		if !mine {
@@ -350,7 +349,8 @@ func (pl *planner) repo(folder string, repo Repo, oldFrag map[string]fragEntry, 
 
 		// One install job per checkout; a hand-written one is reused.
 		installPath := prefix + "install"
-		reuseInstall := pl.handTasks[installPath]
+		handDir, handInstall := pl.handTasks[installPath]
+		reuseInstall := handInstall && handDir == filepath.Clean(co.Dir)
 		if !reuseInstall {
 			installPath = unique(installPath, pl.freeTask)
 			pl.tasks[installPath] = true
@@ -376,8 +376,14 @@ func (pl *planner) repo(folder string, repo Repo, oldFrag map[string]fragEntry, 
 				Project: project, Worktree: wt, Dir: rel(folder, pkg.Dir), Package: pkg.Name,
 				Framework: pkg.Framework, PackageManager: pkg.PackageManager,
 			}
-			if pl.handTasks[candidate] || pl.handDirs[filepath.Clean(pkg.Dir)] {
-				ap.Task, ap.Status, ap.Skipped = candidate, "manual", true
+			_, handAtPath := pl.handTasks[candidate]
+			handPath, handHere := pl.handDirs[filepath.Clean(pkg.Dir)]
+			if handAtPath || handHere {
+				ap.Task = candidate
+				if handHere {
+					ap.Task = handPath // the task that already serves this folder
+				}
+				ap.Status, ap.Skipped = "manual", true
 				ap.Notes = append(ap.Notes, "Already configured by hand in dekit.yaml; Portplane leaves it alone.")
 				p.Apps = append(p.Apps, ap)
 				continue
@@ -564,7 +570,7 @@ func devCommand(pkg Package, name string) ([]string, []string) {
 				notes = append(notes, fmt.Sprintf("The dev script pins port %s, which would win over portless; Portplane calls the framework directly instead.", pkg.HardPort))
 			}
 		}
-		if pkg.Framework == "node" {
+		if pkg.Framework == "node" && pkg.HardPort == "" {
 			notes = append(notes, "Unknown dev server: it must listen on the PORT variable for its URL to work.")
 		}
 	}
