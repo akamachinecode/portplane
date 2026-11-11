@@ -119,6 +119,7 @@ Quality:
 ## Phase 6: M4, desktop
 
 - [x] Open the UI as an app-mode browser window where a Chromium-based browser exists (ADR-0004).
+- [x] On macOS, a native window instead, with a Dock icon and menus while it is open (ADR-0017). Windows (WebView2) and Linux (WebKitGTK loaded at run time) later.
 - [x] Tray or menu-bar icon: count of running servers, open the window, quick start and stop.
 - [x] Start at login on each OS.
 - [x] Installers on GitHub Releases: macOS `.dmg` (unsigned), Linux `.tar.gz`, `.deb` and `.rpm`, Windows `.zip` or `.msi`, all with cosign-signed checksums.
