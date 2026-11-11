@@ -28,3 +28,27 @@ func statusNotifierHost() bool {
 	_ = conn.Close()
 	return true
 }
+
+// Visible reports whether a tray icon can be seen now: a StatusNotifier
+// watcher runs and a host shows its items. GNOME has none unless the
+// AppIndicator extension is on, and then Portplane has no icon to come
+// back to.
+func Visible() bool {
+	if !statusNotifierHost() {
+		return false
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	conn, err := dbus.ConnectSessionBus(dbus.WithContext(ctx))
+	if err != nil {
+		return false
+	}
+	defer func() { _ = conn.Close() }()
+	v, err := conn.Object("org.kde.StatusNotifierWatcher", "/StatusNotifierWatcher").
+		GetProperty("org.kde.StatusNotifierWatcher.IsStatusNotifierHostRegistered")
+	if err != nil {
+		return false
+	}
+	on, ok := v.Value().(bool)
+	return ok && on
+}
