@@ -14,12 +14,13 @@ Out of v1.0 (tracked for later): MCP server for agents (P6), Docker ports (P7), 
 
 ## Phase 0: Publish the repo
 
-- [ ] Commit identity that keeps personal and employer details private (GitHub noreply address).
-- [ ] `LICENSE` (Apache-2.0) and ADR-0001 recording it, before the first public commit.
-- [ ] Community files: `CONTRIBUTING.md` (DCO sign-off, Conventional Commits, how ADRs work), `CODE_OF_CONDUCT.md`, `SECURITY.md` (private vulnerability reporting), issue and PR templates.
-- [ ] `.gitignore`, `.editorconfig`.
-- [ ] Create the public GitHub repo: description, topics, default branch protection (PR required, DCO check), private vulnerability reporting on.
-- [ ] GitHub milestones M1–M4 and v1.0, and one issue per item in this roadmap.
+- [x] Commit identity that keeps personal and employer details private (GitHub noreply address).
+- [x] `LICENSE` (Apache-2.0) and ADR-0001 recording it, before the first public commit.
+- [x] Community files: `CONTRIBUTING.md` (DCO sign-off, Conventional Commits, how ADRs work), `CODE_OF_CONDUCT.md`, `SECURITY.md` (private vulnerability reporting), issue and PR templates.
+- [x] `.gitignore`, `.editorconfig`.
+- [x] Create the public GitHub repo: description, topics, default branch protection (PR required, DCO check), private vulnerability reporting on.
+- [x] GitHub milestones M1–M4 and v1.0.
+- [ ] One issue per remaining item in this roadmap.
 
 **Exit:** the repo is public, licensed, and a newcomer can tell from the README how to follow and contribute.
 
@@ -54,11 +55,11 @@ Upstream, in parallel (drafts in [upstream.md](upstream.md)):
 
 ## Phase 2: Foundation
 
-- [ ] `mise.toml` pinning Go, Node and pnpm.
+- [x] `mise.toml` pinning Go, Node and pnpm.
 - [ ] Layout: `cmd/portplane`, `internal/{model,agent,collector,adapters/dekit,adapters/portless,api,setup}`, `web/`.
-- [ ] The repo's own `dekit.yaml`, so contributors run the UI dev server and the app through dekit and portless (dogfooding).
-- [ ] CI on macOS, Linux and Windows: Go lint and tests, web typecheck, lint and tests, DCO and Conventional Commit checks.
-- [ ] Release pipeline dry run: release-please PRs, goreleaser snapshot builds for all targets, cosign-signed checksums.
+- [x] The repo's own `dekit.yaml`, so contributors run the UI dev server and the app through dekit and portless (dogfooding).
+- [x] CI on macOS, Linux and Windows: Go lint and tests, web typecheck, lint and tests, DCO and Conventional Commit checks.
+- [x] Release pipeline dry run: release-please PRs, goreleaser snapshot builds for all targets, cosign-signed checksums.
 
 **Exit:** a tagged pre-release (`v0.1.0`) produces signed binaries for every target that print their version.
 
