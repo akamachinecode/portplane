@@ -26,6 +26,7 @@ Commands:
   folders       List, add or remove the folders Portplane watches
   setup <dir>   Find the dev servers in a folder and write dekit config for them
   port-exec     Run a command with {PORT} and {HOST} filled from the environment
+  agent         Run as the agent of a Portplane on another machine (over SSH)
   version       Print the version
   help          Show this help
 
@@ -51,6 +52,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return cmdFolders(args[1:], stdout, stderr)
 	case "setup":
 		return cmdSetup(args[1:], stdout, stderr)
+	case "agent":
+		return cmdAgent(args[1:], stderr)
 	case "port-exec":
 		return cmdPortExec(args[1:], stderr)
 	case "version", "--version", "-v":

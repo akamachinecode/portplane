@@ -31,5 +31,7 @@ Accepted ADRs are not rewritten. A decision that changes gets a new ADR that sup
 | [0012](0012-tooling-and-releases.md) | mise, release-please, goreleaser and cosign; no OS code signing for v1 | Accepted |
 | [0013](0013-windows-support-level.md) | Windows is beta until someone uses it daily | Accepted |
 | [0014](0014-setup-scope.md) | Setup understands JavaScript workspaces in v1 and guides installs without running them | Accepted |
+| [0015](0015-remote-transport.md) | Reach other machines with the system ssh and an uploaded agent speaking over stdio | Accepted |
+| [0016](0016-remote-urls.md) | Open remote apps at `https://<app>.<machine>.localhost` through an HTTP proxy per app | Accepted |
 
 Pending decisions are tracked in [../open-questions.md](../open-questions.md).

@@ -19,6 +19,8 @@ Decisions that are still pending, plus a short list of the ones already resolved
 - **R4, repo conventions:** mise, release-please, goreleaser, see [ADR-0012](adr/0012-tooling-and-releases.md).
 - **P3, scanner scope:** JavaScript workspaces and the common frameworks first, see [ADR-0014](adr/0014-setup-scope.md).
 - **P5, installing dependencies:** guide with exact commands, never install or run privileged steps, see [ADR-0014](adr/0014-setup-scope.md).
+- **A4, remote transport:** system ssh, an uploaded agent and yamux over stdio, see [ADR-0015](adr/0015-remote-transport.md).
+- **A5, remote URLs:** an HTTP proxy per remote app with a portless alias `<app>.<machine>`, see [ADR-0016](adr/0016-remote-urls.md).
 
 ## Product
 
@@ -26,11 +28,3 @@ Decisions that are still pending, plus a short list of the ones already resolved
 |---|---|---|---|
 | P6 | **Agents.** Expose an MCP server ("list servers", "URL of X", "start X") like Exhale does? portless already has `portless mcp` | Yes, as a small later milestone: it is the cleanest fix for agents starting duplicate servers | After M3 |
 | P7 | **Docker.** Show ports published by `docker ps` / Compose | Read-only, later | After M3 |
-
-## Architecture
-
-| # | Question | Starting proposal | Blocks |
-|---|---|---|---|
-| A4 | **Remote transport** | The same binary runs as `agent --stdio` over the system `ssh` (honours `~/.ssh/config`, agents, ProxyJump, Tailscale SSH; works on Windows' OpenSSH). The app uploads the right agent build on first connect, as VS Code Remote and Zed do. JSON messages over stdin/stdout, with the agent pushing changes. The alternative is agentless (run `ss`/`lsof`/`dekit ls` per poll): simpler, but slower, and it needs ControlMaster, which Windows lacks | M3 |
-| A5 | **Opening remote URLs.** A remote `https://x.localhost` does not resolve locally | The agent forwards TCP streams over the same SSH session. The app opens a local port and registers `portless alias <app>.<machine> <port>`, so a remote app gets `https://<app>.<machine>.localhost`. To check: the Host header the remote server expects (Vite `allowedHosts`, cookie domains) | M3 |
-
