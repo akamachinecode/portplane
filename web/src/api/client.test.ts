@@ -184,3 +184,33 @@ describe("eventsUrl", () => {
     expect(eventsUrl(null)).toBe("/api/events");
   });
 });
+
+describe("jobs and preferences endpoints", () => {
+  it("sends each request where the server expects it", async () => {
+    const f = fakeFetch((url) => (url.endsWith("/cancel") ? new Response(null, { status: 202 }) : json(url.includes("/api/jobs/") ? { id: "a b" } : [])));
+    const api = createHttpApi("t", f.fn);
+    await api.jobs();
+    await api.job("a b");
+    await api.cancelJob("a b");
+    await api.preferences();
+    expect(f.calls.map((c) => `${c.init.method} ${c.url}`)).toEqual(["GET /api/jobs", "GET /api/jobs/a%20b", "POST /api/jobs/a%20b/cancel", "GET /api/preferences"]);
+    expect(f.calls[2].init.body).toBe("{}");
+  });
+
+  it("puts the whole preferences object and surfaces a refusal", async () => {
+    const prefs = {
+      theme: "dark" as const,
+      density: "compact" as const,
+      favorites: [],
+      notifications: { failures: true, recoveries: false, jobs: true },
+      updateCheck: "manual" as const,
+      onboarding: { completed: true, skipped: false, done: [] },
+    };
+    const ok = fakeFetch((_u, init) => json(JSON.parse(init.body as string)));
+    expect(await createHttpApi("t", ok.fn).savePreferences(prefs)).toEqual(prefs);
+    expect(ok.calls[0].init.method).toBe("PUT");
+    expect(ok.calls[0].url).toBe("/api/preferences");
+    const bad = createHttpApi("t", fakeFetch(() => json({ error: "theme must be one of system, light, dark" }, 400)).fn);
+    await expect(bad.savePreferences(prefs)).rejects.toThrow("theme must be one of system, light, dark");
+  });
+});

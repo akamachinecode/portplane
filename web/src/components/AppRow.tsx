@@ -1,11 +1,9 @@
 import { useId, useState } from "react";
-import { errorText } from "../api/errors";
 import type { App, MachineSnapshot, Verb } from "../api/types";
 import { appHref, copyableUrl, isAlive, rowAddress } from "../lib/apps";
-import { copyText } from "../lib/clipboard";
 import { dekitCommand, portLabel, stateLabel } from "../lib/format";
-import { appsFingerprint } from "../lib/pending";
-import { appTarget } from "../lib/targets";
+import { appRoute, href as routeHref, navigate } from "../lib/router";
+import { actOnApp, appKey, copyWithToast } from "./appActions";
 import { useApp } from "./AppContext";
 import { ExcerptPanel } from "./ExcerptPanel";
 import { Icon } from "./Icon";
@@ -14,14 +12,15 @@ import { Menu, type MenuItem } from "./Menu";
 import { StateDot } from "./StateDot";
 
 export function AppRow({ app, ms }: { app: App; ms: MachineSnapshot }) {
-  const { api, pending, toast } = useApp();
+  const ctx = useApp();
+  const { api, pending } = ctx;
   const [expanded, setExpanded] = useState(false);
   const excerptId = useId();
   const machine = ms.machine.id;
 
   const alive = isAlive(app.state);
   const failed = app.state === "failed";
-  const key = `app|${machine}|${app.id}|`;
+  const key = appKey(machine, app);
   const busy = pending.hasPrefix(key);
   const href = app.state === "on" ? appHref(app, ms.machine) : undefined;
   // The live URL (tunnelled, for another machine); or, while it runs without
@@ -29,16 +28,11 @@ export function AppRow({ app, ms }: { app: App; ms: MachineSnapshot }) {
   const address = rowAddress(app, ms.machine, href);
   const copyUrl = copyableUrl(app, ms.machine, ms.tools);
 
-  const act = (verb: Verb) =>
-    pending.run(key + verb, appsFingerprint(machine, [app.id]), () => api.act(appTarget(machine, app), verb));
+  const act = (verb: Verb) => actOnApp(ctx, machine, app, verb);
+  const copy = (text: string, what: string) => copyWithToast(ctx, text, what);
+  const detail = appRoute(machine, app.id);
 
-  const copy = (text: string, what: string) =>
-    copyText(text).then(
-      () => toast.info(`Copied ${what}`),
-      (err: unknown) => toast.error(errorText(err)),
-    );
-
-  const menu: MenuItem[] = [];
+  const menu: MenuItem[] = [{ label: "Show details", icon: "panelRight", onSelect: () => navigate(detail) }];
   if (copyUrl) menu.push({ label: "Copy URL", icon: "copy", onSelect: () => copy(copyUrl, "the URL") });
   if (ms.machine.local && app.dir) {
     const dir = app.dir;
@@ -58,9 +52,9 @@ export function AppRow({ app, ms }: { app: App; ms: MachineSnapshot }) {
         <StateDot state={app.state} />
         <div className="row-body">
           <div className="row-line">
-            <span className="row-label" title={app.task}>
+            <a className="row-label" href={routeHref(detail)} title={`${app.task}: show details`}>
               {app.label}
-            </span>
+            </a>
             {app.kind === "job" && <span className="tag">step</span>}
             <span className="row-state">{stateLabel(app.state)}</span>
             {(app.detail || failed) && (

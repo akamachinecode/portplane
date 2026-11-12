@@ -232,3 +232,25 @@ export interface MachineUpdate {
 export interface Autostart {
   enabled: boolean;
 }
+
+// ---- Preferences (GET and PUT /api/preferences; lib/preferences.ts) ----
+
+export type Theme = "system" | "light" | "dark";
+export type Density = "comfortable" | "compact";
+
+export interface OnboardingProgress {
+  completed: boolean;
+  skipped: boolean;
+  step?: string;
+  done: string[]; // steps finished
+}
+
+/** How the user likes the app. PUT sends the whole object back. */
+export interface Preferences {
+  theme: Theme;
+  density: Density;
+  favorites: string[]; // "<machine>|<appId>"
+  notifications: { failures: boolean; recoveries: boolean; jobs: boolean };
+  updateCheck: "manual" | "auto";
+  onboarding: OnboardingProgress;
+}

@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useSyncExternalStore, type ReactNode } from "react";
+import { useId, useLayoutEffect, useRef, useSyncExternalStore, type ReactNode, type RefObject } from "react";
 import { Icon, Spinner } from "./Icon";
 
 // Open modal dialogs, in opening order. Everything outside the topmost one
@@ -22,6 +22,31 @@ export function useTopDialog(): HTMLDialogElement | null {
   );
 }
 
+/**
+ * Shows a <dialog> as a modal while `open` and keeps the stack of open modals
+ * (for useTopDialog). When it closes or unmounts, focus goes back to where it
+ * was before it opened, if that is still on the page.
+ */
+export function useModal(ref: RefObject<HTMLDialogElement | null>, open: boolean): void {
+  const opener = useRef<Element | null>(null);
+  useLayoutEffect(() => {
+    const d = ref.current;
+    if (!d || !open) return;
+    opener.current = document.activeElement;
+    if (!d.open) d.showModal();
+    // The browser focuses the first control; an element marked
+    // data-autofocus (a title, a search field) can ask for it instead.
+    d.querySelector<HTMLElement>("[data-autofocus]")?.focus({ preventScroll: true });
+    setOpenDialogs([...openDialogs.filter((x) => x !== d), d]);
+    return () => {
+      setOpenDialogs(openDialogs.filter((x) => x !== d));
+      if (d.open) d.close();
+      const back = opener.current;
+      if (back instanceof HTMLElement && back.isConnected) back.focus({ preventScroll: true });
+    };
+  }, [ref, open]);
+}
+
 interface Props {
   open: boolean;
   onClose(): void;
@@ -42,15 +67,7 @@ interface Props {
 export function Dialog({ open, onClose, title, head, footer, size = "md", dismissable = true, children }: Props) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
-
-  useEffect(() => {
-    const d = ref.current;
-    if (!d) return;
-    if (open && !d.open) d.showModal();
-    else if (!open && d.open) d.close();
-    if (open) setOpenDialogs([...openDialogs.filter((x) => x !== d), d]);
-    return () => setOpenDialogs(openDialogs.filter((x) => x !== d));
-  }, [open]);
+  useModal(ref, open);
 
   return (
     <dialog

@@ -1,0 +1,22 @@
+.summary {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.summary-part + .summary-part::before {
+  content: "·";
+  margin: 0 7px;
+  color: var(--text-3);
+}
+
+.summary-part.tone-failed {
+  color: var(--err);
+  font-weight: 500;
+}
+
+.summary-part.tone-starting,
+.summary-part.tone-stopping {
+  color: var(--warn);
+}

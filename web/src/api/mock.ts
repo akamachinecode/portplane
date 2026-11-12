@@ -1,7 +1,13 @@
 import type { Api, PickResult } from "./client";
 import { ApiError } from "./errors";
 import type { FeedHandlers } from "./events";
+import type { MockContext } from "./mockContext";
+import { createMockDekit } from "./mockDekit";
+import { createMockJobs, demoJob } from "./mockJobs";
+import { createMockPortless } from "./mockPortless";
 import { createMockSetup } from "./mockSetup";
+import { createMockTools } from "./mockTools";
+import { DEFAULT_PREFERENCES, preferencesProblem } from "../lib/preferences";
 import type {
   App,
   Excerpt,
@@ -10,6 +16,7 @@ import type {
   MachineSettings,
   MachineSnapshot,
   Port,
+  Preferences,
   Settings,
   Snapshot,
   Target,
@@ -202,6 +209,14 @@ const EXCERPT: Excerpt = {
 export interface MockControls {
   /** Edits the folder behind setup's back: the next write gets a 409. */
   touchSetupFolder(): void;
+  /** Starts a fake install job (the palette's "Run a demo job"); returns its id. */
+  startDemoJob(fail?: boolean): string;
+}
+
+/** Preferences a mock starts with: first run has not been through onboarding. */
+export function mockPreferences(scenario: Scenario): Preferences {
+  const done = scenario !== "nofolders";
+  return { ...structuredClone(DEFAULT_PREFERENCES), onboarding: { completed: done, skipped: false, done: [] } };
 }
 
 /** An in-memory Api: actions change the mock snapshot after a short delay, like dekit would. */
@@ -210,6 +225,8 @@ export function createMockApi(scenario: Scenario = "default"): Api & MockControl
   let folders = [...snapshot.machines[0].folders];
   let machines: MachineSettings[] = scenario === "default" ? structuredClone(MOCK_MACHINES) : [];
   let autostart = false;
+  let preferences = mockPreferences(scenario);
+  const jobs = createMockJobs();
   const setup = createMockSetup(scenario === "empty" || scenario === "readonly" || scenario === "nofolders" ? "fresh" : "existing", ROOT);
   const listeners = new Set<FeedHandlers>();
   let nextPid = 50000;
@@ -264,7 +281,15 @@ export function createMockApi(scenario: Scenario = "default"): Api & MockControl
     });
   const machineError = (id: string) => new ApiError(`unknown machine "${id}"`, 400);
 
+  jobs.onChange((job) => {
+    for (const l of listeners) l.onJob?.(job);
+  });
+  const ctx: MockContext = { scenario, snapshot: () => snapshot, update, delay, later, jobs };
+
   return {
+    ...createMockPortless(ctx),
+    ...createMockDekit(ctx),
+    ...createMockTools(ctx),
     info: () => delay<Info>({ version: "0.0.0-mock", os: "linux", arch: "amd64", url: "https://portplane.localhost", picker: true }),
     snapshot: () => delay(snapshot),
     async act(target, verb: Verb) {
@@ -410,7 +435,25 @@ export function createMockApi(scenario: Scenario = "default"): Api & MockControl
       autostart = enabled;
       return { enabled };
     },
+    jobs: () => delay(jobs.list(), 120),
+    async job(id) {
+      await delay(undefined, 80);
+      return jobs.get(id);
+    },
+    async cancelJob(id) {
+      await delay(undefined, 120);
+      jobs.cancel(id);
+    },
+    preferences: () => delay(structuredClone(preferences), 120),
+    async savePreferences(p) {
+      await delay(undefined, 150);
+      const problem = preferencesProblem(p);
+      if (problem) throw new ApiError(problem, 400);
+      preferences = structuredClone(p);
+      return structuredClone(preferences);
+    },
     touchSetupFolder: () => setup.touch(),
+    startDemoJob: (fail = false) => jobs.start(demoJob(fail)).id,
 
     subscribe(handlers) {
       listeners.add(handlers);

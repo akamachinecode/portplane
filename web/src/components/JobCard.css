@@ -1,0 +1,138 @@
+.job {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.job-failed {
+  border-color: color-mix(in srgb, var(--err) 35%, var(--border));
+}
+
+.job-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 24px;
+}
+
+.job-state-icon {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  color: var(--text-3);
+}
+
+.job-running .job-state-icon {
+  color: var(--accent);
+}
+
+.job-succeeded .job-state-icon {
+  color: var(--on);
+}
+
+.job-failed .job-state-icon {
+  color: var(--err);
+}
+
+.job-title {
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.job-admin {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.job-meta {
+  display: inline-flex;
+  gap: var(--space-2);
+  margin-left: auto;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.job-failed .job-state-label {
+  color: var(--err);
+}
+
+.job-cancel {
+  margin-right: -4px;
+}
+
+.job-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin: 0;
+  padding: 0 0 0 2px;
+  list-style: none;
+}
+
+.job-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-2);
+  font-size: var(--text-xs);
+}
+
+.job-step-icon {
+  display: grid;
+  place-items: center;
+  color: var(--text-3);
+}
+
+.job-step-running {
+  color: var(--text);
+  font-weight: 550;
+}
+
+.job-step-running .job-step-icon {
+  color: var(--accent);
+}
+
+.job-step-succeeded .job-step-icon {
+  color: var(--on);
+}
+
+.job-step-failed {
+  color: var(--err);
+}
+
+.job-step-failed .job-step-icon {
+  color: var(--err);
+}
+
+.job-step-pending,
+.job-step-skipped {
+  color: var(--text-3);
+}
+
+.job-output {
+  margin: 0;
+  padding: var(--space-2) 10px;
+  overflow: auto;
+  border-radius: var(--radius-sm);
+  background: var(--code-bg);
+  color: var(--text-2);
+  font: var(--text-xs) / 1.5 var(--mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.job-error {
+  color: var(--err);
+  font-size: var(--text-sm);
+}

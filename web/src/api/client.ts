@@ -1,5 +1,9 @@
-import { ApiError } from "./errors";
+import { createDekitHttp, type DekitApi } from "./dekit";
 import { connectFeed, type FeedHandlers } from "./events";
+import { createHttp, seg, type FetchLike } from "./http";
+import type { Job } from "./jobs";
+import { createPortlessHttp, type PortlessApi } from "./portless";
+import { createToolsHttp, type ToolsApi } from "./tools";
 import type {
   ApplyResult,
   Autostart,
@@ -9,6 +13,7 @@ import type {
   MachineSettings,
   MachineUpdate,
   NewMachine,
+  Preferences,
   Proposal,
   Settings,
   SetupCheck,
@@ -19,14 +24,17 @@ import type {
 } from "./types";
 
 export { ApiError } from "./errors";
-
-// Every request carries the per-run token (ADR-0008); errors become ApiError.
-export const TOKEN_HEADER = "X-Portplane-Token";
+export { TOKEN_HEADER, UNREACHABLE } from "./http";
 
 export type PickResult = { kind: "picked"; path: string } | { kind: "cancelled" } | { kind: "unsupported" };
 
-/** Everything the UI needs from the binary. The mock in mock.ts implements the same interface. */
-export interface Api {
+/**
+ * Everything the UI needs from the binary. The mock in mock.ts implements the
+ * same interface. The portless, dekit and tools parts live in their own
+ * modules (portless.ts, dekit.ts, tools.ts), each with an HTTP factory and a
+ * mock factory, so work on one does not touch this file.
+ */
+export interface Api extends PortlessApi, DekitApi, ToolsApi {
   info(): Promise<Info>;
   snapshot(): Promise<Snapshot>;
   act(target: Target, verb: Verb): Promise<void>;
@@ -57,62 +65,28 @@ export interface Api {
   autostart(): Promise<Autostart>;
   setAutostart(enabled: boolean): Promise<Autostart>;
 
-  /** Streams snapshots until the returned function is called. */
+  /** Recent jobs, newest first (see jobs.ts). */
+  jobs(): Promise<Job[]>;
+  job(id: string): Promise<Job>;
+  /** Asks a running job to stop (202); its next event says when it did. */
+  cancelJob(id: string): Promise<void>;
+
+  preferences(): Promise<Preferences>;
+  /** Saves the whole object and returns what was saved (400 on an invalid value). */
+  savePreferences(preferences: Preferences): Promise<Preferences>;
+
+  /** Streams snapshots and job events until the returned function is called. */
   subscribe(handlers: FeedHandlers): () => void;
 }
 
-type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
-
-export const UNREACHABLE = "Can't reach Portplane. Is it still running?";
-
-async function errorMessage(res: Response): Promise<string> {
-  const text = await res.text().catch(() => "");
-  if (text) {
-    try {
-      const body = JSON.parse(text) as { error?: unknown };
-      if (typeof body.error === "string" && body.error !== "") return body.error;
-    } catch {
-      // not JSON: fall through to the raw text
-    }
-    return text.trim().slice(0, 300);
-  }
-  return `Request failed (${res.status}${res.statusText ? ` ${res.statusText}` : ""})`;
-}
-
-export function createHttpApi(token: string | null, fetchImpl: FetchLike = (i, o) => fetch(i, o)): Api {
-  async function send(method: string, path: string, body?: unknown, signal?: AbortSignal): Promise<Response> {
-    const headers: Record<string, string> = { Accept: "application/json" };
-    if (token) headers[TOKEN_HEADER] = token;
-    if (body !== undefined) headers["Content-Type"] = "application/json";
-    let res: Response;
-    try {
-      res = await fetchImpl(path, {
-        method,
-        headers,
-        body: body === undefined ? undefined : JSON.stringify(body),
-        cache: "no-store",
-        signal,
-      });
-    } catch (err) {
-      if (signal?.aborted) throw err; // the caller cancelled: not a dead server
-      throw new ApiError(UNREACHABLE, 0);
-    }
-    return res;
-  }
-
-  async function json<T>(method: string, path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
-    const res = await send(method, path, body, signal);
-    if (!res.ok) throw new ApiError(await errorMessage(res), res.status);
-    const text = await res.text();
-    return (text ? JSON.parse(text) : undefined) as T;
-  }
-
-  async function none(method: string, path: string, body?: unknown): Promise<void> {
-    const res = await send(method, path, body);
-    if (!res.ok) throw new ApiError(await errorMessage(res), res.status);
-  }
+export function createHttpApi(token: string | null, fetchImpl?: FetchLike): Api {
+  const h = createHttp(token, fetchImpl);
+  const { send, json, none } = h;
 
   const api: Api = {
+    ...createPortlessHttp(h),
+    ...createDekitHttp(h),
+    ...createToolsHttp(h),
     info: () => json<Info>("GET", "/api/info"),
     snapshot: () => json<Snapshot>("GET", "/api/snapshot"),
     act: (target, verb) => none("POST", "/api/actions", { target, verb }),
@@ -127,7 +101,7 @@ export function createHttpApi(token: string | null, fetchImpl: FetchLike = (i, o
       const res = await send("POST", "/api/folders/pick", {});
       if (res.status === 204) return { kind: "cancelled" };
       if (res.status === 501) return { kind: "unsupported" };
-      if (!res.ok) throw new ApiError(await errorMessage(res), res.status);
+      if (!res.ok) throw await h.fail(res);
       const body = (await res.json()) as { path?: string };
       return body.path ? { kind: "picked", path: body.path } : { kind: "cancelled" };
     },
@@ -137,11 +111,16 @@ export function createHttpApi(token: string | null, fetchImpl: FetchLike = (i, o
     machines: () => json<MachineSettings[]>("GET", "/api/machines"),
     machineCandidates: () => json<MachineCandidate[]>("GET", "/api/machines/candidates"),
     addMachine: (machine, signal) => json<MachineSettings>("POST", "/api/machines", machine, signal),
-    updateMachine: (id, update) => json<MachineSettings>("PUT", `/api/machines/${encodeURIComponent(id)}`, update),
-    removeMachine: (id) => none("DELETE", `/api/machines/${encodeURIComponent(id)}`),
+    updateMachine: (id, update) => json<MachineSettings>("PUT", `/api/machines/${seg(id)}`, update),
+    removeMachine: (id) => none("DELETE", `/api/machines/${seg(id)}`),
     openPort: async (machine, port) => (await json<{ url: string }>("POST", "/api/ports/open", { machine, port })).url,
     autostart: () => json<Autostart>("GET", "/api/autostart"),
     setAutostart: (enabled) => json<Autostart>("PUT", "/api/autostart", { enabled }),
+    jobs: () => json<Job[]>("GET", "/api/jobs"),
+    job: (id) => json<Job>("GET", `/api/jobs/${seg(id)}`),
+    cancelJob: (id) => none("POST", `/api/jobs/${seg(id)}/cancel`, {}),
+    preferences: () => json<Preferences>("GET", "/api/preferences"),
+    savePreferences: (preferences) => json<Preferences>("PUT", "/api/preferences", preferences),
     subscribe: (handlers) =>
       connectFeed({
         url: eventsUrl(token),
