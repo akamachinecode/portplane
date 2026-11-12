@@ -55,7 +55,7 @@ sha256sum --check --ignore-missing checksums.txt
 ## What else you need
 
 - **[dekit](https://dekit.run)** runs your dev servers.
-- **[portless](https://github.com/vercel-labs/portless)** (Node.js 24+) gives them `https://<name>.localhost` URLs. Run `sudo portless service install` once so its proxy starts with your computer and its certificate is trusted.
+- **[portless](https://github.com/vercel-labs/portless)** (Node.js 24+) gives them `https://<name>.localhost` URLs. Run `sudo portless service install` once so its proxy starts with your computer and its certificate is trusted, or click **Install the service** in Portplane's **Domains → Proxy**. **Domains → Maintenance** updates or removes portless later, with the tool that installed it.
 
 `portplane setup <folder>` and the Setup screen check all of this and print the exact command for your OS. Without dekit and portless, Portplane still lists the ports open on your machine.
 

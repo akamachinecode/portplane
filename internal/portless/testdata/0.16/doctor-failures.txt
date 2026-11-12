@@ -1,0 +1,21 @@
+
+portless doctor
+
+Version: 0.16.0
+Node.js: 22.12.0
+Platform: linux x64
+State dir: /home/dev/.portless
+Proxy target: https://127.0.0.1
+Mode: HTTPS, .localhost
+
+fail  Node.js 22.12.0 is unsupported.
+      Install Node.js 24 or newer.
+info  State directory has not been created yet: /home/dev/.portless
+fail  Port 443 is in use, but it is not a portless proxy.
+      Process on port: PID 812
+fail  OpenSSL is not available on PATH.
+      Install OpenSSL with your system package manager.
+info  Local CA has not been generated yet.
+info  No routes are registered.
+
+Summary: 3 failures, 0 warnings.
