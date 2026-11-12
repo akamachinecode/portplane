@@ -7,6 +7,7 @@ import { href } from "../lib/router";
 import type { Problem, Severity } from "../shell/health";
 import { SnapshotGate } from "../shell/SnapshotGate";
 import { useShell } from "../shell/ShellContext";
+import { usePortlessDoctor } from "./domains/store";
 import { ExportDiagnosticsButton } from "./health/ExportDiagnostics";
 import "./HealthView.css";
 
@@ -62,6 +63,9 @@ function ProblemRow({ problem, multiMachine }: { problem: Problem; multiMachine:
 /** Every problem in one list, each with its fix where there is one (plan §6.4). */
 export function HealthView() {
   const { problems, snapshot } = useShell();
+  // Opening Health runs portless's own diagnostics once, so its findings
+  // join the list (they need a few seconds, so not at start).
+  usePortlessDoctor(!!snapshot?.machines.find((m) => m.machine.local)?.tools.portless);
   const serious = problems.filter((p) => p.severity !== "info").length;
   const multiMachine = (snapshot?.machines.length ?? 0) > 1;
   return (

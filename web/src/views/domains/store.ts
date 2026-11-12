@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 import type { Api } from "../../api/client";
 import { errorText } from "../../api/errors";
 import { useJobs } from "../../api/jobs";
-import type { DoctorReport, PortlessAction, PortlessStatus, RouteView } from "../../api/portless";
+import type { Certificates, DoctorReport, PortlessAction, PortlessStatus, RouteView } from "../../api/portless";
 import { useApp } from "../../components/AppContext";
 import { invalidateProblems } from "../../shell/health";
 
@@ -57,6 +57,7 @@ function resource<T>(fetch: (api: Api) => Promise<T>): Resource<T> {
 export const statusResource = resource<PortlessStatus>((api) => api.portlessStatus());
 export const doctorResource = resource<DoctorReport>((api) => api.portlessDoctor());
 export const routesResource = resource<RouteView[]>((api) => api.portlessRoutes());
+export const certificatesResource = resource<Certificates>((api) => api.portlessCertificates());
 
 /** The latest value of a resource, whatever its state. */
 export function valueOf<T>(l: Load<T>): T | undefined {
@@ -79,13 +80,16 @@ export function usePortlessStatus() {
 }
 
 /**
- * Loads portless's status once in the background (no doctor run), so the
- * Health view knows about a broken service from the first screen.
+ * Loads portless's status and certificates once in the background (no
+ * doctor run), so the Health view knows about a broken service or an
+ * untrusted certificate from the first screen.
  */
 export function usePrimePortless(enabled: boolean): void {
   const { api } = useApp();
   useEffect(() => {
-    if (enabled && statusResource.get().status === "idle") void statusResource.load(api);
+    if (!enabled) return;
+    if (statusResource.get().status === "idle") void statusResource.load(api);
+    if (certificatesResource.get().status === "idle") void certificatesResource.load(api);
   }, [api, enabled]);
 }
 
@@ -119,6 +123,7 @@ export function useRefreshOnJobs(onDone?: () => void) {
     if (!fresh.length) return;
     for (const id of fresh) seen.current.add(id);
     void statusResource.load(api);
+    if (certificatesResource.get().status !== "idle") void certificatesResource.load(api);
     if (routesResource.get().status !== "idle") void routesResource.load(api);
     if (doctorResource.get().status !== "idle") void doctorResource.load(api);
     cb.current?.();

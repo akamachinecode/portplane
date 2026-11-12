@@ -4,7 +4,7 @@ import { FIX_LABELS, groupFindings } from "../../lib/portless";
 import { navigate, type DomainSection } from "../../lib/router";
 import { registerProblemSource, type Problem, type ProblemFix } from "../../shell/health";
 import type { PortlessAction } from "../../api/portless";
-import { doctorResource, requestIntent, statusResource, valueOf } from "./store";
+import { certificatesResource, doctorResource, requestIntent, statusResource, valueOf } from "./store";
 
 // The portless center's problems for the Health view (plan §6.4): the
 // service pointing at a Node.js that is gone, and doctor's warnings and
@@ -14,6 +14,8 @@ import { doctorResource, requestIntent, statusResource, valueOf } from "./store"
 
 const SECTION: Partial<Record<PortlessAction, DomainSection>> = {
   trust: "certificates",
+  "ca-fix-ownership": "certificates",
+  "ca-regenerate": "certificates",
   prune: "routes",
   "hosts-sync": "hosts",
 };
@@ -67,6 +69,45 @@ export function portlessProblems(snapshot: Snapshot): Problem[] {
       machine: where,
       fix: planFix("service-install", "Reinstall the service"),
     });
+  }
+
+  const ca = valueOf(certificatesResource.get())?.ca;
+  if (ca?.exists && !ca.trusted) {
+    out.push({
+      id: `portless-ca-untrusted|${local.machine.id}`,
+      severity: "warning",
+      title: "Browsers will warn about your .localhost addresses",
+      detail: "Your system doesn't trust portless's local certificate authority yet. Trusting it asks for your password once.",
+      machine: where,
+      fix: planFix("trust", "Trust the certificate"),
+      link: { label: "Certificates", route: { view: "domains", section: "certificates" } },
+    });
+  }
+  if (ca?.systemCopyNotRoot) {
+    out.push({
+      id: `portless-ca-owner|${local.machine.id}`,
+      severity: "warning",
+      title: "The trusted copy of the local certificate belongs to your user",
+      detail: "Any program you run could replace it with another certificate, and your system would trust that one the next time it updates its trust store. Fixing it asks for your password once.",
+      code: ca.systemCopy,
+      machine: where,
+      fix: planFix("ca-fix-ownership", "Fix ownership"),
+      link: { label: "Certificates", route: { view: "domains", section: "certificates" } },
+    });
+  }
+  if (ca?.exists && ca.notAfter) {
+    const days = Math.floor((Date.parse(ca.notAfter) - Date.now()) / 86_400_000);
+    if (days < 30) {
+      out.push({
+        id: `portless-ca-expiry|${local.machine.id}`,
+        severity: days < 0 ? "error" : "warning",
+        title: days < 0 ? "The local certificate has expired" : `The local certificate expires in ${days} ${days === 1 ? "day" : "days"}`,
+        detail: "Regenerate it, then trust the new one, so browsers keep accepting your .localhost addresses.",
+        machine: where,
+        fix: planFix("ca-regenerate", "Regenerate"),
+        link: { label: "Certificates", route: { view: "domains", section: "certificates" } },
+      });
+    }
   }
 
   const doctor = valueOf(doctorResource.get());
