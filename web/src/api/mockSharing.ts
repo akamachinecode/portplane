@@ -389,6 +389,7 @@ export function createMockSharing(ctx: MockContext, hooks: SharingHooks): MockSh
       dir,
       argv: [BIN, ...args],
       terminal: `cd ${dir} && ${BIN} ${args.join(" ")}`,
+      warnings: r.op === "up" && !hooks.responding() ? ["The portless proxy isn't running, so portless starts it first. If that needs your password, it can't ask from here and the start fails: start the proxy in Domains → Proxy, then try again."] : [],
     };
     if (!tools.docker) plan.problem = "Docker isn't installed, and portless runs compose projects through it.";
     else if (r.op === "up" && !file) plan.problem = "Portplane can't find this project's compose file. Choose it to start the project.";

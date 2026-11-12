@@ -218,6 +218,8 @@ type ComposePlan struct {
 	Terminal string   `json:"terminal"`
 	// Problem: it can't run (no compose file, no Docker).
 	Problem string `json:"problem,omitempty"`
+	// Warnings: it runs, but something may get in the way.
+	Warnings []string `json:"warnings"`
 }
 
 func checkComposeFile(path string) error {
@@ -242,7 +244,7 @@ func checkComposeFile(path string) error {
 }
 
 func (p *portlessAPI) planCompose(ctx context.Context, req composeRequest) (ComposePlan, error) {
-	pl := ComposePlan{Op: req.Op, Project: req.Project}
+	pl := ComposePlan{Op: req.Op, Project: req.Project, Warnings: []string{}}
 	if req.Op != "up" && req.Op != "down" {
 		return pl, fmt.Errorf("unknown compose operation %q", req.Op)
 	}
@@ -291,6 +293,9 @@ func (p *portlessAPI) planCompose(ctx context.Context, req composeRequest) (Comp
 		}
 		pl.Title = "Start " + name
 		pl.Summary = "Starts the project's containers in the background with portless, which gives each service that publishes an HTTP port an address under ." + portless.ComposeLabel(name) + ". Docker may pull or build images first."
+		if !p.d.Client.ProxyState(ctx).Responding {
+			pl.Warnings = append(pl.Warnings, "The portless proxy isn't running, so portless starts it first. If that needs your password, it can't ask from here and the start fails: start the proxy in Domains → Proxy, then try again.")
+		}
 	} else {
 		args = portless.ComposeDownArgs(req.Project, file)
 		pl.Title = "Stop " + name

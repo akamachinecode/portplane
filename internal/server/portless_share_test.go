@@ -311,6 +311,13 @@ func TestPortlessCompose(t *testing.T) {
 			t.Errorf("%+v: %d", bad, rec.Code)
 		}
 	}
+	// The fixture's proxy doesn't answer: Start says portless starts it first.
+	if pl := decodeBody[ComposePlan](t, f.do("POST", "/api/portless/compose/preview", composeRequest{Op: "up", File: dir})); pl.Problem != "" || len(pl.Warnings) != 1 || !strings.Contains(pl.Warnings[0], "proxy isn't running") || pl.File != file {
+		t.Errorf("up %+v", pl)
+	}
+	if len(pl.Warnings) != 0 {
+		t.Errorf("down warns: %+v", pl.Warnings)
+	}
 	job := f.wait(decodeBody[jobs.Job](t, f.do("POST", "/api/portless/compose/run", composeRequest{Op: "up", File: dir})))
 	if job.State != jobs.Succeeded || !strings.Contains(f.calls(), "compose -f "+file+" up -d") {
 		t.Fatalf("%+v\n%s", job, f.calls())

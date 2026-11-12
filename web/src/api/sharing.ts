@@ -146,6 +146,8 @@ export interface ComposePlan {
   argv: string[];
   terminal: string;
   problem?: string;
+  /** It runs, but something may get in the way (the proxy isn't running). */
+  warnings: string[];
 }
 
 export interface LanAddress {

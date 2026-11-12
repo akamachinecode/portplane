@@ -122,6 +122,12 @@ function ComposeDialog({ request, needFile, onClose }: { request: ComposeRequest
                   {plan.problem}
                 </p>
               )}
+              {plan.warnings.map((w) => (
+                <p key={w} className="rename-note rename-warn">
+                  <Icon name="warning" size={13} />
+                  {w}
+                </p>
+              ))}
               <h3 className="plan-title">What runs</h3>
               <CommandLine command={plan.terminal} />
               <p className="plan-password">This doesn't need your password. The job shows Docker's output as it comes.</p>
