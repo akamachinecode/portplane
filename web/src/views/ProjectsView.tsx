@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import type { App, MachineSnapshot, Project, Runner, Snapshot } from "../api/types";
-import { runnerKey, startRunner } from "../components/appActions";
+import { appKey, runnerKey, startRunner } from "../components/appActions";
 import { useApp } from "../components/AppContext";
 import { Icon, Spinner } from "../components/Icon";
 import { EmptyState } from "../components/States";
@@ -8,10 +8,15 @@ import { StateDot } from "../components/StateDot";
 import { ViewHeader } from "../components/ViewHeader";
 import { indexApps, projectApps, serviceCounts, visibleApps, worktreeApps } from "../lib/apps";
 import { inferHome, shortenPath, stateLabel } from "../lib/format";
+import { appsFingerprint } from "../lib/pending";
+import { projectTarget } from "../lib/targets";
 import { appRoute, href, navigate } from "../lib/router";
 import { SnapshotGate } from "../shell/SnapshotGate";
 import { useShell } from "../shell/ShellContext";
 import "./ProjectsView.css";
+import { useProjectDialog } from "./projects/dialogs";
+import { ProjectEditor } from "./projects/ProjectEditor";
+import "./projects/commands";
 
 interface RunnerEntry {
   ms: MachineSnapshot;
@@ -68,13 +73,32 @@ function RunnerLink({ entry, current, multiMachine }: { entry: RunnerEntry; curr
 }
 
 function ProjectBlock({ ms, project }: { ms: MachineSnapshot; project: Project }) {
+  const ctx = useApp();
   const byId = useMemo(() => indexApps(ms.apps), [ms.apps]);
   const multi = project.worktrees.length > 1;
+  const apps = projectApps(project, byId);
+  const key = `project|${ms.machine.id}|${project.runner}|${project.name}|restart`;
+  const busy = ctx.pending.has(key) || apps.some((a) => ctx.pending.hasPrefix(appKey(ms.machine.id, a)));
+  const canAct = !!ms.tools.dekit && (ms.machine.local || ms.machine.status === "online") && project.running > 0;
   return (
     <section className="proj" aria-label={project.name}>
       <header className="proj-head">
         <h3 className="proj-name">{project.name}</h3>
-        <Counts apps={projectApps(project, byId)} />
+        <Counts apps={apps} />
+        <span className="spacer" />
+        {canAct && (
+          <button
+            type="button"
+            className="btn btn-sm btn-ghost"
+            disabled={busy}
+            aria-busy={ctx.pending.has(key) || undefined}
+            title="Restarts the apps of this project that are running"
+            onClick={() => void ctx.pending.run(key, appsFingerprint(ms.machine.id, apps.map((a) => a.id)), () => ctx.api.act(projectTarget(ms.machine.id, project, byId), "restart"))}
+          >
+            {ctx.pending.has(key) ? <Spinner size={12} /> : <Icon name="restart" size={13} />}
+            Restart all
+          </button>
+        )}
       </header>
       {project.worktrees.map((wt) => {
         const apps = visibleApps(worktreeApps(wt, byId));
@@ -104,6 +128,44 @@ function ProjectBlock({ ms, project }: { ms: MachineSnapshot; project: Project }
           </div>
         );
       })}
+    </section>
+  );
+}
+
+function ProjectBlocks({ ms, projects }: { ms: MachineSnapshot; projects: Project[] }) {
+  return projects.length ? (
+    <div className="proj-blocks">
+      {projects.map((p) => (
+        <ProjectBlock key={p.name} ms={ms} project={p} />
+      ))}
+    </div>
+  ) : (
+    <p className="muted">No tasks in this dekit.yaml yet.</p>
+  );
+}
+
+/** This computer's own runner (machine-wide tasks), at #/projects/local/host. */
+function HostDetail() {
+  return (
+    <section className="runner-detail" aria-labelledby="runner-detail-title">
+      <a className="back-link" href={href({ view: "projects" })}>
+        <Icon name="chevronLeft" size={14} />
+        All projects
+      </a>
+      <header className="runner-detail-head">
+        <div>
+          <h2 className="runner-detail-title" id="runner-detail-title">
+            This computer
+          </h2>
+          <p className="runner-detail-path mono">~/.config/dekit/host/dekit.yaml</p>
+        </div>
+        <a className="btn" href={href({ view: "runners" })}>
+          <Icon name="layers" size={14} />
+          Runner
+        </a>
+      </header>
+      <p className="runner-detail-status">Tasks that are yours rather than a project's, such as a database you always want up.</p>
+      <ProjectEditor runner="host" up />
     </section>
   );
 }
@@ -147,18 +209,14 @@ function RunnerDetail({ entry }: { entry: RunnerEntry }) {
         {runner.error && <span className="runner-error"> · {runner.error}</span>}
       </p>
 
-      {projects.length ? projects.map((p) => <ProjectBlock key={p.name} ms={ms} project={p} />) : <p className="muted">No tasks in this dekit.yaml yet.</p>}
-
-      <section className="config-soon" aria-labelledby="config-soon-title">
-        <h3 id="config-soon-title" className="config-soon-title">
-          <Icon name="pencil" size={14} />
-          Configuration <span className="tag">soon</span>
-        </h3>
-        <p className="muted">
-          A later version edits this project's <code>dekit.yaml</code> here: tasks, shared settings and what loads from where, always with
-          a preview of the change. Until then, edit it in your editor.
-        </p>
-      </section>
+      {local && ms.tools.dekit ? (
+        <ProjectEditor runner={runner.root} up={runner.up} os={ms.machine.os} apps={<ProjectBlocks ms={ms} projects={projects} />} />
+      ) : (
+        <>
+          <ProjectBlocks ms={ms} projects={projects} />
+          {!local && <p className="muted config-note">Editing the configuration of {ms.machine.name}'s projects comes later: edit its dekit.yaml there and Portplane picks up the change.</p>}
+        </>
+      )}
     </section>
   );
 }
@@ -170,8 +228,11 @@ function Body({ snapshot }: { snapshot: Snapshot }) {
   const sel = route.view === "projects" ? route.runner : undefined;
   const selected = sel && entries.find((e) => e.ms.machine.id === sel.machine && e.runner.root === sel.root);
   const multiMachine = new Set(entries.map((e) => e.ms.machine.id)).size > 1;
+  const dialog = useProjectDialog();
+  const localMs = snapshot.machines.find((m) => m.machine.local);
+  const host = sel?.machine === "local" && sel.root === "host" && !!localMs?.tools.dekit;
 
-  if (entries.length === 0) {
+  if (entries.length === 0 && !host) {
     const local = snapshot.machines.find((m) => m.machine.local);
     const folder = local?.folders[0];
     return (
@@ -196,17 +257,30 @@ function Body({ snapshot }: { snapshot: Snapshot }) {
         {entries.map((e) => (
           <RunnerLink key={`${e.ms.machine.id}|${e.runner.root}`} entry={e} current={selected === e} multiMachine={multiMachine} />
         ))}
+        {localMs?.tools.dekit && (
+          <li>
+            <a className="runner-link" href={href({ view: "projects", runner: { machine: "local", root: "host" } })} aria-current={host ? "page" : undefined}>
+              <Icon name="monitor" size={14} />
+              <span className="runner-link-text">
+                <span className="runner-link-name">This computer</span>
+                <span className="runner-link-path mono">machine-wide tasks</span>
+              </span>
+            </a>
+          </li>
+        )}
       </ul>
       <div className="projects-detail">
-        {selected ? (
+        {host ? (
+          <HostDetail />
+        ) : selected ? (
           <RunnerDetail entry={selected} />
         ) : sel ? (
           <EmptyState icon="box" title="This project isn't there any more">
             <a href={href({ view: "projects" })}>See all projects</a>
           </EmptyState>
         ) : (
-          <EmptyState icon="arrowRight" title="Pick a project">
-            Its apps, worktrees and dekit runner show here.
+          <EmptyState icon="arrowRight" title={dialog?.kind === "add-app" ? "Choose the project for the new app" : dialog?.kind === "run-command" ? "Choose where to run the command" : "Pick a project"}>
+            Its apps, worktrees and dekit runner show here, with its configuration.
           </EmptyState>
         )}
       </div>
@@ -214,11 +288,11 @@ function Body({ snapshot }: { snapshot: Snapshot }) {
   );
 }
 
-/** dekit projects and their runners (plan §6.2; the editor comes in M5.3). */
+/** dekit projects, their runners and their configuration (plan §4.5, §6.2). */
 export function ProjectsView() {
   return (
     <>
-      <ViewHeader title="Projects" description="Each dekit.yaml Portplane reads, and the apps it defines." />
+      <ViewHeader title="Projects" description="Each dekit.yaml Portplane reads, the apps it defines, and its configuration." />
       <SnapshotGate>{(snapshot) => <Body snapshot={snapshot} />}</SnapshotGate>
     </>
   );

@@ -50,13 +50,15 @@ type NameInfo struct {
 	Dir     string `json:"dir,omitempty"`
 }
 
-// FileEdit is one file a rename or a config change writes.
-type FileEdit struct {
-	Path    string `json:"path"`
-	Before  string `json:"before"`
-	After   string `json:"after"`
-	Created bool   `json:"created"`
-	Changed bool   `json:"changed"`
+// fileEdit turns portless's planned edit into the API's FileEdit (shared
+// with the dekit center, see dekit.go).
+func fileEdit(e portless.ConfigEdit) FileEdit {
+	return FileEdit{Path: e.Path, Before: e.Before, After: e.After, Created: e.Created, Changed: e.Changed}
+}
+
+// configEdit is the reverse of fileEdit.
+func configEdit(f FileEdit) portless.ConfigEdit {
+	return portless.ConfigEdit{Path: f.Path, Before: f.Before, After: f.After, Created: f.Created, Changed: f.Changed}
 }
 
 // NamePreview is POST /api/portless/names/preview.
@@ -330,7 +332,7 @@ func (p *portlessAPI) planRename(ctx context.Context, rc *renameCtx, name string
 		if err != nil {
 			return pv, err
 		}
-		pv.Files = append(pv.Files, FileEdit(e))
+		pv.Files = append(pv.Files, fileEdit(e))
 		pv.Steps = append(pv.Steps, "Write "+filepath.Base(e.Path))
 		if info.Running {
 			pv.Steps = append(pv.Steps, "Restart "+rc.app.Label)
@@ -415,7 +417,7 @@ func (p *portlessAPI) nameApply(w http.ResponseWriter, r *http.Request) {
 		defer p.d.Refresh()
 		for _, f := range pv.Files {
 			run.Step("Write " + filepath.Base(f.Path))
-			if err := portless.WriteEdit(portless.ConfigEdit(f)); err != nil {
+			if err := portless.WriteEdit(configEdit(f)); err != nil {
 				return err
 			}
 			run.Logf("Wrote %s", f.Path)

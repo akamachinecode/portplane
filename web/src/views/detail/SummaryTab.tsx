@@ -10,6 +10,8 @@ import { appHref, copyableUrl, isAlive } from "../../lib/apps";
 import { dekitCommand, displayHost, inferHome, shellQuote, shortenPath, stateLabel } from "../../lib/format";
 import { appRoute, href as routeHref } from "../../lib/router";
 import type { DetailTabProps } from "../AppDetail";
+import { DekitHelpHost } from "../runners/DekitHelp";
+import { WhySection } from "./WhySection";
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -143,6 +145,8 @@ export function SummaryTab({ ms, app }: DetailTabProps) {
           </p>
         </Row>
       </dl>
+      <WhySection ms={ms} app={app} />
+      <DekitHelpHost />
     </div>
   );
 }

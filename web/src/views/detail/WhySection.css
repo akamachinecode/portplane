@@ -1,0 +1,149 @@
+/* "Why it is like this" and the dependency graph (plan §4.3). */
+
+.why .detail-section-title {
+  display: flex;
+  align-items: center;
+}
+
+.why-sentence {
+  font-size: var(--text-md);
+}
+
+.why-loading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-sm);
+}
+
+.why-marks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.why-mark {
+  padding: 1px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: var(--text-xs);
+}
+
+.why-vetoed {
+  border-color: var(--warn-dot);
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.why-pinned {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.why-retrying {
+  color: var(--err);
+}
+
+.why-deps {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.why-dep {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.why-dep a {
+  color: var(--accent-text);
+}
+
+.why-dep .icon {
+  color: var(--on);
+}
+
+.why-wait {
+  color: var(--warn);
+  font-size: var(--text-xs);
+  font-weight: 550;
+}
+
+.why-veto {
+  margin-top: var(--space-3);
+}
+
+.dep-graph {
+  margin: var(--space-4) 0 0;
+}
+
+.dep-graph-scroll {
+  position: relative;
+  overflow-x: auto;
+  padding-bottom: var(--space-1);
+}
+
+.dep-graph svg {
+  display: block;
+}
+
+.dep-edge {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+}
+
+.dep-node {
+  display: flex;
+  position: absolute;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: inherit;
+  font-size: var(--text-xs);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.dep-node span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+a.dep-node:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-2);
+}
+
+.dep-node.is-center {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  font-weight: 600;
+}
+
+.dep-node .dot {
+  width: 7px;
+  height: 7px;
+  box-shadow: none;
+}
+
+.detail-section.why {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}

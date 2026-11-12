@@ -59,6 +59,8 @@ sha256sum --check --ignore-missing checksums.txt
 
 You don't have to install them first: the guided setup does it (below). Without dekit and portless, Portplane still lists the ports open on your machine.
 
+Once dekit is installed, **Runners → Update…** updates it: with dekit's own updater when it came from the install script, or with Homebrew, npm or pip when it came from one of them, and then switches the running projects to the new version.
+
 ## First run
 
 Open Portplane. On a first run it shows a guided setup that takes about five minutes and no terminal:

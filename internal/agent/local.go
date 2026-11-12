@@ -401,6 +401,16 @@ func (l *Local) Act(ctx context.Context, target model.Target, verb model.Verb) e
 	}
 	var targets []string
 	switch {
+	case verb == model.VerbRemove:
+		if target.Task == "" {
+			return errors.New("remove one app at a time")
+		}
+		for _, a := range apps {
+			if a.Task == target.Task {
+				return l.remove(ctx, a)
+			}
+		}
+		return fmt.Errorf("unknown app %s", target.Task)
 	case target.Task != "":
 		if !exists(target.Task) {
 			return fmt.Errorf("unknown app %s", target.Task)
@@ -431,7 +441,13 @@ func (l *Local) Act(ctx context.Context, target model.Target, verb model.Verb) e
 		return dekit.ErrNotInstalled
 	}
 	for _, t := range targets {
-		if err := l.dekit.Act(ctx, target.Runner, string(verb), t); err != nil {
+		var err error
+		if verb == model.VerbForceRestart {
+			err = l.forceRestart(ctx, target.Runner, t)
+		} else {
+			err = l.dekit.Act(ctx, target.Runner, string(verb), t)
+		}
+		if err != nil {
 			return err
 		}
 	}
@@ -446,7 +462,7 @@ func (l *Local) Act(ctx context.Context, target model.Target, verb model.Verb) e
 func groupTargets(group []model.App, prefix string, verb model.Verb, autostart map[string]bool) []string {
 	var out []string
 	switch verb {
-	case model.VerbStop:
+	case model.VerbStop, model.VerbKill, model.VerbVeto:
 		if prefix != "" {
 			return []string{prefix + "**"}
 		}
@@ -468,7 +484,7 @@ func groupTargets(group []model.App, prefix string, verb model.Verb, autostart m
 			return marked
 		}
 		out = services
-	case model.VerbRestart:
+	case model.VerbRestart, model.VerbForceRestart:
 		for _, a := range group {
 			if a.Kind != "job" && a.State.Alive() {
 				out = append(out, a.Task)

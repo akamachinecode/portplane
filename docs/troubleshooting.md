@@ -42,6 +42,18 @@
 
 **Portplane cannot find dekit or portless when started at login.** Login items get a minimal PATH. Portplane adds your login shell's PATH and the usual install folders (`~/.local/bin`, Homebrew, mise shims); if your tools live elsewhere, add that folder to the PATH your login shell sets.
 
+**A task's form is read-only, or a field says "Written with !js".** Portplane edits `dekit.yaml` entry by entry and keeps your comments, but it does not rewrite `!js` values, YAML anchors and aliases, or entries written in flow style (`{…}`). Change those in the **YAML** tab of the project, or click **Open in your editor**; Portplane picks up the change.
+
+**"Configuration changed: review and reload".** A runner reads `dekit.yaml` when it starts; after that, changes on disk wait until a reload. The banner lists what a reload would change; **Review and reload** applies it, and can restart the running tasks it changes. From a terminal: `dekit -C <folder> reload --yes`.
+
+**A runner shows "Stale record".** dekit has a record for a runner whose process is gone (it crashed, or the computer restarted). Start it again, or use **Clean stale records** in Runners (`dekit runner clean`), which never touches running runners.
+
+**A runner shows "Needs restart".** The project now selects another dekit binary (its `kernel:`, or the default you set). **Restart runner** or **Upgrade** switches it without stopping its tasks. On Windows dekit cannot do this in place: stop the runner and start it again.
+
+**Remove is missing from an app's menu.** Portplane only removes tasks it added (in `.portplane/tasks.yaml`) or ones started with **Run a command**. A task you wrote in `dekit.yaml` stays yours: delete it there, or from the project's **Tasks** tab.
+
+**Start the runner from Runners and it says some tasks didn't start.** Start waits until every task is ready; the job names the ones that failed, and their app shows why (**Why it is like this**) and their last output.
+
 **Start from a clean state.** Quit Portplane, remove `<user config dir>/portplane/settings.json`, start it again.
 
 ## Browsers and the local certificate

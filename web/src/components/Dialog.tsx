@@ -80,9 +80,9 @@ export function Dialog({ open, onClose, title, head, footer, size = "md", dismis
         if (dismissable) onClose();
       }}
       onClose={(e) => {
-        // The close event comes a moment after close(): when React's
-        // development double mount closes and reopens the dialog, it
-        // arrives while the dialog is open again and must be ignored.
+        // A close event queued by an earlier close() (React's dev double
+        // mount closes and reopens a dialog that mounts open) arrives while
+        // the dialog is open again: ignore it.
         if (open && !e.currentTarget.open) onClose();
       }}
       onClick={(e) => {

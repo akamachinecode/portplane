@@ -1,0 +1,24 @@
+/* The Undo strip after Remove (plan §6.6: toast with Undo). */
+
+.undo-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: var(--space-1) var(--space-3) var(--space-2) var(--space-6);
+  padding: 6px 6px 6px var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--toast-bg);
+  color: var(--toast-fg);
+  font-size: var(--text-sm);
+}
+
+.undo-strip .btn {
+  border-color: transparent;
+  background: rgb(255 255 255 / 14%);
+  color: inherit;
+}
+
+.undo-strip .btn:hover {
+  background: rgb(255 255 255 / 22%);
+}

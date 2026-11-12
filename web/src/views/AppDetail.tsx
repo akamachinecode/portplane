@@ -1,10 +1,12 @@
 import { useId, useRef, type KeyboardEvent, type ReactNode } from "react";
 import type { App, MachineSnapshot } from "../api/types";
+import { useAppActionMenu } from "../components/AppActionMenu";
 import { actOnApp, appKey } from "../components/appActions";
 import { useApp } from "../components/AppContext";
 import { Drawer } from "../components/Drawer";
 import { Icon } from "../components/Icon";
 import { IconButton } from "../components/IconButton";
+import { Menu } from "../components/Menu";
 import { EmptyState, LoadingState } from "../components/States";
 import { StateDot } from "../components/StateDot";
 import { appHref, isAlive } from "../lib/apps";
@@ -42,6 +44,7 @@ function Header({ ms, app, titleId }: DetailTabProps & { titleId: string }) {
   const canAct = !!ms.tools.dekit && (ms.machine.local || ms.machine.status === "online");
   const toggle = alive ? "stop" : "start";
   const where = [app.project, app.worktree, ms.machine.name].filter(Boolean).join(" · ");
+  const more = useAppActionMenu(ms, app);
   return (
     <header className="detail-head">
       <div className="detail-title-row">
@@ -70,11 +73,13 @@ function Header({ ms, app, titleId }: DetailTabProps & { titleId: string }) {
           {canAct && alive && (
             <IconButton icon="restart" label={`Restart ${app.label}`} pending={ctx.pending.has(key + "restart")} busy={busy} onClick={() => void actOnApp(ctx, machine, app, "restart")} />
           )}
+          {more.items.length > 0 && <Menu label={`More actions for ${app.label}`} items={more.items} />}
           <span className="detail-actions-sep" aria-hidden="true" />
           <IconButton icon="close" label="Close details" onClick={close} />
         </div>
       </div>
       <p className="detail-where">{where}</p>
+      {more.element}
     </header>
   );
 }

@@ -46,8 +46,14 @@ func TestRunnerDown(t *testing.T) {
 func TestActRejectsUnknownVerbs(t *testing.T) {
 	var calls []fakeCall
 	c := fakeCLI("", "", nil, &calls)
-	if err := c.Act(context.Background(), "/p", "rm", "x"); err == nil {
-		t.Fatal("rm must not be allowed")
+	if err := c.Act(context.Background(), "/p", "explode", "x"); err == nil {
+		t.Fatal("unknown verbs must not be allowed")
+	}
+	if err := c.Act(context.Background(), "/p", "stop", "**"); err == nil {
+		t.Fatal("stopping every task must be refused (field notes)")
+	}
+	if len(calls) != 0 {
+		t.Fatalf("refused verbs must not reach dekit: %v", calls)
 	}
 	if err := c.Act(context.Background(), "/p", "start", "shop/**"); err != nil {
 		t.Fatal(err)

@@ -111,3 +111,246 @@
     display: none;
   }
 }
+
+/* ---- the dekit center (M5.3) ---- */
+
+.dk-about {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+}
+
+.dk-about-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.dk-about-title {
+  font-size: var(--text-lg);
+  font-weight: 650;
+}
+
+.dk-about-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.dk-about-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-2) var(--space-5);
+  margin: 0;
+}
+
+.dk-about-facts dt {
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+
+.dk-about-facts dd {
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+}
+
+.dk-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: var(--space-4) 0;
+  color: var(--text-2);
+  font-size: var(--text-sm);
+}
+
+.dk-note a {
+  color: var(--accent-text);
+}
+
+.dk-section + .dk-section {
+  margin-top: var(--space-6);
+}
+
+.dk-section-text {
+  margin: calc(-1 * var(--space-1)) 0 var(--space-2);
+  color: var(--text-2);
+  font-size: var(--text-xs);
+}
+
+.dk-runners {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+  list-style: none;
+}
+
+.dk-runner + .dk-runner {
+  border-top: 1px solid var(--border);
+}
+
+.dk-runner-main {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--row-h);
+  padding: var(--row-pad-y) var(--space-3) var(--row-pad-y) var(--space-4);
+}
+
+.dk-runner-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.dk-runner-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.dk-runner-name a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.dk-runner-name a:hover {
+  color: var(--accent-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.dk-runner-path {
+  overflow: hidden;
+  color: var(--text-3);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dk-runner-facts {
+  display: grid;
+  grid-template-columns: 96px 84px 64px 130px;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+  color: var(--text-2);
+  font-size: var(--text-xs);
+}
+
+.dk-runner-facts div {
+  display: flex;
+  gap: 4px;
+  min-width: 0;
+}
+
+.dk-runner-facts dt {
+  color: var(--text-3);
+}
+
+.dk-runner-facts dd {
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dk-state {
+  font-weight: 550;
+}
+
+.dk-state-running {
+  color: var(--on);
+}
+
+.dk-state-stale,
+.dk-state-failed {
+  color: var(--err);
+}
+
+.dk-state-starting {
+  color: var(--warn);
+}
+
+.dk-runner-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-1);
+  min-width: 112px;
+}
+
+.dk-runner-warnings {
+  margin: 0;
+  padding: 0 var(--space-4) var(--space-2) calc(var(--space-4) + 20px);
+  color: var(--warn);
+  font-size: var(--text-xs);
+  list-style: none;
+}
+
+.dk-warn-error {
+  color: var(--err);
+}
+
+.dk-runner-note {
+  padding: 0 var(--space-4) var(--space-3) calc(var(--space-4) + 20px);
+  color: var(--text-2);
+  font-size: var(--text-xs);
+}
+
+.runner-job {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1);
+  padding: 0 var(--space-4) var(--space-3) calc(var(--space-4) + 20px);
+}
+
+.runner-job > * {
+  align-self: stretch;
+}
+
+.runner-job .runner-job-dismiss {
+  align-self: flex-end;
+}
+
+.runner-job-all {
+  margin-top: var(--space-4);
+  padding: 0;
+}
+
+@media (max-width: 900px) {
+  .dk-runner-facts {
+    grid-template-columns: 96px 84px;
+  }
+  .dk-runner-facts > div:nth-child(n + 3) {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .dk-runner-main {
+    grid-template-columns: 8px minmax(0, 1fr) auto;
+  }
+  .dk-runner-facts {
+    display: none;
+  }
+  .dk-runner-actions {
+    min-width: 0;
+  }
+}

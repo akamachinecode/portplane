@@ -324,9 +324,17 @@ export function createMockApi(scenario: Scenario = "default"): Api & MockControl
       const m = target.machine;
       const ids = new Set((machineSnap(m)?.apps ?? []).filter((a) => matches(target, a)).map((a) => a.id));
       if (ids.size === 0) throw new ApiError("no task matches this target", 404);
-      if (verb === "stop") {
+      if (verb === "rm") {
+        const apps = machineSnap(m)?.apps.filter((a) => ids.has(a.id)) ?? [];
+        const kept = apps.find((a) => !a.dynamic && !a.portplane);
+        if (kept) throw new ApiError(`${kept.label} is in your dekit.yaml: remove it there (Portplane only removes the tasks it added or ones started with Run a command)`, 400);
+        update((ms) => (ms.apps = ms.apps.filter((a) => !ids.has(a.id))), m);
+        return;
+      }
+      if (verb === "stop" || verb === "kill" || verb === "veto") {
+        const detail = verb === "veto" ? "kept stopped" : undefined;
         setState(m, ids, () => ({ state: "stopping", rawState: "stopping" }));
-        later(900, () => setState(m, ids, (a) => ({ state: a.kind === "job" ? "done" : "off", rawState: "stopped", pid: undefined, port: undefined, ports: undefined, url: undefined, remoteUrl: undefined, detail: undefined })));
+        later(verb === "kill" ? 200 : 900, () => setState(m, ids, (a) => ({ state: a.kind === "job" ? "done" : "off", rawState: "idle", pid: undefined, port: undefined, ports: undefined, url: undefined, remoteUrl: undefined, detail })));
         return;
       }
       setState(m, ids, () => ({ state: "starting", rawState: "running", detail: "waiting for port" }));

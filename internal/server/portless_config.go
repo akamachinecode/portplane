@@ -147,7 +147,7 @@ func (p *portlessAPI) configPreview(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			pv.Problems = append(pv.Problems, err.Error())
 		} else {
-			fe := FileEdit(e)
+			fe := fileEdit(e)
 			pv.Edit = &fe
 		}
 	}
