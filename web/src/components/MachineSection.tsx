@@ -1,10 +1,9 @@
 import { useMemo } from "react";
 import type { MachineSnapshot } from "../api/types";
-import { indexApps } from "../lib/apps";
 import { inferHome } from "../lib/format";
+import type { AppEntry, ProjectGroup } from "../views/apps/model";
 import { useApp } from "./AppContext";
-import { Banner } from "./Banner";
-import { RunnerBanners, ToolBanners } from "./Banners";
+import type { RowExtras } from "./AppRow";
 import { FirstRun, NoApps } from "./EmptyStates";
 import { Icon, Spinner } from "./Icon";
 import { Menu } from "./Menu";
@@ -14,9 +13,19 @@ import { StateDot } from "./StateDot";
 
 const STATUS_LABEL = { online: "Online", connecting: "Connecting", offline: "Offline" } as const;
 
-function Body({ ms }: { ms: MachineSnapshot }) {
+export interface MachineBodyProps {
+  ms: MachineSnapshot;
+  /** The projects to show, filtered and sorted (views/apps/model.ts). */
+  projects: ProjectGroup[];
+  /** Filters are on: an empty machine says nothing, other ports stay out. */
+  filtering: boolean;
+  /** Renders the projects (cards, or the table's rows). */
+  renderProjects(projects: ProjectGroup[]): React.ReactNode;
+}
+
+/** What a machine with no app to show says instead (first run, no dekit.yaml). */
+function EmptyBody({ ms }: { ms: MachineSnapshot }) {
   const { openEditMachine } = useApp();
-  const byId = useMemo(() => indexApps(ms.apps), [ms.apps]);
   if (ms.folders.length === 0) {
     if (ms.machine.local) return <FirstRun />;
     return (
@@ -29,46 +38,24 @@ function Body({ ms }: { ms: MachineSnapshot }) {
       </div>
     );
   }
-  if (ms.apps.length === 0) {
-    // Without dekit there is nothing to read: the banner already says so.
-    if (!ms.tools.dekit || ms.runners.length > 0) return null;
-    return <NoApps ms={ms} />;
-  }
-  return (
-    <div className="grid">
-      {ms.projects.map((p) => (
-        <ProjectCard key={`${p.runner}\u0000${p.name}`} ms={ms} project={p} byId={byId} />
-      ))}
-    </div>
-  );
+  // Without dekit, or with runners that are down, Health says why.
+  if (ms.apps.length > 0 || !ms.tools.dekit || ms.runners.length > 0) return null;
+  return <NoApps ms={ms} />;
 }
 
-/** Where a remote machine stands while it isn't online (ADR-0015: reconnects on its own). */
+/** One line on a remote machine that is not online; Health has the details (ADR-0015). */
 function RemoteStatus({ ms }: { ms: MachineSnapshot }) {
   const { machine } = ms;
-  if (machine.status === "offline") {
-    return (
-      <Banner tone="error" title={`Can't reach ${machine.name}`}>
-        {machine.error && <span className="banner-pre">{machine.error}</span>}
-        <span className="banner-hint">Portplane keeps trying in the background.</span>
-      </Banner>
-    );
-  }
-  if (machine.error) {
-    return (
-      <Banner tone="warn" title={`Reconnecting to ${machine.name}…`}>
-        <span className="banner-pre">Last error: {machine.error}</span>
-      </Banner>
-    );
-  }
+  if (machine.status === "offline") return <p className="machine-note">Portplane keeps trying to reach it in the background.</p>;
   return (
-    <p className="machine-connecting">
-      <Spinner /> Connecting over SSH…
+    <p className="machine-note">
+      <Spinner /> {machine.error ? "Reconnecting over SSH…" : "Connecting over SSH…"}
     </p>
   );
 }
 
-export function MachineSection({ ms }: { ms: MachineSnapshot }) {
+/** A machine in the Apps view: its name and state, its projects, and its other ports. */
+export function MachineSection({ ms, projects, filtering, renderProjects }: MachineBodyProps) {
   const { openEditMachine, openRemoveMachine } = useApp();
   const { machine } = ms;
   const home = useMemo(
@@ -81,6 +68,7 @@ export function MachineSection({ ms }: { ms: MachineSnapshot }) {
   const headingId = `machine-${machine.id}`.replace(/[^\w-]/g, "_");
   // A remote machine's tools and runners are only known while it's online.
   const live = machine.local || machine.status === "online";
+  if (filtering && projects.length === 0) return null;
 
   return (
     <section className="machine" aria-labelledby={headingId}>
@@ -106,20 +94,20 @@ export function MachineSection({ ms }: { ms: MachineSnapshot }) {
           </span>
         )}
       </header>
-      {machine.local && machine.error && (
-        <Banner tone="error" title="Problem with this machine">
-          {machine.error}
-        </Banner>
-      )}
-      {!machine.local && machine.status !== "online" && <RemoteStatus ms={ms} />}
-      {live && (
-        <>
-          <ToolBanners ms={ms} />
-          <RunnerBanners ms={ms} home={home} />
-          <Body ms={ms} />
-        </>
-      )}
-      <OtherPorts ms={ms} home={home} />
+      {!live && <RemoteStatus ms={ms} />}
+      {live && (projects.length > 0 ? renderProjects(projects) : !filtering && <EmptyBody ms={ms} />)}
+      {!filtering && <OtherPorts ms={ms} home={home} />}
     </section>
+  );
+}
+
+/** Cards mode: a grid of project cards. */
+export function ProjectGrid({ ms, projects, extras }: { ms: MachineSnapshot; projects: ProjectGroup[]; extras(e: AppEntry): RowExtras }) {
+  return (
+    <div className="grid">
+      {projects.map((p) => (
+        <ProjectCard key={p.key} ms={ms} group={p} extras={extras} />
+      ))}
+    </div>
   );
 }

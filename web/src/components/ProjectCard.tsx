@@ -1,8 +1,9 @@
-import type { App, MachineSnapshot, Project, Target, Verb, Worktree } from "../api/types";
-import { isAlive, projectApps, runningUrls, serviceCounts, visibleApps, worktreeApps } from "../lib/apps";
+import type { App, MachineSnapshot, Project, Target, Verb } from "../api/types";
+import { indexApps, isAlive, projectApps, runningUrls, serviceCounts, worktreeApps } from "../lib/apps";
 import { appsFingerprint } from "../lib/pending";
 import { projectTarget, worktreeTarget } from "../lib/targets";
-import { AppRow } from "./AppRow";
+import type { AppEntry, ProjectGroup, WorktreeGroup } from "../views/apps/model";
+import { AppRow, type RowExtras } from "./AppRow";
 import { useApp } from "./AppContext";
 import { Icon } from "./Icon";
 import { IconButton } from "./IconButton";
@@ -62,7 +63,7 @@ function GroupActions({ ms, name, keyBase, apps, target, withOpen }: GroupAction
   );
 }
 
-function Count({ apps }: { apps: App[] }) {
+export function Count({ apps }: { apps: App[] }) {
   const { running, total } = serviceCounts(apps);
   return (
     <span className={running > 0 ? "count count-live" : "count"} title={`${running} of ${total} running`}>
@@ -74,11 +75,35 @@ function Count({ apps }: { apps: App[] }) {
   );
 }
 
-function WorktreeGroup({ ms, project, wt, byId, multi }: { ms: MachineSnapshot; project: Project; wt: Worktree; byId: Map<string, App>; multi: boolean }) {
+/** The rows of a list of entries. */
+export function EntryRows({ entries, extras, showProject, showMachine }: { entries: AppEntry[]; extras(e: AppEntry): RowExtras; showProject?: boolean; showMachine?: boolean }) {
+  return (
+    <ul className="rows">
+      {entries.map((e) => (
+        <AppRow key={e.key} app={e.app} ms={e.ms} extras={extras(e)} showProject={showProject} showMachine={showMachine} />
+      ))}
+    </ul>
+  );
+}
+
+function WorktreeSection({
+  ms,
+  project,
+  group,
+  byId,
+  multi,
+  extras,
+}: {
+  ms: MachineSnapshot;
+  project: Project;
+  group: WorktreeGroup;
+  byId: Map<string, App>;
+  multi: boolean;
+  extras(e: AppEntry): RowExtras;
+}) {
+  const wt = group.worktree;
   const apps = worktreeApps(wt, byId);
-  const visible = visibleApps(apps);
   const name = wt.name || "main";
-  if (visible.length === 0 && multi) return null;
   return (
     <div className="wt">
       {multi && (
@@ -98,22 +123,19 @@ function WorktreeGroup({ ms, project, wt, byId, multi }: { ms: MachineSnapshot; 
           />
         </div>
       )}
-      {visible.length > 0 ? (
-        <ul className="rows">
-          {visible.map((app) => (
-            <AppRow key={app.id} app={app} ms={ms} />
-          ))}
-        </ul>
-      ) : (
-        <p className="rows-empty">Only setup steps here, and none is running.</p>
-      )}
+      <EntryRows entries={group.entries} extras={extras} />
     </div>
   );
 }
 
-export function ProjectCard({ ms, project, byId }: { ms: MachineSnapshot; project: Project; byId: Map<string, App> }) {
+/**
+ * A project: its name, counts and group actions over all its apps, and the
+ * rows the Apps view shows (filtered and sorted), by worktree.
+ */
+export function ProjectCard({ ms, group, extras }: { ms: MachineSnapshot; group: ProjectGroup; extras(e: AppEntry): RowExtras }) {
+  const { project } = group;
+  const byId = indexApps(ms.apps);
   const apps = projectApps(project, byId);
-  const multi = project.worktrees.length > 1;
   const live = apps.some((a) => a.kind !== "job" && a.state === "on");
   const failed = apps.some((a) => a.state === "failed");
   const headingId = `p-${ms.machine.id}-${project.runner}-${project.name}`.replace(/[^\w-]/g, "_");
@@ -133,8 +155,8 @@ export function ProjectCard({ ms, project, byId }: { ms: MachineSnapshot; projec
           withOpen
         />
       </header>
-      {project.worktrees.map((wt) => (
-        <WorktreeGroup key={wt.name} ms={ms} project={project} wt={wt} byId={byId} multi={multi} />
+      {group.worktrees.map((wt) => (
+        <WorktreeSection key={wt.name} ms={ms} project={project} group={wt} byId={byId} multi={group.multi} extras={extras} />
       ))}
     </article>
   );
