@@ -40,8 +40,24 @@ import type {
 //   nopassword first run where no password dialog can open (the proxy
 //              service fails with the command to run by hand)
 //   many       300 apps in 25 projects (long lists, windowing)
+// and, for sharing, compose and LAN mode (mockSharing.ts):
+//   tailnet    every way to share ready, apps shared on the tailnet and Funnel
+//   bare       no Tailscale, ngrok, cloudflared, Docker or Avahi
+//   compose    Docker Compose projects: running, stopped and brought down
 
-export type Scenario = "default" | "degraded" | "readonly" | "empty" | "nofolders" | "fresh" | "node20" | "nopassword" | "many";
+export type Scenario =
+  | "default"
+  | "degraded"
+  | "readonly"
+  | "empty"
+  | "nofolders"
+  | "fresh"
+  | "node20"
+  | "nopassword"
+  | "many"
+  | "tailnet"
+  | "bare"
+  | "compose";
 
 /** Scenarios that start on the guided setup, with no folders. */
 export const FIRST_RUN: readonly Scenario[] = ["nofolders", "fresh", "node20", "nopassword"];

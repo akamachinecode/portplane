@@ -99,7 +99,9 @@ describe("proxy options", () => {
     expect(tldProblem("test")).toBeNull();
     expect(tldProblem("")).toBe("Type a domain, such as test.");
     expect(tldProblem("Test")).toBe("Use lowercase letters.");
-    expect(tldProblem("a.b")).toContain("one word");
+    expect(tldProblem("dev.example.com")).toBeNull();
+    expect(tldProblem("a..b")).toContain("Two dots");
+    expect(tldProblem("a b")).toContain("letters, digits and dashes");
     expect(optionsProblems(base)).toEqual({});
     expect(optionsProblems({ ...base, port: 70000 }).port).toBeDefined();
     expect(optionsProblems({ ...base, tlds: ["localhost", "bad tld"] }).tlds).toContain(".bad tld");

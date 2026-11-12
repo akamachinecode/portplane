@@ -2,6 +2,7 @@ import { ApiError } from "./errors";
 import type { Job } from "./jobs";
 import type { MockContext } from "./mockContext";
 import type { MockJobStep } from "./mockJobs";
+import { createMockSharing } from "./mockSharing";
 import type {
   CA,
   Certificates,
@@ -34,7 +35,8 @@ import { baseName, checkConfigText, describeOptions, hostnameFor, nameProblem, n
 //
 // Besides the shared scenarios, `?mock=broken` shows a portless that needs
 // fixing: the proxy down, the service pointing at a Node that is gone, the
-// certificate untrusted, stale routes and a hosts file out of date.
+// certificate untrusted, stale routes and a hosts file out of date. Sharing,
+// compose and LAN mode live in mockSharing.ts, on the same state.
 
 const HOME = "/home/dev";
 const STATE = `${HOME}/.portless`;
@@ -127,6 +129,8 @@ export function createMockPortless(ctx: MockContext): PortlessApi {
     if (!state.installed) throw notInstalled();
   };
 
+  let sharing: ReturnType<typeof createMockSharing>;
+
   const syncSnapshot = () =>
     ctx.update((ms) => {
       ms.tools.portless = state.installed ? state.version : undefined;
@@ -155,7 +159,7 @@ export function createMockPortless(ctx: MockContext): PortlessApi {
         registeredAt: started - (a.order + 1) * 7 * 60_000,
         alive: true,
         kind: "app",
-        shared: a.task === "my-monorepo/web" ? [{ kind: "tailscale", url: "https://workstation.tail4c2a.ts.net" }] : [],
+        shared: sharing.sharedFor(a.hostname),
         url: proxyUrl(a.hostname, proxy()),
         owner: { kind: "app", label: [a.project, a.worktree, a.label].filter(Boolean).join(" · "), machine: ms.machine.id, appId: a.id, pid: a.pid },
       });
@@ -179,6 +183,7 @@ export function createMockPortless(ctx: MockContext): PortlessApi {
               : undefined,
       });
     }
+    out.push(...sharing.extraRoutes());
     for (const m of ctx.snapshot().machines) {
       if (m.machine.local) continue;
       m.apps.forEach((a, i) => {
@@ -489,6 +494,8 @@ export function createMockPortless(ctx: MockContext): PortlessApi {
         p.summary = "Removes routes whose portless process is gone and kills the dev servers still holding their ports at once (SIGKILL). Unsaved work in those servers is lost.";
         p.steps.push(portlessStep(p.title, false, "prune", "--force"));
         break;
+      case "tailscale-operator":
+        return sharing.operatorPlan();
       case "update":
         p.title = "Update portless";
         p.summary = "Updates portless to its latest version with npm.";
@@ -606,6 +613,8 @@ export function createMockPortless(ctx: MockContext): PortlessApi {
         };
         return runJob(p, `portless.${action}`, () => (state.stale = []), () => [...lines, summary], result);
       }
+      case "tailscale-operator":
+        return runJob(p, "portless.tailscale-operator", () => sharing.operatorDone(), () => []);
       case "update":
         return runJob(p, "portless.update", () => (state.version = "0.16.1"), (s) => (s.label === "Check the new version" ? ["portless 0.16.0 → 0.16.1"] : s.label === "Update portless" ? ["changed 1 package in 3s"] : ["Wrote /etc/systemd/system/portless.service"]), { before: "0.16.0", after: "0.16.1" });
       case "uninstall":
@@ -817,10 +826,23 @@ export function createMockPortless(ctx: MockContext): PortlessApi {
     return [...out.values()].sort((a, b) => a.dir.localeCompare(b.dir));
   };
 
+  sharing = createMockSharing(ctx, {
+    installed: () => state.installed,
+    tlds,
+    proxy,
+    options: () => state.options,
+    serviceInstalled: () => state.service.installed,
+    responding: () => state.responding,
+    ca: () => state.ca,
+    routes,
+  });
+  const { sharedFor: _s, extraRoutes: _e, composeNameInfo, composeNamePreview, composeRename, operatorPlan: _o, operatorDone: _d, ...sharingApi } = sharing;
+
   // The broken scenario's proxy is down: the snapshot says so too.
   if (scenario === "broken") syncSnapshot();
 
   return {
+    ...sharingApi,
     portlessStatus: () => ctx.delay(status(), 250),
     async portlessDoctor() {
       need();
@@ -900,19 +922,19 @@ export function createMockPortless(ctx: MockContext): PortlessApi {
       await ctx.delay(undefined, 150);
       return run(action, options);
     },
-    async portlessNameInfo(machine, app) {
+    async portlessNameInfo(machine, app, route) {
       await ctx.delay(undefined, 200);
-      return nameInfo(machine, app);
+      return !app && route ? composeNameInfo(route) : nameInfo(machine, app);
     },
-    async portlessNamePreview(machine, app, name) {
+    async portlessNamePreview(machine, app, name, route) {
       need();
       await ctx.delay(undefined, 220);
-      return preview(machine, app, name);
+      return !app && route ? composeNamePreview(route, name) : preview(machine, app, name);
     },
-    async portlessRename(machine, app, name, digest) {
+    async portlessRename(machine, app, name, digest, route) {
       need();
       await ctx.delay(undefined, 200);
-      return rename(machine, app, name, digest);
+      return !app && route ? composeRename(route, name, digest) : rename(machine, app, name, digest);
     },
     portlessConfigs: () => ctx.delay(places(), 200),
     async portlessConfig(dir) {
