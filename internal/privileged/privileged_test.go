@@ -3,6 +3,7 @@ package privileged
 import (
 	"bytes"
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -109,5 +110,19 @@ func TestMergeEnv(t *testing.T) {
 	got := mergeEnv([]string{"HOME=/root", "PATH=/sbin", "LANG=C"}, []string{"HOME=/home/dev", "PATH=/usr/bin"})
 	if strings.Join(got, ",") != "LANG=C,HOME=/home/dev,PATH=/usr/bin" {
 		t.Errorf("got %v", got)
+	}
+}
+
+// A headless machine (a remote agent) never asks: the user runs the
+// command over SSH instead.
+func TestHeadless(t *testing.T) {
+	t.Cleanup(func() { headless.Store(false) })
+	Headless()
+	if Method() != "" || Available() {
+		t.Fatal("a headless machine has no password dialog")
+	}
+	err := Run(context.Background(), Command{Argv: []string{"/bin/true"}}, nil)
+	if !errors.Is(err, ErrUnavailable) {
+		t.Fatalf("%v", err)
 	}
 }

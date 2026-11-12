@@ -38,6 +38,7 @@ type Options struct {
 
 // Local is the agent for the machine Portplane runs on.
 type Local struct {
+	idMu     sync.Mutex // guards id: a remote agent learns it after start
 	id, name string
 	pace     atomic.Int64 // collection interval, as a time.Duration
 	dekit    Runner
@@ -172,10 +173,29 @@ func (l *Local) SetFolders(_ context.Context, folders []string) error {
 	return nil
 }
 
+// SetID changes the machine's id. A remote agent takes the id Portplane
+// knows it by (ADR-0026), so the ids in its answers match the UI's.
+func (l *Local) SetID(id string) {
+	if id == "" {
+		return
+	}
+	l.idMu.Lock()
+	l.id = id
+	l.idMu.Unlock()
+	l.mu.Lock()
+	if l.last.Machine.ID != "" {
+		l.last.Machine.ID = id
+	}
+	l.mu.Unlock()
+}
+
 func (l *Local) machine() model.Machine {
 	host, _ := os.Hostname()
+	l.idMu.Lock()
+	id := l.id
+	l.idMu.Unlock()
 	return model.Machine{
-		ID: l.id, Name: l.name, Local: true, Hostname: host,
+		ID: id, Name: l.name, Local: true, Hostname: host,
 		OS: runtime.GOOS, Arch: runtime.GOARCH, Status: "online",
 		Agent: buildinfo.Version(),
 	}
