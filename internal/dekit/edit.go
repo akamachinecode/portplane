@@ -158,6 +158,13 @@ func DeleteEntry(src []byte, path []string) ([]byte, error) {
 	lines := splitLines(src)
 	start := parent.Content[i].Line - 1 - commentLines(parent.Content[i].HeadComment)
 	end := blockEnd(lines, parent, i)
+	// The blank line that separated it from its neighbours goes too.
+	switch {
+	case start > 0 && blank(lines[start-1]) && (end == len(lines) || blank(lines[end])):
+		start--
+	case i == 0 && end < len(lines) && blank(lines[end]):
+		end++
+	}
 	out := append(append([][]byte{}, lines[:start]...), lines[end:]...)
 	return bytes.Join(out, nil), nil
 }
@@ -202,8 +209,8 @@ func parseDoc(src []byte) (*yaml.Node, error) {
 	if err := yaml.Unmarshal(src, &doc); err != nil {
 		return nil, err
 	}
-	if len(bytes.TrimSpace(src)) == 0 {
-		return &yaml.Node{Kind: yaml.MappingNode}, nil
+	if len(bytes.TrimSpace(src)) == 0 || doc.Kind == 0 || (doc.Kind == yaml.DocumentNode && len(doc.Content) == 0) {
+		return &yaml.Node{Kind: yaml.MappingNode}, nil // empty, or only comments
 	}
 	if doc.Kind != yaml.DocumentNode || len(doc.Content) != 1 || doc.Content[0].Kind != yaml.MappingNode || doc.Content[0].Style&yaml.FlowStyle != 0 {
 		return nil, ErrNotEditable
