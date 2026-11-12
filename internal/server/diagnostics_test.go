@@ -15,7 +15,7 @@ import (
 )
 
 func TestRedact(t *testing.T) {
-	r := Redactor{Secrets: []string{"0123456789abcdef"}, Home: "/home/dev"}
+	r := Redactor{Secrets: []string{"0123456789abcdef"}, Homes: []string{"/home/dev", "/", ""}}
 	for in, want := range map[string]string{
 		"API_KEY=sk-live-abc node server.js":                                   "API_KEY=[redacted] node server.js",
 		`Environment="PORTLESS_STATE_DIR=/home/dev/.x"`:                        `Environment="PORTLESS_STATE_DIR=[redacted]"`,
@@ -78,7 +78,7 @@ func TestDiagnosticsHandler(t *testing.T) {
 			savedName, saved = name, data
 			return SavedReport{Path: "/home/dev/Downloads/" + name, Revealed: true}, nil
 		},
-		Redactor: Redactor{Home: "/home/dev"},
+		Redactor: Redactor{Homes: []string{"/home/dev/"}},
 		Now:      func() time.Time { return now },
 	})["POST /api/diagnostics"]
 

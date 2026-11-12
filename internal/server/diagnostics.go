@@ -139,8 +139,9 @@ func BuildDiagnostics(files []DiagnosticFile, r Redactor, now time.Time) ([]byte
 type Redactor struct {
 	// Secrets are exact values never to write, such as the API token.
 	Secrets []string
-	// Home is replaced by "~".
-	Home string
+	// Homes are the user's home folders ($HOME and the account's), each
+	// replaced by "~".
+	Homes []string
 }
 
 const redacted = "[redacted]"
@@ -179,8 +180,10 @@ func (r Redactor) Redact(s string) string {
 		}
 		return parts[1] + parts[2] + redacted
 	})
-	if r.Home != "" && r.Home != "/" {
-		s = strings.ReplaceAll(s, r.Home, "~")
+	for _, h := range r.Homes {
+		if h = strings.TrimSuffix(h, "/"); len(h) > 1 {
+			s = strings.ReplaceAll(s, h, "~")
+		}
 	}
 	return s
 }

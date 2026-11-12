@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -54,11 +55,10 @@ func polishHandlers(d deps) map[string]http.HandlerFunc {
 		"GET /api/updates":             p.updates.get,
 		"POST /api/updates/check":      p.updates.check,
 	}
-	home, _ := os.UserHomeDir()
 	for pattern, handler := range server.DiagnosticsHandlers(server.DiagnosticsDeps{
 		Collect:  p.collect,
 		Save:     saveReport,
-		Redactor: server.Redactor{Home: home},
+		Redactor: server.Redactor{Homes: homes()},
 	}) {
 		h[pattern] = handler
 	}
@@ -302,7 +302,7 @@ func (p *polish) collect(ctx context.Context) []server.DiagnosticFile {
 		"portplane":    buildinfo.Get(),
 		"dekit":        orNone(local.Tools.Dekit),
 		"portless":     orNone(local.Tools.Portless),
-		"proxy":        local.Tools,
+		"tools":        local.Tools,
 		"os":           runtime.GOOS,
 		"arch":         runtime.GOARCH,
 		"nativeWindow": window.Supported(),
@@ -335,6 +335,19 @@ func (p *polish) collect(ctx context.Context) []server.DiagnosticFile {
 		"onboarding": prefs.Onboarding,
 	})
 	return files
+}
+
+// homes are the folders the report shows as ~: $HOME, and the account's
+// home when Portplane runs with another HOME.
+func homes() []string {
+	var out []string
+	if h, err := os.UserHomeDir(); err == nil {
+		out = append(out, h)
+	}
+	if u, err := user.Current(); err == nil && u.HomeDir != "" {
+		out = append(out, u.HomeDir)
+	}
+	return out
 }
 
 var ansiRE = regexp.MustCompile(`\x1b\[[0-9;?]*[A-Za-z]`)
