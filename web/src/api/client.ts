@@ -2,6 +2,7 @@ import { createDekitHttp, type DekitApi } from "./dekit";
 import { connectFeed, type FeedHandlers } from "./events";
 import { createHttp, seg, type FetchLike } from "./http";
 import type { Job } from "./jobs";
+import { createPolishHttp, type PolishApi } from "./polish";
 import { createPortlessHttp, type PortlessApi } from "./portless";
 import { createToolsHttp, type ToolsApi } from "./tools";
 import type {
@@ -34,7 +35,7 @@ export type PickResult = { kind: "picked"; path: string } | { kind: "cancelled" 
  * modules (portless.ts, dekit.ts, tools.ts), each with an HTTP factory and a
  * mock factory, so work on one does not touch this file.
  */
-export interface Api extends PortlessApi, DekitApi, ToolsApi {
+export interface Api extends PortlessApi, DekitApi, ToolsApi, PolishApi {
   info(): Promise<Info>;
   snapshot(): Promise<Snapshot>;
   act(target: Target, verb: Verb): Promise<void>;
@@ -87,6 +88,7 @@ export function createHttpApi(token: string | null, fetchImpl?: FetchLike): Api 
     ...createPortlessHttp(h),
     ...createDekitHttp(h),
     ...createToolsHttp(h),
+    ...createPolishHttp(h),
     info: () => json<Info>("GET", "/api/info"),
     snapshot: () => json<Snapshot>("GET", "/api/snapshot"),
     act: (target, verb) => none("POST", "/api/actions", { target, verb }),
