@@ -14,6 +14,8 @@ import "../views/onboarding/problems";
 import "../views/domains/commands";
 import "../views/domains/problems";
 import "../views/projects/commands";
+import "../views/runners/problems";
+import { BackgroundData } from "./BackgroundData";
 import "./builtinCommands";
 import { SHORTCUTS_EVENT } from "./polishCommands";
 import { CommandPalette } from "./CommandPalette";
@@ -130,6 +132,7 @@ export function Shell() {
       {paletteEl}
       {help && <ShortcutsDialog onClose={() => setHelp(false)} />}
       <Announcer />
+      <BackgroundData />
     </>
   );
 

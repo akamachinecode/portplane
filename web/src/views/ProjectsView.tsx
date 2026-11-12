@@ -27,6 +27,11 @@ interface RunnerEntry {
 }
 
 /** Every dekit runner (one per dekit.yaml) on every machine that can tell. */
+/** A project's own folder name ("shop"), the runner's name being its path. */
+export function folderName(root: string): string {
+  return root.replace(/[\\/]+$/, "").split(/[\\/]/).pop() || root;
+}
+
 export function runnerEntries(snapshot: Snapshot): RunnerEntry[] {
   return snapshot.machines.flatMap((ms) => {
     if (!ms.machine.local && ms.machine.status !== "online") return [];
@@ -57,7 +62,7 @@ function RunnerLink({ entry, current, multiMachine }: { entry: RunnerEntry; curr
       <a className="runner-link" href={href({ view: "projects", runner: { machine: ms.machine.id, root: runner.root } })} aria-current={current ? "page" : undefined}>
         <StateDot state={!runner.up ? "off" : failed ? "failed" : apps.some((a) => a.state === "on") ? "on" : "off"} />
         <span className="runner-link-text">
-          <span className="runner-link-name">{runner.name}</span>
+          <span className="runner-link-name">{folderName(runner.root)}</span>
           <span className="runner-link-path mono">{shortenPath(runner.root, entry.home)}</span>
         </span>
         <span className="runner-link-meta">
@@ -184,7 +189,7 @@ function RunnerDetail({ entry }: { entry: RunnerEntry }) {
       <header className="runner-detail-head">
         <div>
           <h2 className="runner-detail-title" id="runner-detail-title">
-            {runner.name}
+            {folderName(runner.root)}
           </h2>
           <p className="runner-detail-path mono">{shortenPath(runner.root, entry.home)}</p>
         </div>
