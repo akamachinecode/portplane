@@ -1,0 +1,7 @@
+127.0.0.1   localhost localhost.localdomain
+::1         localhost localhost.localdomain
+
+# portless-start
+127.0.0.1 web.test
+127.0.0.1 old.test # left over
+# portless-end

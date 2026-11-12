@@ -1,0 +1,7 @@
+  web.localhost - killed process group 51030 (SIGTERM)
+  api.web.localhost :4512 - route removed (port already free)
+  docs.localhost :4519 - killed PID 51101 (SIGKILL)
+  docs.localhost :4519 - PID 51102 already exited
+  shop.localhost - stopped ngrok tunnel
+[39m
+Pruned 3 stale routes, killed 2 orphaned processes.
