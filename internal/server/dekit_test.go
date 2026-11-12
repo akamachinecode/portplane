@@ -132,12 +132,12 @@ func TestDekitRunners(t *testing.T) {
 		case s == "--version":
 			return "dekit 0.10.3", "", nil
 		case s == "runner list --json":
-			list := strings.ReplaceAll(readFixture(t, "runner-list.json"), "/home/dev/code/my-monorepo", root)
+			list := strings.ReplaceAll(readFixture(t, "runner-list.json"), "/home/dev/code/my-monorepo", jsonText(root))
 			return list, "", nil
 		case strings.Contains(s, "runner status --json host"):
 			return readFixture(t, "runner-status-absent.json"), "", nil
 		case strings.HasSuffix(s, "runner status --json") && strings.Contains(s, root):
-			return strings.ReplaceAll(readFixture(t, "runner-status-running.json"), "/home/dev/code/my-monorepo", root), "", nil
+			return strings.ReplaceAll(readFixture(t, "runner-status-running.json"), "/home/dev/code/my-monorepo", jsonText(root)), "", nil
 		case strings.HasSuffix(s, "runner status --json"):
 			return readFixture(t, "runner-status-stale.json"), "", nil
 		}
@@ -354,9 +354,17 @@ func TestDekitWhySpawnSuggestValidate(t *testing.T) {
 	}
 }
 
+// jsonText is s as it appears inside a JSON string (backslashes of
+// Windows paths escaped).
+func jsonText(s string) string {
+	b, _ := json.Marshal(s)
+	return string(b[1 : len(b)-1])
+}
+
 func TestDekitUpdateJob(t *testing.T) {
 	data := t.TempDir()
 	t.Setenv("XDG_DATA_HOME", data)
+	t.Setenv("LOCALAPPDATA", data) // where dekit keeps its receipt on Windows
 	if err := os.MkdirAll(filepath.Join(data, "dekit"), 0o755); err != nil {
 		t.Fatal(err)
 	}

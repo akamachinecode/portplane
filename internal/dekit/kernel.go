@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -88,13 +89,15 @@ func receiptFile(goos string, getenv func(string) string, home string) string {
 		}
 		return ""
 	}
+	// Unix paths use forward slashes whatever the host, so a goos other
+	// than the host's (tests) still gives the path dekit would use.
 	if d := getenv("XDG_DATA_HOME"); d != "" {
-		return filepath.Join(d, "dekit", "install")
+		return path.Join(d, "dekit", "install")
 	}
 	if home == "" {
 		return ""
 	}
-	return filepath.Join(home, ".local", "share", "dekit", "install")
+	return path.Join(home, ".local", "share", "dekit", "install")
 }
 
 // DetectOrigin works out how the dekit at bin was installed. version is
