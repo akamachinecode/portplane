@@ -20,6 +20,10 @@
 
 **An app shows as on, but its URL says "no app registered".** The app was started outside portless, or under a different name. Its row shows the internal port; open that, or wrap the command with `portless <name>` in `dekit.yaml`.
 
+**The Output tab shows only the last lines.** It shows the screen dekit keeps for the app (`dekit screen`), refreshed once a second while the tab is open, so lines that scrolled off the top are not there. **Open in a terminal** copies `dekit -C <folder> attach <app>`, where you can scroll back and type into the app. To keep everything an app prints, turn on its `log` setting in `dekit.yaml`.
+
+**The Output tab says "Not updating".** It keeps the last screen it got and asks again every few seconds; the message says why, such as a remote machine that went offline. **Try again** asks at once. It also stops refreshing while Portplane's window is hidden, and starts again when you come back.
+
 **A remote machine stays offline.** Check `ssh <host> true` works without a prompt: Portplane runs ssh with `BatchMode=yes`, so passwords and host-key questions fail. The error under the machine's name is ssh's own message.
 
 **A remote app opens but logins or cookies break.** Cookies set for a parent domain on the remote machine (`shop.localhost`) do not apply under `shop.<machine>.localhost`; see [ADR-0016](adr/0016-remote-urls.md).

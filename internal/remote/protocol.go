@@ -289,6 +289,12 @@ func dispatch(ctx context.Context, a agent.Agent, m message, watch func()) (any,
 			return nil, err
 		}
 		return a.Excerpt(ctx, p.Runner, p.Task)
+	case "output":
+		var p taskParams
+		if err := json.Unmarshal(m.Params, &p); err != nil {
+			return nil, err
+		}
+		return a.Output(ctx, p.Runner, p.Task)
 	case "setInterval":
 		var p intervalParams
 		if err := json.Unmarshal(m.Params, &p); err != nil {

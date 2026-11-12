@@ -22,6 +22,8 @@ type Agent interface {
 	Up(ctx context.Context, runner string) error
 	// Excerpt returns the last lines of an app's terminal.
 	Excerpt(ctx context.Context, runner, task string) (model.Excerpt, error)
+	// Output returns an app's whole terminal screen, with its colours.
+	Output(ctx context.Context, runner, task string) (model.Output, error)
 	// SetFolders replaces the folders the agent watches.
 	SetFolders(ctx context.Context, folders []string) error
 	// Dial opens a TCP connection to a port on the agent's machine.

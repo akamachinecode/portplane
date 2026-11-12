@@ -20,6 +20,7 @@ import type {
   SetupOverrides,
   Snapshot,
   Target,
+  TaskOutput,
   Verb,
 } from "./types";
 
@@ -40,6 +41,8 @@ export interface Api extends PortlessApi, DekitApi, ToolsApi {
   act(target: Target, verb: Verb): Promise<void>;
   runnerUp(machine: string, runner: string): Promise<void>;
   excerpt(machine: string, runner: string, task: string): Promise<Excerpt>;
+  /** An app's whole screen with its colours (the Output panel asks once a second while open). */
+  output(machine: string, runner: string, task: string, signal?: AbortSignal): Promise<TaskOutput>;
   open(machine: string, urls: string[]): Promise<void>;
   reveal(machine: string, path: string): Promise<void>;
   settings(): Promise<Settings>;
@@ -93,6 +96,8 @@ export function createHttpApi(token: string | null, fetchImpl?: FetchLike): Api 
     runnerUp: (machine, runner) => none("POST", "/api/runners/up", { machine, runner }),
     excerpt: (machine, runner, task) =>
       json<Excerpt>("GET", `/api/excerpt?${new URLSearchParams({ machine, runner, task })}`),
+    output: (machine, runner, task, signal) =>
+      json<TaskOutput>("GET", `/api/output?${new URLSearchParams({ machine, runner, task })}`, undefined, signal),
     open: (machine, urls) => none("POST", "/api/open", { machine, urls }),
     reveal: (machine, path) => none("POST", "/api/reveal", { machine, path }),
     settings: () => json<Settings>("GET", "/api/settings"),

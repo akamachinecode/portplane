@@ -377,6 +377,13 @@ func (a *Agent) Excerpt(ctx context.Context, runner, task string) (model.Excerpt
 	return ex, err
 }
 
+// Output reads a task's whole screen.
+func (a *Agent) Output(ctx context.Context, runner, task string) (model.Output, error) {
+	var out model.Output
+	err := a.call(ctx, "output", taskParams{Runner: runner, Task: task}, &out)
+	return out, err
+}
+
 // SetFolders changes the remote folders (kept for reconnects).
 func (a *Agent) SetFolders(ctx context.Context, folders []string) error {
 	err := a.call(ctx, "setFolders", foldersParams{Folders: folders}, nil)
