@@ -45,7 +45,7 @@ export function runnerProblems(snapshot: Snapshot, r: RunnersResponse | null = r
       id: `dekit-stale|${local.machine.id}`,
       severity: "info",
       title: stale.length === 1 ? `dekit has a stale record for ${stale[0].name}` : `dekit has ${stale.length} stale runner records`,
-      detail: "Their runners stopped without cleaning up (a crash or a restart). Nothing runs; the records only clutter `dekit runner list`. Cleaning never touches running runners.",
+      detail: "Their runners stopped without cleaning up (a crash or a restart). Nothing runs; the records only clutter dekit's runner list. Cleaning never touches running runners.",
       code: stale.map((x) => x.root).join("\n"),
       machine: where,
       fix: {
