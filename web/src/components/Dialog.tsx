@@ -79,8 +79,11 @@ export function Dialog({ open, onClose, title, head, footer, size = "md", dismis
         e.preventDefault();
         if (dismissable) onClose();
       }}
-      onClose={() => {
-        if (open) onClose();
+      onClose={(e) => {
+        // The close event comes a moment after close(): when React's
+        // development double mount closes and reopens the dialog, it
+        // arrives while the dialog is open again and must be ignored.
+        if (open && !e.currentTarget.open) onClose();
       }}
       onClick={(e) => {
         // a click on the backdrop lands on the dialog element itself
