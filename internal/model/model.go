@@ -30,10 +30,27 @@ const (
 	VerbStart   Verb = "start"
 	VerbStop    Verb = "stop"
 	VerbRestart Verb = "restart"
+	// VerbKill stops at once with a hard kill, for an app that does not
+	// answer Stop.
+	VerbKill Verb = "kill"
+	// VerbVeto stops and keeps it stopped, even when another app needs it,
+	// until it is started again (start lifts the veto: dekit has no unveto).
+	VerbVeto Verb = "veto"
+	// VerbForceRestart kills and starts again; a stopped app just starts.
+	VerbForceRestart Verb = "force-restart"
+	// VerbRemove removes a task: only one spawned at run time (dynamic) or
+	// one in Portplane's own fragment, which loses its entry there.
+	VerbRemove Verb = "rm"
 )
 
 // Valid reports whether v is a known verb.
-func (v Verb) Valid() bool { return v == VerbStart || v == VerbStop || v == VerbRestart }
+func (v Verb) Valid() bool {
+	switch v {
+	case VerbStart, VerbStop, VerbRestart, VerbKill, VerbVeto, VerbForceRestart, VerbRemove:
+		return true
+	}
+	return false
+}
 
 // Target names what an action applies to on one machine: one task, or every
 // task under a path prefix (a project or worktree) in one runner.
@@ -67,6 +84,10 @@ type App struct {
 	PID       int      `json:"pid,omitempty"`
 	Order     int      `json:"order"`               // position in the config
 	RemoteURL string   `json:"remoteUrl,omitempty"` // set by the hub for apps on other machines
+	// Dynamic: added at run time (dekit spawn), not in any config file.
+	Dynamic bool `json:"dynamic,omitempty"`
+	// Portplane: declared in Portplane's own fragment (.portplane/tasks.yaml).
+	Portplane bool `json:"portplane,omitempty"`
 }
 
 // Port is a listening TCP port that no known app owns.
