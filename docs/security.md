@@ -62,7 +62,8 @@ A few portless steps need admin rights ([ADR-0020](adr/0020-privileged-steps.md)
 
 - `chown root:root` on the system's copy of portless's certificate (Linux), offered only when that file belongs to you, since any program of yours could then replace it;
 - updating or removing portless with the npm that installed it, only when that npm's folder belongs to the administrator (a system-wide npm);
-- `tailscale set --operator=<your user>` on Linux, offered in Sharing only when Tailscale doesn't let your user share yet (M5.6).
+- `tailscale set --operator=<your user>` on Linux, offered in Sharing only when Tailscale doesn't let your user share yet (M5.6);
+- `dpkg -i` or `rpm -U` of Portplane's own new package, when you update a Portplane installed from the `.deb` or `.rpm` ([ADR-0031](adr/0031-self-update.md)).
 
 - **Only on your click,** on a button that says it will ask for your password.
 - **The exact command first.** A confirmation shows the argv, one argument per line, and the environment that goes with it.
@@ -85,7 +86,8 @@ Portplane makes outgoing requests only to your SSH hosts and, when you start a d
 | `registry.npmjs.org` (or the registry in your npm config) | portless and its dependencies; portless's latest version |
 | `nodejs.org` | Node.js builds and the list of releases |
 
-- **Update checks** run when you click "Check for updates". Automatic checks are off by default; turned on, they run at most once a day.
+- **Update checks** run when you click "Check for updates". Automatic checks are off by default. The sidebar asks once whether to turn them on, and turned on, they run at most once a day.
+- **Updating Portplane** ([ADR-0031](adr/0031-self-update.md)) happens only on your click on "Update and restart". It downloads the release file from GitHub and checks it against that release's `checksums.txt`, then replaces Portplane the way it was installed: the files in its folder, the `.app`, or the `.deb` or `.rpm` through the password dialog. The new binary must run and report the new version, or the old one is put back. The app checks the SHA-256, not the cosign signature (see [Verify a download by hand](install.md#verify-a-download-by-hand)).
 - **What is sent:** HTTPS `GET` requests with no cookies and no identifiers, and a `User-Agent` of `portplane/<version>`. Each one tells that host your IP address and that you run Portplane.
 
 ## Sharing and LAN mode
@@ -109,12 +111,14 @@ Sharing an app (M5.6) makes it reachable from other devices, so Portplane treats
 - On your click, in portless's state folder: the certificate authority moved to a `ca-backup-<time>` folder before **Regenerate** (nothing is deleted); a copy of `ca.pem` in your Downloads folder for **Export**.
 - With `autostart on`: a LaunchAgent, an XDG autostart file or a `Run` registry value.
 - After an update check: its result, `<user cache dir>/portplane/updates.json`.
+- On your click on "Update and restart": the release file in `<user cache dir>/portplane/update/` while it installs, and the new Portplane in place of the old one (files named `.portplane*.new-*` and `.portplane*.old-*` next to it during the swap, removed afterwards or at the next start).
 - On your click, where you choose: the diagnostic report, a zip from which environment values, secret-looking keys and tokens, URL credentials, private keys, the API token and your home folder's path are removed. It is never sent anywhere.
 - portless aliases for itself and for open remote apps, removed when it quits.
 
 ## What Portplane never does
 
-- Run anything with elevated privileges without your click and the system's password dialog, or run any privileged command other than the portless steps above.
+- Run anything with elevated privileges without your click and the system's password dialog, or run any privileged command other than the steps above and installing its own `.deb` or `.rpm` when you update it.
+- Replace itself without your click.
 - Ask for, see or store your password.
 - Download from a host not listed under [Network](#network), run a download whose checksum does not match, or pipe a download into a shell.
 - Make a request you did not start, unless you turned on automatic update checks.

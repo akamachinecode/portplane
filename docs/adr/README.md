@@ -41,11 +41,12 @@ Accepted ADRs are not rewritten. A decision that changes gets a new ADR that sup
 | [0022](0022-edit-dekit-config.md) | Edit dekit config from the UI, keeping the user's file as they wrote it | Accepted |
 | [0023](0023-portless-cli.md) | Act on portless through its CLI, read its state files, and parse its text with versioned fixtures | Accepted |
 | [0024](0024-app-shell.md) | Turn the UI into an app shell with a sidebar, a hash router and background jobs | Accepted; the layout superseded by 0027 |
-| [0025](0025-network-use.md) | Use the network only for downloads the user starts and update checks the user asks for | Accepted |
+| [0025](0025-network-use.md) | Use the network only for downloads the user starts and update checks the user asks for | Accepted; "it does not replace itself" superseded by 0031 |
 | [0026](0026-remote-parity.md) | Serve setup, dekit and portless on every machine by tunnelling API requests to the agent | Accepted |
 | [0027](0027-projects-first-layout.md) | Lay the app out around projects, with dekit and portless in the sidebar, and draw the macOS title bar ourselves | Accepted; the sidebar groups and first run superseded by 0028 |
 | [0028](0028-information-architecture.md) | Organise the app by objects and how often they are used: the work in the sidebar, the tools in Settings | Accepted |
 | [0029](0029-visual-system.md) | A quieter visual system: neutral greys, Portplane's green as the one colour, Inter and Geist Mono, more room | Accepted |
 | [0030](0030-app-icons.md) | Give every app and project an icon: the user's choice, else its own favicon or logo, else its initials | Accepted |
+| [0031](0031-self-update.md) | Portplane updates itself on a click, and asks once whether to check every day | Accepted |
 
 Pending decisions are tracked in [../open-questions.md](../open-questions.md).

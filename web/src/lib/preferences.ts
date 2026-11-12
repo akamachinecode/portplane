@@ -17,6 +17,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   // Only failures notify until the user turns more on (plan §6.5).
   notifications: { failures: true, recoveries: false, jobs: false, config: false },
   updateCheck: "manual",
+  updateAsked: false,
   onboarding: { completed: false, skipped: false, done: [] },
   appsLayout: "cards",
 };
@@ -49,6 +50,7 @@ export function normalizePreferences(raw: unknown): Preferences {
       config: bool(n.config, d.notifications.config),
     },
     updateCheck: oneOf(UPDATE_CHECKS, p.updateCheck, d.updateCheck),
+    updateAsked: bool(p.updateAsked, d.updateAsked),
     onboarding: {
       completed: bool(o.completed, false),
       skipped: bool(o.skipped, false),

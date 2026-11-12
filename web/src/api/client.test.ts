@@ -204,6 +204,7 @@ describe("jobs and preferences endpoints", () => {
       favorites: [],
       notifications: { failures: true, recoveries: false, jobs: true, config: false },
       updateCheck: "manual" as const,
+      updateAsked: false,
       onboarding: { completed: true, skipped: false, done: [] },
       appsLayout: "cards" as const,
     };

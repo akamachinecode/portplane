@@ -13,7 +13,11 @@ type Preferences struct {
 	Favorites     []string      `json:"favorites"` // "<machine>|<appId>"
 	Notifications Notifications `json:"notifications"`
 	UpdateCheck   string        `json:"updateCheck"` // manual or auto (ADR-0025)
-	Onboarding    Onboarding    `json:"onboarding"`
+	// UpdateAsked is true once the user answered whether Portplane may
+	// check for new versions once a day (ADR-0031); until then the app
+	// asks.
+	UpdateAsked bool       `json:"updateAsked"`
+	Onboarding  Onboarding `json:"onboarding"`
 	// AppsLayout is how the Apps view lists apps: cards or table.
 	AppsLayout string `json:"appsLayout"`
 	// Icons are the icons the user chose for apps and projects (ADR-0030),

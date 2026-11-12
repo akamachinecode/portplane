@@ -19,8 +19,10 @@ import (
 
 	"github.com/akamachinecode/portplane/internal/buildinfo"
 	"github.com/akamachinecode/portplane/internal/desktop"
+	"github.com/akamachinecode/portplane/internal/jobs"
 	"github.com/akamachinecode/portplane/internal/model"
 	"github.com/akamachinecode/portplane/internal/notify"
+	"github.com/akamachinecode/portplane/internal/selfupdate"
 	"github.com/akamachinecode/portplane/internal/server"
 	"github.com/akamachinecode/portplane/internal/settings"
 	"github.com/akamachinecode/portplane/internal/tray"
@@ -46,14 +48,23 @@ func polishHandlers(d deps) map[string]http.HandlerFunc {
 		checker:   &updates.Checker{UserAgent: "portplane/" + buildinfo.Version()},
 		store:     &updates.Store{Path: updates.DefaultPath()},
 		installed: p.installed,
+		announce:  p.announceUpdate,
 	}
 	go p.updates.auto(d.ctx, func() bool { return p.prefs().UpdateCheck == "auto" })
+	self := &selfUpdate{
+		d: d, store: p.updates.store, updater: selfupdate.New(),
+		plan: func(ctx context.Context) selfupdate.Plan {
+			return selfupdate.Detect(selfupdate.LocalEnv(ctx, buildinfo.Version()))
+		},
+	}
 
 	h := map[string]http.HandlerFunc{
-		"PUT /api/window/theme":        p.putTheme,
-		"POST /api/notifications/test": p.testNotification,
-		"GET /api/updates":             p.updates.get,
-		"POST /api/updates/check":      p.updates.check,
+		"PUT /api/window/theme":          p.putTheme,
+		"POST /api/notifications/test":   p.testNotification,
+		"GET /api/updates":               p.updates.get,
+		"POST /api/updates/check":        p.updates.check,
+		"GET /api/updates/self":          self.get,
+		"POST /api/updates/self/install": self.install,
 	}
 	for pattern, handler := range server.DiagnosticsHandlers(server.DiagnosticsDeps{
 		Collect:  p.collect,
@@ -224,7 +235,10 @@ type updatesService struct {
 	checker   *updates.Checker
 	store     *updates.Store
 	installed func(context.Context) updates.Installed
-	mu        sync.Mutex // one check at a time
+	// announce shows a system notification about a new Portplane, and
+	// reports whether it did.
+	announce func(ctx context.Context, item updates.Item) bool
+	mu       sync.Mutex // one check at a time
 }
 
 func (u *updatesService) run(ctx context.Context) updates.Result {
@@ -233,10 +247,17 @@ func (u *updatesService) run(ctx context.Context) updates.Result {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	r := u.checker.Check(ctx, u.installed(ctx), time.Now())
+	if prev := u.store.Load(); prev != nil {
+		r.Notified = prev.Notified
+	}
+	u.save(r)
+	return r
+}
+
+func (u *updatesService) save(r updates.Result) {
 	if err := u.store.Save(r); err != nil {
 		fmt.Fprintln(os.Stderr, "portplane: saving the update check:", err)
 	}
-	return r
 }
 
 // get is GET /api/updates: the last check, or null before the first one.
@@ -265,10 +286,110 @@ func (u *updatesService) auto(ctx context.Context, on func() bool) {
 		case <-t.C:
 		}
 		if on() && updates.Due(u.store.Load(), time.Now()) {
-			u.run(ctx)
+			r := u.run(ctx)
+			// Each new Portplane is announced once, even with the window
+			// closed (ADR-0031).
+			if it, ok := r.Find("portplane"); ok && it.Update && it.Latest != r.Notified && u.announce != nil && u.announce(ctx, it) {
+				r.Notified = it.Latest
+				u.save(r)
+			}
 		}
 		t.Reset(time.Hour)
 	}
+}
+
+// announceUpdate is the system notification about a new Portplane.
+func (p *polish) announceUpdate(ctx context.Context, it updates.Item) bool {
+	p.mu.Lock()
+	s := p.sender
+	p.mu.Unlock()
+	if s == nil {
+		return false
+	}
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	err := s.Send(ctx, notify.Notification{
+		ID:    "update|portplane",
+		Kind:  notify.KindUpdate,
+		Title: "Portplane " + it.Latest + " is available",
+		Body:  "Open Portplane to update and restart in one click.",
+		Route: "#/settings/updates",
+	})
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "portplane: notification:", err)
+		return false
+	}
+	return true
+}
+
+// ---- Portplane updates itself (ADR-0031) ----
+
+type selfUpdate struct {
+	d       deps
+	store   *updates.Store
+	updater *selfupdate.Updater
+	plan    func(context.Context) selfupdate.Plan
+}
+
+// selfPlan is GET /api/updates/self: how this Portplane updates.
+type selfPlan struct {
+	selfupdate.Plan
+	// Running is the version that runs now.
+	Running string `json:"running"`
+}
+
+func (s *selfUpdate) get(w http.ResponseWriter, r *http.Request) {
+	p := s.plan(r.Context())
+	if it, ok := s.store.Load().Find("portplane"); ok && it.Latest != "" {
+		p.Command = strings.ReplaceAll(p.Command, "<version>", it.Latest)
+	}
+	server.WriteJSON(w, http.StatusOK, selfPlan{Plan: p, Running: buildinfo.Version()})
+}
+
+// install is POST /api/updates/self/install: "Update and restart". It
+// installs the version the last check found, then starts it and quits.
+func (s *selfUpdate) install(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Version string `json:"version"`
+	}
+	if err := server.Decode(r, &body); err != nil {
+		server.WriteError(w, http.StatusBadRequest, err)
+		return
+	}
+	it, ok := s.store.Load().Find("portplane")
+	if !ok || !it.Update || it.Latest != body.Version || !updates.Newer(it.Latest, buildinfo.Version()) {
+		server.WriteError(w, http.StatusConflict, fmt.Errorf("%s isn't a newer Portplane than this one (%s): check for updates again", body.Version, buildinfo.Version()))
+		return
+	}
+	plan := s.plan(r.Context())
+	if !plan.Auto {
+		server.WriteError(w, http.StatusConflict, errors.New(plan.Reason))
+		return
+	}
+	v := it.Latest
+	job := s.d.jobs.Start(jobs.Spec{
+		Kind: "update", Title: "Update Portplane to " + v, Key: "update:portplane",
+		Steps: selfupdate.Steps(plan, v), Privileged: plan.Password,
+	}, func(ctx context.Context, run *jobs.Run) error {
+		exe, err := s.updater.Apply(ctx, plan, v, run)
+		if err != nil {
+			return err
+		}
+		run.Step(selfupdate.StepRestart)
+		if err := selfupdate.Start(exe, selfupdate.RestartArgs(os.Args[1:]), os.Getpid()); err != nil {
+			return fmt.Errorf("version %s is installed, but it didn't start: open Portplane again (%w)", v, err)
+		}
+		run.Logf("Portplane %s is starting; this one quits.", v)
+		run.SetResult(map[string]any{"version": v, "restarting": true})
+		if s.d.quit != nil {
+			go func() {
+				time.Sleep(1500 * time.Millisecond) // the page hears that the job is done
+				s.d.quit()
+			}()
+		}
+		return nil
+	})
+	server.StartJob(w, job)
 }
 
 // ---- diagnostic report (plan §6.4) ----

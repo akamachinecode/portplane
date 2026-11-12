@@ -28,6 +28,7 @@ import (
 	"github.com/akamachinecode/portplane/internal/model"
 	"github.com/akamachinecode/portplane/internal/portless"
 	"github.com/akamachinecode/portplane/internal/remote"
+	"github.com/akamachinecode/portplane/internal/selfupdate"
 	"github.com/akamachinecode/portplane/internal/server"
 	"github.com/akamachinecode/portplane/internal/settings"
 	"github.com/akamachinecode/portplane/internal/setup"
@@ -54,6 +55,12 @@ func cmdServe(args []string, stdout, stderr io.Writer) int {
 	detachOwnConsole()
 	envpath.Enrich()
 	activation := takeActivationToken()
+	// Started by an update: wait for the Portplane it replaces to quit
+	// (ADR-0031). Never rename this variable: older versions set it.
+	if pid, err := strconv.Atoi(os.Getenv(selfupdate.AfterPIDEnv)); err == nil && pid > 0 {
+		_ = os.Unsetenv(selfupdate.AfterPIDEnv)
+		waitForQuit(pid, 30*time.Second)
+	}
 
 	// One Portplane per user: a second start opens the first one's window.
 	if inst, ok := runningInstance(); ok {
@@ -68,6 +75,7 @@ func cmdServe(args []string, stdout, stderr io.Writer) int {
 	defer stop()
 	ctx, quit := context.WithCancel(ctx)
 	defer quit()
+	go selfupdate.Cleanup(executable()) // what an update left next to the binary
 
 	store, err := openSettings()
 	if err != nil {
@@ -234,7 +242,7 @@ func cmdServe(args []string, stdout, stderr io.Writer) int {
 	}
 	areaHandlers(deps{
 		ctx: ctx, local: local, hub: h, jobs: jobManager, store: store,
-		dekit: dk, portless: pl, publicURL: publicURL, rawURL: rawURL,
+		dekit: dk, portless: pl, publicURL: publicURL, rawURL: rawURL, quit: quit,
 	}, srv.Extra)
 	httpSrv := &http.Server{
 		Handler:           srv.Handler(),
@@ -352,6 +360,31 @@ func runningInstance() (instance, bool) {
 	}
 	_ = resp.Body.Close()
 	return i, resp.StatusCode == http.StatusOK && resp.Header.Get("Content-Security-Policy") != ""
+}
+
+// waitForQuit waits until the Portplane with process id pid no longer
+// answers, so the one that replaces it after an update doesn't just show
+// the old one's window.
+func waitForQuit(pid int, limit time.Duration) {
+	deadline := time.Now().Add(limit)
+	for time.Now().Before(deadline) {
+		if i, ok := runningInstance(); !ok || i.PID != pid {
+			return
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+}
+
+// executable is the running binary with symlinks resolved, or "".
+func executable() string {
+	exe, err := os.Executable()
+	if err != nil {
+		return ""
+	}
+	if r, err := filepath.EvalSymlinks(exe); err == nil {
+		return r
+	}
+	return exe
 }
 
 // showRunning asks the running Portplane to bring up its own window,

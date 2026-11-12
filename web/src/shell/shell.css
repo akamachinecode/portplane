@@ -461,6 +461,31 @@ html:has(.shell) body {
   color: var(--text-3);
 }
 
+/* A new Portplane, or whether to look for one (ADR-0031) */
+.sidebar-foot .setup-callout {
+  margin: 0 0 var(--space-2);
+}
+
+.update-callout-icon {
+  flex: none;
+  color: var(--accent-text);
+}
+
+.update-ask {
+  align-items: flex-start;
+}
+
+.update-ask .setup-callout-sub {
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+.update-ask-actions {
+  display: flex;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+}
+
 /* Settings' own sidebar */
 .nav-back {
   display: flex;

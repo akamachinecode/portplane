@@ -349,6 +349,8 @@ export interface Preferences {
   /** System notifications: an app crashed or a job failed; an app recovered; a job finished; a dekit.yaml changed. */
   notifications: { failures: boolean; recoveries: boolean; jobs: boolean; config: boolean };
   updateCheck: "manual" | "auto";
+  /** The user answered whether Portplane may check once a day (ADR-0031); until then the sidebar asks. */
+  updateAsked: boolean;
   onboarding: OnboardingProgress;
   /** How the Apps view lists apps. */
   appsLayout: AppsLayout;

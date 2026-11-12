@@ -3,6 +3,7 @@ import { useJobs } from "../api/jobs";
 import { agentIsOutdated, clearAgentOutdated, LOCAL_MACHINE } from "../api/machine";
 import type { Snapshot } from "../api/types";
 import { useApp } from "../components/AppContext";
+import { setUpdateCheck } from "../lib/updateCheck";
 import { primePortless, useLivePortless, usePrimePortless } from "../views/domains/store";
 import { forgetRunners, primeRunners } from "../views/runners/problems";
 import { useShell } from "./ShellContext";
@@ -24,6 +25,7 @@ export function BackgroundData() {
     if (dekit) void primeRunners(api);
   }, [api, dekit]);
   useRemoteMachines(snapshot);
+  useUpdateCheckLoader();
 
   // A finished runner job changes what the runners look like.
   const { jobs } = useJobs();
@@ -46,6 +48,24 @@ export function BackgroundData() {
     }
   }, [jobs, api, dekit, snapshot]);
   return null;
+}
+
+/**
+ * Loads the last update check for the sidebar's notice, and again every
+ * half hour: the binary checks once a day on its own when the user turned
+ * that on (ADR-0025). Reading it is local; it never goes online.
+ */
+function useUpdateCheckLoader() {
+  const { api } = useApp();
+  useEffect(() => {
+    const load = () =>
+      api.updates().then(setUpdateCheck, () => {
+        // an older binary or a hiccup: the notice waits for the next try
+      });
+    void load();
+    const t = window.setInterval(load, 30 * 60_000);
+    return () => window.clearInterval(t);
+  }, [api]);
 }
 
 /** Each connection to a remote machine: its id, and the agent that answered. */

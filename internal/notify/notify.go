@@ -22,6 +22,9 @@ const (
 	KindRecovery Kind = "recovery" // a failed app runs again
 	KindJob      Kind = "job"      // a job finished
 	KindConfig   Kind = "config"   // a dekit.yaml changed and needs a reload
+	// KindUpdate is a new Portplane, sent only after an automatic check,
+	// which the user turned on (ADR-0031); it has no switch of its own.
+	KindUpdate Kind = "update"
 )
 
 // Notification is one system notification.

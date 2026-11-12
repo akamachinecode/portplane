@@ -55,6 +55,22 @@ type Item struct {
 type Result struct {
 	CheckedAt time.Time `json:"checkedAt"`
 	Items     []Item    `json:"items"`
+	// Notified is the Portplane version a system notification already
+	// announced, so each new version is announced once.
+	Notified string `json:"notified,omitempty"`
+}
+
+// Find returns the item of a tool, or false.
+func (r *Result) Find(id string) (Item, bool) {
+	if r == nil {
+		return Item{}, false
+	}
+	for _, it := range r.Items {
+		if it.ID == id {
+			return it, true
+		}
+	}
+	return Item{}, false
 }
 
 // Installed are the versions on this computer; "" when a tool is missing.

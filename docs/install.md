@@ -95,7 +95,20 @@ portplane autostart on                         # optional: start at login
 
 Add it in **Settings → Machines → Add a machine** (any host your `ssh` reaches without a prompt). Then **Set up** on its card runs the same guided setup on that machine: the check, installing dekit, Node.js and portless into your home folder there (no password), its folders and apps. Steps that need an administrator there, such as the proxy service, show the command to paste into a terminal here, `ssh -t <machine> 'sudo portless service install'`, then **Check again**. Afterwards pick the machine at the top of **Addresses** or of a page in **Settings → dekit** or **Settings → portless**, or open one of its projects, to manage its dekit and portless from Portplane.
 
-Pin the apps you use most with the star on their row: they come first in the Apps view and get start and stop in the tray. Settings → General has the theme, notifications (failures only, at first) and **Check for updates**, which only goes online when you click it, or once a day if you turn that on.
+Pin the apps you use most with the star on their row: they come first in the Apps view and get start and stop in the tray. Settings → General has the theme, and Settings → Notifications decides which notifications you get (failures only, at first).
+
+## Updates
+
+Portplane updates itself. After setup, the sidebar asks once whether it may check GitHub for new versions once a day (**Check daily** or **Not now**; change it later in **Settings → Updates**). With **Not now**, it only checks when you click **Check for updates** there.
+
+When there is a new version, the sidebar says so, and with daily checks on a notification does too. **Update and restart** in **Settings → Updates** downloads the new version and checks it against the release's `checksums.txt`. It then replaces Portplane the way you installed it and opens the new version:
+
+- **Portplane.app** (macOS): replaces the app. It needs permission to change the folder the app is in, which administrators have for Applications.
+- **`install.sh` or `install.ps1`**, or an archive you unpacked: replaces `portplane` (and `portplane-window` on Linux) in its folder.
+- **`.deb` or `.rpm`**: installs the new package, after your password in the system's dialog.
+- **Homebrew:** run `brew upgrade portplane`.
+
+If the new version doesn't run, the old one is put back and nothing changes. Versions 0.5.0 and earlier don't have the button: update them once by hand, the way you installed them.
 
 ## Uninstall
 
@@ -107,6 +120,6 @@ Run `portplane autostart off` first if you turned it on, then remove the binary 
 | Linux | `~/.config/portplane` | `~/.cache/portplane` |
 | Windows | `%AppData%\portplane` | `%LocalAppData%\portplane` |
 
-The cache folder also holds the last update check (`updates.json`).
+The cache folder also holds the last update check (`updates.json`) and, while an update downloads, the `update` folder.
 
 On Windows, the installer also added `%LocalAppData%\Programs\Portplane` to your user PATH. On machines you added over SSH, Portplane only wrote `~/.cache/portplane` (on macOS and Linux alike).
