@@ -3,6 +3,7 @@ import type { App, MachineSnapshot, Verb } from "../api/types";
 import { appHref, copyableUrl, isAlive, rowAddress } from "../lib/apps";
 import { dekitCommand, portLabel, stateLabel } from "../lib/format";
 import { appRoute, href as routeHref, navigate } from "../lib/router";
+import { useAppActionMenu } from "./AppActionMenu";
 import { actOnApp, appKey, copyWithToast } from "./appActions";
 import { useApp } from "./AppContext";
 import { ExcerptPanel } from "./ExcerptPanel";
@@ -43,6 +44,8 @@ export function AppRow({ app, ms }: { app: App; ms: MachineSnapshot }) {
     });
   }
   menu.push({ label: "Copy dekit command", icon: "terminal", onSelect: () => copy(dekitCommand(app), "the command") });
+  const more = useAppActionMenu(ms, app);
+  menu.push(...more.items);
 
   const toggleVerb: Verb = alive ? "stop" : "start";
 
@@ -127,6 +130,7 @@ export function AppRow({ app, ms }: { app: App; ms: MachineSnapshot }) {
         </div>
       </div>
       {failed && expanded && <ExcerptPanel id={excerptId} machine={machine} app={app} />}
+      {more.element}
     </li>
   );
 }
