@@ -2,7 +2,8 @@
 // source of truth, and remote agents send the same JSON (ADR-0005).
 
 export type State = "on" | "starting" | "stopping" | "failed" | "off" | "done" | "unknown";
-export type Verb = "start" | "stop" | "restart";
+/** start, stop and restart; kill (hard), veto (keep stopped), force-restart (kill, then start) and rm (remove a dynamic or Portplane task). */
+export type Verb = "start" | "stop" | "restart" | "kill" | "veto" | "force-restart" | "rm";
 
 export interface Target {
   machine: string;
@@ -33,6 +34,10 @@ export interface App {
   pid?: number;
   order: number;
   remoteUrl?: string;
+  /** Added at run time (dekit spawn), not in any config file. */
+  dynamic?: boolean;
+  /** Declared in Portplane's own fragment (.portplane/tasks.yaml). */
+  portplane?: boolean;
 }
 
 export interface Port {
