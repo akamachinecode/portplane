@@ -97,7 +97,7 @@ func (p *portlessAPI) findApp(ctx context.Context, machine, id string) (model.Ap
 	}
 	local := p.d.Local(ctx)
 	if machine != "" && machine != local.Machine.ID {
-		return model.App{}, local, errors.New("names of apps on other machines can be changed on that machine for now; remote machines get this later")
+		return model.App{}, local, fmt.Errorf("that app is on another machine: rename it through /api/m/%s/portless/names", machine)
 	}
 	for _, a := range local.Apps {
 		if a.ID == id {
