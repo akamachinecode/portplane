@@ -11,6 +11,7 @@ Stop hunting for `localhost:51xx`. Portplane shows every dev server across your 
 [**Download**](https://akamachinecode.github.io/portplane/#download) · [Website](https://akamachinecode.github.io/portplane/) · [Docs](https://akamachinecode.github.io/portplane/docs/) · [Changelog](CHANGELOG.md)
 
 [![Latest release](https://img.shields.io/github/v/release/akamachinecode/portplane?color=10804a&label=release)](https://github.com/akamachinecode/portplane/releases/latest)
+[![CI](https://github.com/akamachinecode/portplane/actions/workflows/ci.yml/badge.svg)](https://github.com/akamachinecode/portplane/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-5b5e67)](LICENSE)
 ![macOS · Linux · Windows](https://img.shields.io/badge/macOS%20·%20Linux%20·%20Windows-5b5e67)
 
@@ -90,6 +91,50 @@ And it keeps three promises:
 
 Without dekit or portless, Portplane still lists the ports open on your machine and the folder each one serves.
 
+## Questions before installing
+
+<details>
+<summary><b>Does Portplane run my dev servers?</b></summary>
+
+No. [dekit](https://dekit.run) runs and supervises them; Portplane shows them and starts, stops or restarts them through dekit. Without dekit or portless, it still lists the ports open on your machine and the folder each one serves.
+</details>
+
+<details>
+<summary><b>Do I have to install dekit and portless first?</b></summary>
+
+No. The guided setup installs dekit, portless and Node.js for you and sets up HTTPS and browser trust, on this computer and on the machines you reach over SSH.
+</details>
+
+<details>
+<summary><b>Does it open anything on my network?</b></summary>
+
+No. The UI lives on loopback, and other machines are reached only over SSH, with your keys. Others see an app only when you share it: with your tailnet, publicly with Tailscale Funnel, ngrok or Cloudflare, or on your Wi-Fi.
+</details>
+
+<details>
+<summary><b>What happens if I stop using Portplane?</b></summary>
+
+Nothing breaks. The config it writes is plain dekit YAML that you can keep using without Portplane.
+</details>
+
+<details>
+<summary><b>Does it work on Windows?</b></summary>
+
+Yes, as a beta until someone uses it every day: Windows 10 and 11, x64 and ARM64. macOS and Linux are fully supported.
+</details>
+
+<details>
+<summary><b>Is it really free?</b></summary>
+
+Yes. Portplane is open source under Apache-2.0, with no accounts, no cloud and no telemetry.
+</details>
+
+<details>
+<summary><b>How do I uninstall it?</b></summary>
+
+Run `portplane autostart off` if you turned it on, then remove the app and its settings and cache folders. The [install guide](docs/install.md#uninstall) lists them for each system.
+</details>
+
 ## Status
 
 Portplane is young (v0.x) and moving fast towards v1.0: expect rough edges, and tell us about them in [Issues](https://github.com/akamachinecode/portplane/issues). The [roadmap](docs/roadmap.md) shows what's next.
@@ -102,7 +147,17 @@ Portplane is young (v0.x) and moving fast towards v1.0: expect rough edges, and 
 
 ## Contributing
 
-Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md). Report security issues privately: [SECURITY.md](SECURITY.md).
+Contributions are welcome: read [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md), the map of the code for people and coding agents. Every technical decision is recorded as an [ADR](docs/adr/README.md).
+
+```sh
+git clone https://github.com/akamachinecode/portplane && cd portplane
+mise install        # Go, Node, pnpm and the other tools
+mise run build      # builds the web UI into the binary: bin/portplane
+./bin/portplane     # the window, with a menu-bar or tray icon
+mise run test       # Go and web tests
+```
+
+Report security issues privately: [SECURITY.md](SECURITY.md).
 
 ## License
 
