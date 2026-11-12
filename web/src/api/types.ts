@@ -1,3 +1,5 @@
+import type { IconChoice } from "../lib/icons";
+
 // Mirror of internal/model (Go). Keep both in sync: the Go types are the
 // source of truth, and remote agents send the same JSON (ADR-0005).
 
@@ -350,4 +352,6 @@ export interface Preferences {
   onboarding: OnboardingProgress;
   /** How the Apps view lists apps. */
   appsLayout: AppsLayout;
+  /** Icons the user chose, by "project:<machine>|<name>" or "app:<machine>|<appId>" (ADR-0030). */
+  icons?: Record<string, IconChoice>;
 }

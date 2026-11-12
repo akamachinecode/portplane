@@ -34,7 +34,7 @@ function ReloadDialog({ runner, reload, onClose }: { runner: string; reload: Rel
   );
 }
 
-export function ProjectEditor({ runner, up, apps, os }: { runner: string; up: boolean; apps?: ReactNode; os?: string }) {
+export function ProjectEditor({ runner, up, apps, os, only }: { runner: string; up: boolean; apps?: ReactNode; os?: string; only?: ReadonlySet<string> }) {
   const { load, reload } = useProjectConfig(runner);
   const { plan, refresh } = useReloadPlan(runner, up);
   const dialog = useProjectDialog();
@@ -64,7 +64,7 @@ export function ProjectEditor({ runner, up, apps, os }: { runner: string; up: bo
   if (tab === "apps") panel = apps;
   else if (load.status === "loading") panel = <LoadingState label="Reading the config…" />;
   else if (load.status === "error") panel = <ErrorState title="Couldn't read the config" message={load.message} onRetry={reload} />;
-  else if (tab === "tasks") panel = <TasksPanel runner={runner} config={load.value} os={os} selected={selected} onSelect={setSelected} onSaved={saved} />;
+  else if (tab === "tasks") panel = <TasksPanel runner={runner} config={load.value} os={os} selected={selected} onSelect={setSelected} onSaved={saved} only={only} />;
   else if (tab === "settings") panel = <SettingsPanel runner={runner} config={load.value} os={os} onSaved={saved} />;
   else panel = <YamlPanel runner={runner} config={load.value} onSaved={saved} />;
 

@@ -100,7 +100,7 @@ export function MachineScope({ machine, children }: { machine: string; children:
  * (#/runners/<machine>), else the one last picked there, else this
  * computer. Picking one remembers it, and updates a URL that names one.
  */
-export function useMachineChoice(view: "runners" | "domains"): { machine: string; options: MachineOption[]; choose(id: string): void } {
+export function useMachineChoice(view: "runners" | "domains" | "dekit" | "addresses"): { machine: string; options: MachineOption[]; choose(id: string): void } {
   const { snapshot, route } = useShell();
   const inUrl = route.view === view ? route.machine : undefined;
   const [picked, setPicked] = useState(() => rememberedMachine(safeLocalStorage(), view));

@@ -1,4 +1,5 @@
 import type { AppsLayout, Density, Preferences, Theme } from "../api/types";
+import type { IconChoice } from "./icons";
 
 // Preferences (GET/PUT /api/preferences) and how theme and density reach the
 // page: <html data-theme="light|dark"> (none for "system") and
@@ -56,7 +57,26 @@ export function normalizePreferences(raw: unknown): Preferences {
       ...(isObject(o.choices) ? { choices: stringMap(o.choices) } : {}),
     },
     appsLayout: oneOf(APPS_LAYOUTS, p.appsLayout, d.appsLayout),
+    ...(isObject(p.icons) ? { icons: iconMap(p.icons) } : {}),
   };
+}
+
+/** The icon choices this UI understands; anything else is left out. */
+function iconMap(v: Record<string, unknown>): Record<string, IconChoice> {
+  const out: Record<string, IconChoice> = {};
+  for (const [key, raw] of Object.entries(v)) {
+    if (!isObject(raw) || !(key.startsWith("project:") || key.startsWith("app:"))) continue;
+    if (raw.kind === "initials") {
+      out[key] = {
+        kind: "initials",
+        ...(typeof raw.text === "string" && raw.text ? { text: raw.text } : {}),
+        ...(typeof raw.tint === "number" && raw.tint >= 1 && raw.tint <= 8 ? { tint: raw.tint } : {}),
+      };
+    } else if (raw.kind === "file" && typeof raw.machine === "string" && typeof raw.path === "string" && raw.machine && raw.path) {
+      out[key] = { kind: "file", machine: raw.machine, path: raw.path };
+    }
+  }
+  return out;
 }
 
 /** Why the server would refuse these preferences (400), or null. The mock uses it. */
@@ -65,6 +85,9 @@ export function preferencesProblem(p: Preferences): string | null {
   if (!DENSITIES.includes(p.density)) return `density must be one of ${DENSITIES.join(", ")}`;
   if (!UPDATE_CHECKS.includes(p.updateCheck)) return `updateCheck must be one of ${UPDATE_CHECKS.join(", ")}`;
   if (!APPS_LAYOUTS.includes(p.appsLayout)) return `appsLayout must be one of ${APPS_LAYOUTS.join(", ")}`;
+  for (const [key, c] of Object.entries(p.icons ?? {})) {
+    if (c.kind === "initials" && [...(c.text ?? "")].length > 3) return `the initials of ${key} are longer than 3 characters`;
+  }
   return null;
 }
 

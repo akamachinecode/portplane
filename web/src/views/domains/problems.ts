@@ -1,7 +1,7 @@
 import { PROXY_COMMAND } from "../onboarding/problems";
 import type { MachineSnapshot, Snapshot } from "../../api/types";
 import { FIX_LABELS, groupFindings } from "../../lib/portless";
-import { navigate, type DomainSection } from "../../lib/router";
+import { navigate, type DomainSection, type Route } from "../../lib/router";
 import { registerProblemSource, type Problem, type ProblemFix } from "../../shell/health";
 import type { PortlessAction } from "../../api/portless";
 import { requestIntent, resourcesOf, valueOf } from "./store";
@@ -19,10 +19,15 @@ const SECTION: Partial<Record<PortlessAction, DomainSection>> = {
   trust: "certificates",
   "ca-fix-ownership": "certificates",
   "ca-regenerate": "certificates",
-  prune: "routes",
   "hosts-sync": "hosts",
   "tailscale-operator": "sharing",
 };
+
+/** Where an action's plan opens: Addresses for cleaning up, else its portless settings page (ADR-0028). */
+export function actionRoute(action: PortlessAction, machine: string): Route {
+  if (action === "prune" || action === "prune-force") return { view: "addresses", filter: "all", machine };
+  return { view: "domains", section: SECTION[action] ?? "proxy", machine };
+}
 
 /** A fix that opens the action's plan in the Domains view of a machine. */
 export function planFix(action: PortlessAction, label = FIX_LABELS[action as keyof typeof FIX_LABELS] ?? "Fix", machine = "local"): ProblemFix {
@@ -30,7 +35,7 @@ export function planFix(action: PortlessAction, label = FIX_LABELS[action as key
     label,
     run: () => {
       requestIntent({ kind: "action", action, machine });
-      navigate({ view: "domains", section: SECTION[action] ?? "proxy", machine });
+      navigate(actionRoute(action, machine));
     },
   };
 }
@@ -145,7 +150,6 @@ function machinePortlessProblems(ms: MachineSnapshot): Problem[] {
       detail: g.findings.length > 1 ? `${g.label}: ${g.findings.length} findings from portless doctor.` : first.hint,
       machine: where,
       fix: g.fixes[0] ? fix(g.fixes[0]) : undefined,
-      link: { label: "Doctor", route: domains("doctor") },
     });
   }
   return out;

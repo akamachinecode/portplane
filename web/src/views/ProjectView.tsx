@@ -1,5 +1,12 @@
-import { useMemo } from "react";
-import type { MachineSnapshot, Project } from "../api/types";
+import { useMemo, useState } from "react";
+import type { App, MachineSnapshot, Project } from "../api/types";
+import { ProjectIcon } from "../components/AppIcons";
+import { IconDialog } from "../components/IconDialog";
+import { MachineScope } from "../components/MachineScope";
+import { projectIconKey, projectIconPlace } from "../lib/icons";
+import { ProjectEditor } from "./projects/ProjectEditor";
+import { DekitHelpHost } from "./runners/DekitHelp";
+import "./ProjectsView.css";
 import { copyWithToast } from "../components/appActions";
 import { useApp } from "../components/AppContext";
 import { Icon } from "../components/Icon";
@@ -58,7 +65,8 @@ export function ProjectView() {
 
 function ProjectBody({ ms, project }: { ms: MachineSnapshot; project: Project }) {
   const ctx = useApp();
-  const { preferences } = useShell();
+  const { preferences, route } = useShell();
+  const [iconOpen, setIconOpen] = useState(false);
   const folds = useFolds();
   const machine = ms.machine.id;
   const byId = useMemo(() => indexApps(ms.apps), [ms.apps]);
@@ -116,10 +124,19 @@ function ProjectBody({ ms, project }: { ms: MachineSnapshot; project: Project })
 
   const stateWord = state === "failed" ? "Something failed" : state === "starting" ? "Starting" : running > 0 ? `${running} of ${total} running` : "Nothing running";
   const linked = checkoutsText(project);
+  const tab = route.view === "project" ? (route.tab ?? "apps") : "apps";
+  const tabRoute = (t: "apps" | "config") => ({ view: "project" as const, machine, name: project.name, ...(route.view === "project" && route.runner ? { runner: route.runner } : {}), ...(t === "config" ? { tab: t } : {}) });
+  const meta = [
+    repo ? shortenPath(repo, home) : null,
+    linked ? (project.repos && project.repos.length > 1 ? linked : `main and ${linked}`) : "main checkout",
+    `${total} ${total === 1 ? "app" : "apps"}`,
+    !ms.machine.local ? `on ${ms.machine.name}` : null,
+  ].filter(Boolean);
 
   return (
     <>
       <ViewHeader
+        section="Projects"
         title={project.name}
         summary={
           <span className={`project-state project-state-${state}`}>
@@ -134,60 +151,87 @@ function ProjectBody({ ms, project }: { ms: MachineSnapshot; project: Project })
           </>
         }
       />
-      <dl className="project-facts">
-        {repo && (
-          <div>
-            <dt>Folder</dt>
-            <dd className="mono" title={repo}>
-              {shortenPath(repo, home)}
-            </dd>
-          </div>
-        )}
-        {project.repos && project.repos.length > 1 && (
-          <div>
-            <dt>Repositories</dt>
-            <dd className="mono" title={project.repos.join("\n")}>
-              {project.repos.map((r) => shortenPath(r, home)).join(", ")}
-            </dd>
-          </div>
-        )}
-        <div>
-          <dt>Checkouts</dt>
-          <dd>{linked ? (project.repos && project.repos.length > 1 ? linked : `main and ${linked}`) : "main only"}</dd>
-        </div>
-        <div>
-          <dt>Apps</dt>
-          <dd>
-            {total} {total === 1 ? "app" : "apps"}
-          </dd>
-        </div>
-        <div>
-          <dt>Configured in</dt>
-          <dd>
-            {runners.map((root, i) => (
-              <span key={root}>
-                {i > 0 && ", "}
-                <a href={href({ view: "projects", runner: { machine, root } })} className="mono">
-                  {shortenPath(root, home)}/dekit.yaml
-                </a>
+      <header className="project-hero">
+        <button type="button" className="icon-button" onClick={() => setIconOpen(true)} title="Change the icon" aria-label={`Change the icon of ${project.name}`}>
+          <ProjectIcon ms={ms} project={project} size={48} />
+        </button>
+        <div className="project-hero-text">
+          <h2 className="project-hero-name">{project.name}</h2>
+          <p className="project-hero-meta">
+            {meta.map((m, i) => (
+              <span key={i} className={i === 0 && repo ? "mono" : undefined}>
+                {m}
               </span>
             ))}
-          </dd>
+          </p>
         </div>
-        {!ms.machine.local && (
-          <div>
-            <dt>Machine</dt>
-            <dd>{ms.machine.name}</dd>
-          </div>
-        )}
-      </dl>
-      {project.worktrees.length > 1 && (
-        <p className="project-hint">
-          <Icon name="branch" size={13} />
-          Each worktree is a checkout of the same repository on another branch, with its own apps and addresses.
-        </p>
+      </header>
+      <nav className="subnav subnav-tabs project-tabs" aria-label={`${project.name} sections`}>
+        <ul>
+          <li>
+            <a className="subnav-item" href={href(tabRoute("apps"))} aria-current={tab === "apps" ? "page" : undefined}>
+              <Icon name="apps" size={15} />
+              Apps
+            </a>
+          </li>
+          <li>
+            <a className="subnav-item" href={href(tabRoute("config"))} aria-current={tab === "config" ? "page" : undefined}>
+              <Icon name="file" size={15} />
+              Configuration
+            </a>
+          </li>
+        </ul>
+      </nav>
+      {tab === "apps" ? (
+        <>
+          {project.worktrees.length > 1 && (
+            <p className="project-hint">
+              <Icon name="branch" size={13} />
+              Each worktree is a checkout of the same repository on another branch, with its own apps and addresses.
+            </p>
+          )}
+          <ProjectCard ms={ms} group={group} folds={folds} headless />
+        </>
+      ) : (
+        <ProjectConfig ms={ms} project={project} runners={runners} home={home} apps={apps} />
       )}
-      <ProjectCard ms={ms} group={group} folds={folds} headless />
+      {iconOpen && <IconDialog name={project.name} prefKey={projectIconKey(machine, project)} place={projectIconPlace(ms, project)} root={repo ?? undefined} onClose={() => setIconOpen(false)} />}
     </>
+  );
+}
+
+/**
+ * The project's own tasks in its dekit.yaml files (ADR-0028): the same
+ * editor as Settings › dekit › Runners, showing only this project's tasks,
+ * with Add an app and Run a command.
+ */
+function ProjectConfig({ ms, project, runners, home, apps }: { ms: MachineSnapshot; project: Project; runners: string[]; home: string | undefined; apps: App[] }) {
+  const reachable = ms.machine.local || ms.machine.status === "online";
+  if (!ms.tools.dekit || !reachable) {
+    return (
+      <EmptyState icon="file" title={reachable ? "dekit isn't installed" : `${ms.machine.name} is offline`}>
+        {reachable ? "Install it from Setup to edit this project's tasks here." : "Its configuration shows here again once Portplane reaches it."}
+      </EmptyState>
+    );
+  }
+  return (
+    <MachineScope machine={ms.machine.id}>
+      {runners.map((root) => {
+        const runner = ms.runners.find((r) => r.root === root);
+        const only = new Set(apps.filter((a) => a.runner === root).map((a) => a.task));
+        return (
+          <section key={root} className="project-config" aria-label={`${shortenPath(root, home)}/dekit.yaml`}>
+            {runners.length > 1 && <h3 className="project-config-title mono">{shortenPath(root, home)}/dekit.yaml</h3>}
+            <ProjectEditor runner={root} up={!!runner?.up} os={ms.machine.os} only={only} />
+          </section>
+        );
+      })}
+      <p className="project-config-foot">
+        <Icon name="info" size={13} />
+        Only this project's tasks show here. The whole file, its settings and its runner are in{" "}
+        <a href={href({ view: "projects", runner: { machine: ms.machine.id, root: project.runner } })}>Settings › dekit › Runners</a>.
+      </p>
+      <DekitHelpHost />
+    </MachineScope>
   );
 }

@@ -48,8 +48,8 @@ function UpdateRow({ item }: { item: UpdateItem }) {
           </a>
         )}
         {item.update && item.id !== "portplane" && (
-          <a className="btn btn-sm" href={href({ view: "settings", section: "tools" })}>
-            Update in Tools
+          <a className="btn btn-sm" href={href(item.id === "dekit" ? { view: "dekit" } : { view: "domains", section: "maintenance" })}>
+            Update {item.name}…
           </a>
         )}
         {item.update && item.id === "portplane" && (

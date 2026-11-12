@@ -116,6 +116,32 @@ const PATHS = {
     </>
   ),
   shield: <path d="M12 3.5l7 2.5v5.5c0 4.2-3 7.4-7 9-4-1.6-7-4.8-7-9V6z" />,
+  lock: (
+    <>
+      <rect x="5.5" y="10.5" width="13" height="9.5" rx="2" />
+      <path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" />
+    </>
+  ),
+  image: (
+    <>
+      <rect x="4" y="5" width="16" height="14" rx="2.5" />
+      <circle cx="9.5" cy="10" r="1.5" />
+      <path d="M20 15.5l-4.5-4.5L7 19.5" />
+    </>
+  ),
+  home: (
+    <>
+      <path d="M4.5 10.5L12 4.5l7.5 6" />
+      <path d="M6.5 9v10.5h11V9" />
+    </>
+  ),
+  timeline: (
+    <>
+      <circle cx="7" cy="6" r="2" />
+      <circle cx="7" cy="18" r="2" />
+      <path d="M7 8v8M11.5 6h8M11.5 18h8M11.5 12h5" />
+    </>
+  ),
   wand: (
     <>
       <path d="M5 19L15 9" />

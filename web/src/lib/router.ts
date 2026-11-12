@@ -1,28 +1,39 @@
 import { useSyncExternalStore } from "react";
 
-// Hash routes (plan §6.1): links work in the native window and the browser
-// alike, Back and Forward work, and the tray or a notification can point at
-// one thing. Every segment is URL-encoded (app ids and runners are paths).
+// Hash routes (plan §6.1, ADR-0028): links work in the native window and the
+// browser alike, Back and Forward work, and the tray or a notification can
+// point at one thing. Every segment is URL-encoded (app ids and runners are
+// paths).
 //
-//   #/apps                                  #/runners/<machine?>
-//   #/apps/<machine>/<appId>/<tab?>         #/machines
-//   #/project/<machine>/<name>/<runner?>    #/health
-//   #/projects                              #/settings/<section?>
-//   #/projects/<machine>/<runner>
-//   #/domains/<section?>/<machine?>         #/onboarding/<step?>
+// The work, in the main sidebar:
+//   #/apps                                  #/addresses/<filter?>/<machine?>
+//   #/apps/<machine>/<appId>/<tab?>         #/health
+//   #/project/<machine>/<name>/<runner?>/<tab?>
+//   #/onboarding/<step?>  (Setup: the guided setup, as a timeline)
 //   #/setup/<machine>/<step?>  (the guided setup on a machine over SSH)
 //
-// Runners and Domains act on one machine (ADR-0026): without one in the
-// URL, the machine last picked there; with one, that machine. Anything
-// else shows the apps.
+// Settings, with their own sidebar (ADR-0028):
+//   #/settings/<section?>                   #/machines
+//   #/runners/<machine?>                    #/dekit/<machine?>
+//   #/projects/<machine>/<runner>  (a dekit.yaml and its runner)
+//   #/domains/<section?>/<machine?>  (portless: proxy, certificates, sharing…)
+//
+// Runners, dekit, Domains and Addresses act on one machine (ADR-0026):
+// without one in the URL, the machine last picked there; with one, that
+// machine. Addresses of the M5 layout (#/domains/routes, aliases, compose,
+// doctor) still open where those pages went. Anything else shows the apps.
 
 export const APP_TABS = ["summary", "output", "config", "url"] as const;
-export const DOMAIN_SECTIONS = ["proxy", "routes", "aliases", "sharing", "compose", "lan", "config", "certificates", "hosts", "doctor", "maintenance"] as const;
-export const SETTINGS_SECTIONS = ["general", "folders", "tools", "network", "advanced"] as const;
+export const DOMAIN_SECTIONS = ["proxy", "hosts", "certificates", "sharing", "lan", "config", "maintenance"] as const;
+export const SETTINGS_SECTIONS = ["general", "notifications", "updates", "folders", "advanced"] as const;
+export const ADDRESS_FILTERS = ["all", "apps", "aliases", "compose", "shared"] as const;
+export const PROJECT_TABS = ["apps", "config"] as const;
 
 export type AppTab = (typeof APP_TABS)[number];
 export type DomainSection = (typeof DOMAIN_SECTIONS)[number];
 export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
+export type AddressFilter = (typeof ADDRESS_FILTERS)[number];
+export type ProjectTab = (typeof PROJECT_TABS)[number];
 
 /** An app in the URL: the machine's id and the app's id (runner#task). */
 export interface AppRef {
@@ -39,14 +50,16 @@ export interface ProjectRef {
 
 export type Route =
   | { view: "apps"; detail?: AppRef & { tab: AppTab } }
-  | ({ view: "project" } & ProjectRef)
+  | ({ view: "project"; tab?: ProjectTab } & ProjectRef)
+  | { view: "addresses"; filter: AddressFilter; machine?: string }
+  | { view: "health" }
+  | { view: "onboarding"; step?: string; machine?: string }
   | { view: "projects"; runner?: { machine: string; root: string } }
   | { view: "domains"; section: DomainSection; machine?: string }
   | { view: "runners"; machine?: string }
+  | { view: "dekit"; machine?: string }
   | { view: "machines" }
-  | { view: "health" }
-  | { view: "settings"; section: SettingsSection }
-  | { view: "onboarding"; step?: string; machine?: string };
+  | { view: "settings"; section: SettingsSection };
 
 export type View = Route["view"];
 
@@ -54,6 +67,14 @@ export const HOME: Route = { view: "apps" };
 
 const pick = <T extends string>(values: readonly T[], v: string | undefined, fallback: T): T | null =>
   v === undefined || v === "" ? fallback : values.includes(v as T) ? (v as T) : null;
+
+/** The portless pages of the M5 layout that moved (ADR-0028), by their old section. */
+const LEGACY_DOMAINS: Record<string, (machine: string | undefined) => Route> = {
+  routes: (machine) => (machine ? { view: "addresses", filter: "all", machine } : { view: "addresses", filter: "all" }),
+  aliases: (machine) => (machine ? { view: "addresses", filter: "aliases", machine } : { view: "addresses", filter: "aliases" }),
+  compose: (machine) => (machine ? { view: "addresses", filter: "compose", machine } : { view: "addresses", filter: "compose" }),
+  doctor: () => ({ view: "health" }),
+};
 
 /** Parses location.hash ("#/apps/…", with or without the "#"). Unknown routes give the apps. */
 export function parseRoute(hash: string): Route {
@@ -74,21 +95,39 @@ export function parseRoute(hash: string): Route {
         const tab = pick(APP_TABS, c, "summary");
         return tab && { view: "apps", detail: { machine: a, appId: b, tab } };
       }
-      case "project":
-        if (!a || !b || rest.length || c === "") return null;
-        return c === undefined ? { view: "project", machine: a, name: b } : { view: "project", machine: a, name: b, runner: c };
+      case "project": {
+        // #/project/<machine>/<name>/<runner?>/<tab?>: a runner is a path, never a tab's name
+        if (!a || !b || c === "" || rest.length > 1) return null;
+        const base = { view: "project" as const, machine: a, name: b };
+        if (c === undefined) return base;
+        if ((PROJECT_TABS as readonly string[]).includes(c)) return rest.length ? null : c === "apps" ? base : { ...base, tab: c as ProjectTab };
+        const tab = pick(PROJECT_TABS, rest[0], "apps");
+        if (!tab) return null;
+        return tab === "apps" ? { ...base, runner: c } : { ...base, runner: c, tab };
+      }
       case "projects":
         if (a === undefined) return { view: "projects" };
         if (!a || !b || c !== undefined) return null;
         return { view: "projects", runner: { machine: a, root: b } };
       case "domains": {
-        const section = c === undefined ? pick(DOMAIN_SECTIONS, a, "proxy") : null;
+        if (c !== undefined || b === "") return null;
+        const legacy = a !== undefined ? LEGACY_DOMAINS[a] : undefined;
+        if (legacy) return legacy(b);
+        const section = pick(DOMAIN_SECTIONS, a, "proxy");
         if (!section) return null;
-        if (b === undefined) return { view: "domains", section };
-        return b ? { view: "domains", section, machine: b } : null;
+        return b === undefined ? { view: "domains", section } : { view: "domains", section, machine: b };
+      }
+      case "addresses": {
+        if (c !== undefined || b === "") return null;
+        const filter = pick(ADDRESS_FILTERS, a, "all");
+        if (!filter) return null;
+        return b === undefined ? { view: "addresses", filter } : { view: "addresses", filter, machine: b };
       }
       case "settings": {
-        const section = b === undefined ? pick(SETTINGS_SECTIONS, a, "general") : null;
+        if (b !== undefined) return null;
+        if (a === "tools") return { view: "dekit" };
+        if (a === "network") return { view: "settings", section: "advanced" };
+        const section = pick(SETTINGS_SECTIONS, a, "general");
         return section && { view: "settings", section };
       }
       case "onboarding":
@@ -98,8 +137,9 @@ export function parseRoute(hash: string): Route {
         if (!a || c !== undefined || a === "local") return null;
         return b ? { view: "onboarding", machine: a, step: b } : { view: "onboarding", machine: a };
       case "runners":
-        if (a === undefined) return { view: "runners" };
-        return a && b === undefined ? { view: "runners", machine: a } : null;
+      case "dekit":
+        if (a === undefined) return { view };
+        return a && b === undefined ? { view, machine: a } : null;
       case "machines":
       case "health":
         return a === undefined ? { view } : null;
@@ -121,14 +161,19 @@ export function href(route: Route): string {
       return `#/apps/${enc(d.machine)}/${enc(d.appId)}${d.tab === "summary" ? "" : `/${d.tab}`}`;
     }
     case "project":
-      return `#/project/${enc(route.machine)}/${enc(route.name)}${route.runner ? `/${enc(route.runner)}` : ""}`;
+      return `#/project/${enc(route.machine)}/${enc(route.name)}${route.runner ? `/${enc(route.runner)}` : ""}${route.tab && route.tab !== "apps" ? `/${route.tab}` : ""}`;
+    case "addresses": {
+      const base = route.filter === "all" && !route.machine ? "#/addresses" : `#/addresses/${route.filter}`;
+      return route.machine ? `${base}/${enc(route.machine)}` : base;
+    }
     case "projects":
       return route.runner ? `#/projects/${enc(route.runner.machine)}/${enc(route.runner.root)}` : "#/projects";
     case "domains":
       if (route.machine) return `#/domains/${route.section}/${enc(route.machine)}`;
       return route.section === "proxy" ? "#/domains" : `#/domains/${route.section}`;
     case "runners":
-      return route.machine ? `#/runners/${enc(route.machine)}` : "#/runners";
+    case "dekit":
+      return route.machine ? `#/${route.view}/${enc(route.machine)}` : `#/${route.view}`;
     case "settings":
       return route.section === "general" ? "#/settings" : `#/settings/${route.section}`;
     case "onboarding":

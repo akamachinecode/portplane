@@ -6,7 +6,7 @@ import { useNow } from "../../hooks/useNow";
 import { doctorSummary, FIX_LABELS, groupFindings, routeAge } from "../../lib/portless";
 import { PlanDialog } from "./PlanDialog";
 import { StatusGate } from "./ProxySection";
-import { StaleList } from "./RoutesSection";
+import { StaleList } from "./routeParts";
 import { useIntent, usePortlessDoctor, valueOf } from "./store";
 
 const STATUS_ICON: Record<Finding["status"], IconName> = { ok: "checkCircle", warn: "warning", fail: "xCircle", info: "info" };

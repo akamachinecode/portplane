@@ -2,15 +2,20 @@ import { useId, type ReactNode } from "react";
 // The groups also show in Domains, which loads without the Settings view.
 import "../SettingsView.css";
 
-/** A titled block of settings inside a section. */
+/**
+ * A titled block of settings (ADR-0029): the title and its sentence above,
+ * the settings in one card below, one row each, as in Linear's settings.
+ */
 export function SettingsGroup({ title, description, children }: { title: string; description?: ReactNode; children: ReactNode }) {
   const id = useId();
   return (
     <section className="sgroup" aria-labelledby={id}>
-      <h2 className="sgroup-title" id={id}>
-        {title}
-      </h2>
-      {description && <p className="sgroup-desc">{description}</p>}
+      <header className="sgroup-head">
+        <h2 className="sgroup-title" id={id}>
+          {title}
+        </h2>
+        {description && <p className="sgroup-desc">{description}</p>}
+      </header>
       <div className="sgroup-body">{children}</div>
     </section>
   );

@@ -45,7 +45,7 @@ type MachineAPIDeps struct {
 }
 
 // MachineAreas are the API paths that act on one machine, under /api/.
-var MachineAreas = []string{"setup/", "tools/", "proxy/", "trust/", "path/", "folders/suggestions", "dekit/", "portless/"}
+var MachineAreas = []string{"setup/", "tools/", "proxy/", "trust/", "path/", "folders/suggestions", "dekit/", "portless/", "icons/"}
 
 // IsMachineArea reports whether an /api path (without "/api/") belongs to
 // an area that runs on any machine.

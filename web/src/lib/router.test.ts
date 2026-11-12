@@ -19,9 +19,13 @@ describe("parseRoute", () => {
     expect(href({ view: "onboarding", machine: "local", step: "check" })).toBe("#/onboarding/check");
     expect(parseRoute("#/runners/box")).toEqual({ view: "runners", machine: "box" });
     expect(parseRoute("#/runners/box/x")).toEqual({ view: "apps" });
-    expect(parseRoute("#/domains/routes/box")).toEqual({ view: "domains", section: "routes", machine: "box" });
+    expect(parseRoute("#/domains/certificates/box")).toEqual({ view: "domains", section: "certificates", machine: "box" });
     expect(parseRoute("#/domains/nope/box")).toEqual({ view: "apps" });
-    expect(parseRoute("#/domains/routes/box/x")).toEqual({ view: "apps" });
+    expect(parseRoute("#/domains/proxy/box/x")).toEqual({ view: "apps" });
+    expect(parseRoute("#/addresses")).toEqual({ view: "addresses", filter: "all" });
+    expect(parseRoute("#/addresses/aliases/box")).toEqual({ view: "addresses", filter: "aliases", machine: "box" });
+    expect(parseRoute("#/addresses/nope")).toEqual({ view: "apps" });
+    expect(parseRoute("#/dekit/box")).toEqual({ view: "dekit", machine: "box" });
     expect(href({ view: "domains", section: "proxy", machine: "box" })).toBe("#/domains/proxy/box");
   });
 
@@ -58,7 +62,7 @@ describe("parseRoute", () => {
     expect(parseRoute("#")).toEqual({ view: "apps" });
     expect(parseRoute("#/")).toEqual({ view: "apps" });
     expect(parseRoute("health")).toEqual({ view: "health" });
-    expect(parseRoute("#/settings/tools/")).toEqual({ view: "settings", section: "tools" });
+    expect(parseRoute("#/settings/folders/")).toEqual({ view: "settings", section: "folders" });
   });
 
   it("sends anything unknown to the apps", () => {
@@ -79,13 +83,33 @@ describe("parseRoute", () => {
   });
 });
 
+describe("the M5 layout's addresses", () => {
+  it("open where those pages went (ADR-0028)", () => {
+    expect(parseRoute("#/domains/routes")).toEqual({ view: "addresses", filter: "all" });
+    expect(parseRoute("#/domains/aliases/box")).toEqual({ view: "addresses", filter: "aliases", machine: "box" });
+    expect(parseRoute("#/domains/compose")).toEqual({ view: "addresses", filter: "compose" });
+    expect(parseRoute("#/domains/doctor")).toEqual({ view: "health" });
+    expect(parseRoute("#/settings/tools")).toEqual({ view: "dekit" });
+    expect(parseRoute("#/settings/network")).toEqual({ view: "settings", section: "advanced" });
+  });
+
+  it("reads a project's tab after its runner", () => {
+    expect(parseRoute("#/project/local/shop/config")).toEqual({ view: "project", machine: "local", name: "shop", tab: "config" });
+    expect(parseRoute("#/project/local/shop/apps")).toEqual({ view: "project", machine: "local", name: "shop" });
+    expect(parseRoute(`#/project/local/shop/${encodeURIComponent("/srv")}/config`)).toEqual({ view: "project", machine: "local", name: "shop", runner: "/srv", tab: "config" });
+    expect(parseRoute(`#/project/local/shop/${encodeURIComponent("/srv")}/nope`)).toEqual({ view: "apps" });
+  });
+});
+
 describe("href", () => {
   it("leaves out default tabs and sections", () => {
     expect(href(appRoute("local", APP_ID))).toBe(`#/apps/local/${encodeURIComponent(APP_ID)}`);
     expect(href(appRoute("local", APP_ID, "output"))).toBe(`#/apps/local/${encodeURIComponent(APP_ID)}/output`);
     expect(href({ view: "domains", section: "proxy" })).toBe("#/domains");
     expect(href({ view: "settings", section: "general" })).toBe("#/settings");
-    expect(href({ view: "settings", section: "network" })).toBe("#/settings/network");
+    expect(href({ view: "settings", section: "updates" })).toBe("#/settings/updates");
+    expect(href({ view: "addresses", filter: "all" })).toBe("#/addresses");
+    expect(href({ view: "addresses", filter: "all", machine: "box" })).toBe("#/addresses/all/box");
   });
 
   it("escapes slashes and spaces in segments", () => {
@@ -100,7 +124,12 @@ describe("href", () => {
       { view: "projects" },
       { view: "projects", runner: { machine: "local", root: "/home/dev/code" } },
       { view: "domains", section: "proxy" },
-      { view: "domains", section: "doctor" },
+      { view: "domains", section: "lan" },
+      { view: "addresses", filter: "all" },
+      { view: "addresses", filter: "compose", machine: "box" },
+      { view: "dekit" },
+      { view: "project", machine: "local", name: "shop", tab: "config" },
+      { view: "project", machine: "local", name: "shop", runner: "/srv", tab: "config" },
       { view: "runners" },
       { view: "machines" },
       { view: "health" },

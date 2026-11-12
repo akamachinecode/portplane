@@ -25,6 +25,13 @@ export function AdvancedSection() {
           </SettingRow>
         )}
       </SettingsGroup>
+      <SettingsGroup title="Privacy and network">
+        <p className="sgroup-text">
+          Portplane opens no network port: this window talks to it on this computer only, and other machines are reached over your own SSH. It
+          only goes online for downloads you start and update checks you ask for. Sharing an app on your network or the internet is in{" "}
+          <a href="#/domains/sharing">Settings › portless › Sharing</a>.
+        </p>
+      </SettingsGroup>
       <SettingsGroup title="Diagnostics">
         <SettingRow label="Diagnostic report" description={DIAGNOSTICS_DESCRIPTION}>
           <ExportDiagnosticsButton />

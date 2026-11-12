@@ -85,21 +85,35 @@ function Appearance() {
           <Segmented label="Density" value={p.density} options={DENSITY_OPTIONS} onChange={(density) => void updatePreferences((x) => ({ ...x, density }))} />
         </SettingRow>
       </SettingsGroup>
-      <NotificationsGroup prefs={p} />
-      <UpdatesGroup prefs={p} />
     </>
   );
 }
 
-/** Brings back "Get started" on the Apps page after it was hidden. */
+/** Settings › Notifications: which system notifications Portplane shows. */
+export function NotificationsSection() {
+  const { preferences, reloadPreferences } = useShell();
+  if (preferences.status === "loading") return <LoadingState label="Loading your preferences…" />;
+  if (preferences.status === "error") return <ErrorState title="Couldn't load your preferences" message={preferences.message} onRetry={reloadPreferences} />;
+  return <NotificationsGroup prefs={preferences.value} />;
+}
+
+/** Settings › Updates: Portplane's, dekit's and portless's, checked when you ask (ADR-0025). */
+export function UpdatesSection() {
+  const { preferences, reloadPreferences } = useShell();
+  if (preferences.status === "loading") return <LoadingState label="Loading your preferences…" />;
+  if (preferences.status === "error") return <ErrorState title="Couldn't load your preferences" message={preferences.message} onRetry={reloadPreferences} />;
+  return <UpdatesGroup prefs={preferences.value} />;
+}
+
+/** Brings back "Set up Portplane" at the top of the sidebar after it was hidden. */
 function ShowChecklist() {
   const { preferences, updatePreferences } = useShell();
   if (preferences.status !== "ok") return null;
   const hidden = preferences.value.onboarding.choices?.checklist === "hidden";
   return (
     <Switch
-      label="Show Get started on the Apps page"
-      description="The steps from nothing to your first app at https://….localhost, ticked as each one is done. It hides by itself once they all are."
+      label="Show Set up Portplane in the sidebar"
+      description="The steps from nothing to your first app at https://….localhost, ticked as each one is done. It moves to the foot of the sidebar once they all are."
       checked={!hidden}
       onChange={(show) =>
         void updatePreferences((p) => {
@@ -120,12 +134,12 @@ export function GeneralSection() {
         <StartAtLogin />
       </SettingsGroup>
       <Appearance />
-      <SettingsGroup title="Guided setup">
+      <SettingsGroup title="Setup">
         <ShowChecklist />
-        <SettingRow label="Run setup again" description="Checks your computer, installs what's missing, and walks through the proxy, your folders and your apps again.">
-          <a className="btn" href={href({ view: "onboarding", step: "welcome" })}>
-            <Icon name="wand" size={14} />
-            Run setup again
+        <SettingRow label="Setup" description="What was checked, installed and set up on this computer, step by step. Any step can be done again from there.">
+          <a className="btn" href={href({ view: "onboarding" })}>
+            <Icon name="timeline" size={14} />
+            Open Setup
           </a>
         </SettingRow>
       </SettingsGroup>

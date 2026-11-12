@@ -1,6 +1,6 @@
 # ADR-0027: Lay the app out around projects, with dekit and portless in the sidebar, and draw the macOS title bar ourselves
 
-- **Status:** Accepted
+- **Status:** Accepted. The sidebar's dekit and portless groups, the "Get started" checklist and the full-window guided setup are superseded by [ADR-0028](0028-information-architecture.md); projects first, the inset panel and the macOS window stay.
 - **Date:** 2026-11-12
 - **Builds on:** [ADR-0017](0017-native-window-macos.md) (the macOS window), [ADR-0024](0024-app-shell.md) (the app shell). It keeps ADR-0024's router, palette, jobs and drawer, and replaces its layout: what the sidebar lists, where a view's title and actions go, and how a first run starts.
 

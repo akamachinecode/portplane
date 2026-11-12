@@ -5,13 +5,13 @@
 .projects {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
 }
 
 .project {
   min-width: 0;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-lg);
   background: var(--surface);
   box-shadow: var(--shadow-card);
 }
@@ -25,11 +25,12 @@
 }
 
 .project-head {
+  --entity-ring: var(--surface);
   display: flex;
   align-items: center;
-  gap: 8px;
-  min-height: 46px;
-  padding: 6px 8px 6px 8px;
+  gap: 10px;
+  min-height: 54px;
+  padding: 8px 10px 8px 10px;
 }
 
 .project-head > .dot {
@@ -160,8 +161,12 @@
 .project .row-main,
 .project .row-main.has-check {
   position: relative;
-  grid-template-columns: 8px minmax(0, 1fr) auto;
-  padding-left: 40px;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  padding-left: 44px;
+}
+
+:root[data-density="compact"] .project .row-main {
+  grid-template-columns: 22px minmax(0, 1fr) auto;
 }
 
 .project .row-check {

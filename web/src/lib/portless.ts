@@ -456,3 +456,14 @@ export function extraKeys(text: string | undefined): Record<string, unknown> {
     return {};
   }
 }
+
+/**
+ * Whether the proxy answers, and on which port: portless's own probe, or
+ * else what its startup service reports (a proxy the system runs as the
+ * administrator can be out of Portplane's reach while the service sees it).
+ */
+export function proxyAnswers(status: Pick<PortlessStatus, "proxy" | "service">): { up: boolean; port: number } {
+  if (status.proxy.responding) return { up: true, port: status.proxy.port };
+  if (status.service?.installed && status.service.responding) return { up: true, port: status.service.port || status.proxy.port };
+  return { up: false, port: status.proxy.port };
+}

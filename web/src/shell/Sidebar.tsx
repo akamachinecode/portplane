@@ -1,15 +1,16 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ConnectionStatus } from "../api/events";
 import { useApp } from "../components/AppContext";
+import { ProjectIcon } from "../components/AppIcons";
 import { Icon, type IconName } from "../components/Icon";
 import { StateDot } from "../components/StateDot";
 import { checklist, checklistVisible, doneCount } from "../lib/gettingStarted";
 import { isMac, paletteShortcutLabel } from "../lib/keyboard";
 import { sidebarProjects, type SidebarProject } from "../lib/projects";
-import { href, sameRoute, type Route } from "../lib/router";
+import { HOME, href, type Route } from "../lib/router";
 import { safeLocalStorage } from "../lib/storage";
 import { problemBadge } from "./health";
-import { SETTINGS_NAV, TOOL_GROUPS } from "./nav";
+import { isSettingsRoute, SETTINGS_GROUPS, SETTINGS_NAV } from "./nav";
 import { useShell } from "./ShellContext";
 import { setSidebarCollapsed } from "./sidebarState";
 
@@ -65,15 +66,21 @@ function useFolded(): [ReadonlySet<string>, (id: string) => void] {
   return [folded, toggle];
 }
 
-function Group({ id, title, hint, folded, onToggle, action, children }: { id: string; title: string; hint?: string; folded: boolean; onToggle(): void; action?: React.ReactNode; children: React.ReactNode }) {
+function Group({ id, title, hint, folded, onToggle, action, children }: { id: string; title: string; hint?: string; folded?: boolean; onToggle?(): void; action?: React.ReactNode; children: React.ReactNode }) {
   const listId = `nav-group-${id}`;
   return (
     <div className={`nav-group${folded ? " is-folded" : ""}`}>
       <div className="nav-group-head">
-        <button type="button" className="nav-group-toggle" aria-expanded={!folded} aria-controls={listId} title={hint} onClick={onToggle}>
-          <span className="nav-group-title">{title}</span>
-          <Icon name="chevronDown" size={12} className="nav-group-chevron" />
-        </button>
+        {onToggle ? (
+          <button type="button" className="nav-group-toggle" aria-expanded={!folded} aria-controls={listId} title={hint} onClick={onToggle}>
+            <span className="nav-group-title">{title}</span>
+            <Icon name="chevronDown" size={12} className="nav-group-chevron" />
+          </button>
+        ) : (
+          <span className="nav-group-toggle is-static" title={hint}>
+            <span className="nav-group-title">{title}</span>
+          </span>
+        )}
         {action}
       </div>
       {!folded && (
@@ -91,7 +98,7 @@ function ProjectLink({ p, current, showMachine }: { p: SidebarProject; current: 
   return (
     <li>
       <a className={`nav-item nav-project nav-project-${state}`} href={href(p.route)} aria-current={current ? "page" : undefined} title={`${project.name}${showMachine ? ` on ${ms.machine.name}` : ""}: ${stateText}`}>
-        <StateDot state={state} />
+        <ProjectIcon ms={ms} project={project} size={18} state={state === "off" ? undefined : state} />
         <span className="nav-label">{project.name}</span>
         {showMachine && !ms.machine.local && <span className="nav-sub">{ms.machine.name}</span>}
         <span className={`nav-count${running > 0 ? " is-live" : ""}`} aria-hidden="true">
@@ -110,35 +117,27 @@ const CONNECTION: Record<ConnectionStatus, string> = {
   expired: "Disconnected: reload the window",
 };
 
+// Where "Back to app" goes from Settings: the last page of the work.
+let lastWorkRoute: Route = HOME;
+
 /**
- * The app's navigation (ADR-0027): the apps, their health and the machines
- * on top, then the dekit and portless sections, then every project (the
- * long list, last), and settings at the foot. It runs up to the
- * window's top edge; on macOS the traffic lights sit in its first strip.
+ * The app's navigation (ADR-0028). The work, on every day: setup while it
+ * is unfinished, the apps, their addresses, their health, and every
+ * project. Settings swaps it for Settings' own sidebar: Portplane, then
+ * dekit, then portless. It runs up to the window's top edge; on macOS the
+ * traffic lights sit in its first strip.
  */
 export function Sidebar({ onSearch }: { onSearch(): void }) {
   const { info } = useApp();
-  const { route, snapshot, summary, problems, status, preferences } = useShell();
-  const [folded, toggle] = useFolded();
+  const { route, status } = useShell();
   const mac = isMac(info?.os);
-  const projects = useMemo(() => (snapshot ? sidebarProjects(snapshot) : []), [snapshot]);
-  const multiMachine = (snapshot?.machines.length ?? 0) > 1;
-  const health = problemBadge(problems);
-  const local = snapshot?.machines.find((m) => m.machine.local);
-  const prefs = preferences.status === "ok" ? preferences.value : null;
-  const steps = useMemo(() => checklist(local), [local]);
-  const setupLeft = checklistVisible(prefs, steps);
-  const remoteCount = (snapshot?.machines.length ?? 1) - 1;
-
-  const appsBadge: Badge | undefined = summary && summary.running > 0 ? { text: String(summary.running), label: `${summary.running} running`, tone: "live" } : undefined;
-  const healthBadge: Badge | undefined =
-    health.count > 0 && health.tone ? { text: String(health.count), label: `${health.count} ${health.count === 1 ? "problem" : "problems"}`, tone: health.tone } : undefined;
-
-  const isProject = (p: SidebarProject) =>
-    route.view === "project" && route.machine === p.ms.machine.id && route.name === p.project.name && (!route.runner || route.runner === p.project.runner);
+  const settings = isSettingsRoute(route);
+  useEffect(() => {
+    if (!settings) lastWorkRoute = route;
+  }, [route, settings]);
 
   return (
-    <nav className="sidebar" aria-label="Main">
+    <nav className={`sidebar${settings ? " is-settings" : ""}`} aria-label={settings ? "Settings" : "Main"}>
       <div className="sidebar-chrome" data-drag-region />
       <div className="sidebar-brand" data-drag-region>
         <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="" width={20} height={20} className="brand-mark" />
@@ -152,32 +151,61 @@ export function Sidebar({ onSearch }: { onSearch(): void }) {
           <Icon name="sidebar" size={16} />
         </button>
       </div>
-      <button type="button" className="sidebar-search" onClick={onSearch} aria-keyshortcuts={mac ? "Meta+K /" : "Control+K /"} aria-label="Search or run a command">
-        <Icon name="search" size={14} />
-        <span className="sidebar-search-text">Search or run…</span>
-        <kbd className="kbd">{paletteShortcutLabel(mac)}</kbd>
-      </button>
+      {settings ? (
+        <SettingsNav />
+      ) : (
+        <>
+          <button type="button" className="sidebar-search" onClick={onSearch} aria-keyshortcuts={mac ? "Meta+K /" : "Control+K /"} aria-label="Search or run a command">
+            <Icon name="search" size={14} />
+            <span className="sidebar-search-text">Search or run…</span>
+            <kbd className="kbd">{paletteShortcutLabel(mac)}</kbd>
+          </button>
+          <WorkNav />
+        </>
+      )}
+    </nav>
+  );
+}
 
+function WorkNav() {
+  const { route, snapshot, summary, problems, preferences } = useShell();
+  const [folded, toggle] = useFolded();
+  const projects = useMemo(() => (snapshot ? sidebarProjects(snapshot) : []), [snapshot]);
+  const multiMachine = (snapshot?.machines.length ?? 0) > 1;
+  const health = problemBadge(problems);
+  const local = snapshot?.machines.find((m) => m.machine.local);
+  const prefs = preferences.status === "ok" ? preferences.value : null;
+  const steps = useMemo(() => checklist(local), [local]);
+  const setupLeft = checklistVisible(prefs, steps);
+  const onSetup = route.view === "onboarding" && !route.machine;
+
+  const appsBadge: Badge | undefined = summary && summary.running > 0 ? { text: String(summary.running), label: `${summary.running} running`, tone: "live" } : undefined;
+  const healthBadge: Badge | undefined =
+    health.count > 0 && health.tone ? { text: String(health.count), label: `${health.count} ${health.count === 1 ? "problem" : "problems"}`, tone: health.tone } : undefined;
+
+  const isProject = (p: SidebarProject) =>
+    route.view === "project" && route.machine === p.ms.machine.id && route.name === p.project.name && (!route.runner || route.runner === p.project.runner);
+
+  return (
+    <>
       <div className="sidebar-scroll">
+        {setupLeft && (
+          <a className="setup-callout" href={href({ view: "onboarding" })} aria-current={onSetup ? "page" : undefined}>
+            <ProgressRing value={doneCount(steps)} max={steps.length} size={20} />
+            <span className="setup-callout-text">
+              <span className="setup-callout-title">Set up Portplane</span>
+              <span className="setup-callout-sub">
+                {doneCount(steps)} of {steps.length} done
+              </span>
+            </span>
+            <Icon name="chevronRight" size={14} className="setup-callout-chevron" />
+          </a>
+        )}
         <ul className="nav-list">
           <NavLink route={{ view: "apps" }} label="Apps" icon="apps" badge={appsBadge} current={route.view === "apps"} />
+          <NavLink route={{ view: "addresses", filter: "all" }} label="Addresses" icon="link" current={route.view === "addresses"} />
           <NavLink route={{ view: "health" }} label="Health" icon="pulse" badge={healthBadge} current={route.view === "health"} />
-          <NavLink
-            route={{ view: "machines" }}
-            label="Machines"
-            icon="machine"
-            current={route.view === "machines"}
-            badge={remoteCount > 0 ? { text: String(remoteCount + 1), label: `${remoteCount + 1} machines` } : undefined}
-          />
         </ul>
-
-        {TOOL_GROUPS.map((g) => (
-          <Group key={g.id} id={g.id} title={g.label} hint={g.hint} folded={folded.has(g.id)} onToggle={() => toggle(g.id)}>
-            {g.links.map((l) => (
-              <NavLink key={l.id} route={l.route} label={l.label} icon={l.icon} current={l.current(route)} />
-            ))}
-          </Group>
-        ))}
 
         <Group
           id="projects"
@@ -202,22 +230,32 @@ export function Sidebar({ onSearch }: { onSearch(): void }) {
       </div>
 
       <div className="sidebar-foot">
-        {setupLeft && (
-          <a className="setup-progress" href={href({ view: "apps" })} title="The steps left to set up Portplane">
-            <ProgressRing value={doneCount(steps)} max={steps.length} />
-            <span className="setup-progress-text">
-              <span className="setup-progress-title">Get started</span>
-              <span className="setup-progress-sub">
-                {doneCount(steps)} of {steps.length} done
-              </span>
-            </span>
-          </a>
-        )}
         <ul className="nav-list">
-          <NavLink route={SETTINGS_NAV.route} label="Settings" icon="gear" current={route.view === "settings" || sameRoute(route, SETTINGS_NAV.route)} />
+          {!setupLeft && <NavLink route={{ view: "onboarding" }} label="Setup" icon="timeline" current={onSetup} />}
+          <NavLink route={SETTINGS_NAV.route} label="Settings" icon="gear" current={false} />
         </ul>
       </div>
-    </nav>
+    </>
+  );
+}
+
+/** Settings' own sidebar (as in Linear): back to the work, then Portplane, dekit and portless. */
+function SettingsNav() {
+  const { route } = useShell();
+  return (
+    <div className="sidebar-scroll sidebar-settings">
+      <a className="nav-back" href={href(lastWorkRoute)}>
+        <Icon name="chevronLeft" size={14} />
+        Back to app
+      </a>
+      {SETTINGS_GROUPS.map((g) => (
+        <Group key={g.id} id={`settings-${g.id}`} title={g.label} hint={g.hint}>
+          {g.links.map((l) => (
+            <NavLink key={l.id} route={l.route} label={l.label} icon={l.icon} current={l.current(route)} />
+          ))}
+        </Group>
+      ))}
+    </div>
   );
 }
 

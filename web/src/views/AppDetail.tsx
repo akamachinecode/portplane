@@ -1,4 +1,4 @@
-import { useId, useRef, type KeyboardEvent, type ReactNode } from "react";
+import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import type { App, MachineSnapshot } from "../api/types";
 import { useAppActionMenu } from "../components/AppActionMenu";
 import { actOnApp, appKey } from "../components/appActions";
@@ -8,7 +8,9 @@ import { Icon } from "../components/Icon";
 import { IconButton } from "../components/IconButton";
 import { Menu } from "../components/Menu";
 import { EmptyState, LoadingState } from "../components/States";
-import { StateDot } from "../components/StateDot";
+import { AppIcon } from "../components/AppIcons";
+import { IconDialog } from "../components/IconDialog";
+import { appIconKey, appIconPlace } from "../lib/icons";
 import { appHref, isAlive } from "../lib/apps";
 import { stateLabel } from "../lib/format";
 import { MachineScope } from "../components/MachineScope";
@@ -30,7 +32,7 @@ const TABS: Record<AppTab, { label: string; Panel: (props: DetailTabProps) => Re
   summary: { label: "Summary", Panel: SummaryTab },
   output: { label: "Output", Panel: OutputTab },
   config: { label: "Config", Panel: ConfigTab },
-  url: { label: "URL", Panel: UrlTab },
+  url: { label: "Address", Panel: UrlTab },
 };
 
 const close = () => navigate({ view: "apps" });
@@ -46,15 +48,25 @@ function Header({ ms, app, titleId }: DetailTabProps & { titleId: string }) {
   const toggle = alive ? "stop" : "start";
   const where = [app.project, app.worktree, ms.machine.name].filter(Boolean).join(" · ");
   const more = useAppActionMenu(ms, app);
+  const [iconOpen, setIconOpen] = useState(false);
   return (
     <header className="detail-head">
       <div className="detail-title-row">
-        <StateDot state={app.state} />
-        <h2 className="detail-title" id={titleId} tabIndex={-1} data-autofocus>
-          {app.label}
-        </h2>
-        <span className={`detail-state state-${app.state}`}>{stateLabel(app.state)}</span>
-        <span className="spacer" />
+        <button type="button" className="icon-button" onClick={() => setIconOpen(true)} title="Change the icon" aria-label={`Change the icon of ${app.label}`}>
+          <AppIcon ms={ms} app={app} size={32} state={app.state} />
+        </button>
+        <div className="detail-titles">
+          <h2 className="detail-title" id={titleId} tabIndex={-1} data-autofocus>
+            {app.label}
+          </h2>
+          <p className="detail-where">
+            <span className={`detail-state state-${app.state}`}>{stateLabel(app.state)}</span>
+            <span className="detail-where-sep" aria-hidden="true">
+              ·
+            </span>
+            {where}
+          </p>
+        </div>
         <div className="detail-actions">
           {href && (
             <a className="icon-btn" href={href} target="_blank" rel="noopener" aria-label={`Open ${app.label}`} title={`Open ${app.label}`}>
@@ -79,8 +91,10 @@ function Header({ ms, app, titleId }: DetailTabProps & { titleId: string }) {
           <IconButton icon="close" label="Close details" onClick={close} />
         </div>
       </div>
-      <p className="detail-where">{where}</p>
       {more.element}
+      {iconOpen && (
+        <IconDialog name={app.label} prefKey={appIconKey(machine, app)} place={appIconPlace(ms, app)} root={app.checkout ?? app.repo ?? app.dir} onClose={() => setIconOpen(false)} />
+      )}
     </header>
   );
 }

@@ -7,8 +7,8 @@ import { Icon } from "../components/Icon";
 import { EmptyState, ErrorState, LoadingState } from "../components/States";
 import { ViewHeader } from "../components/ViewHeader";
 import { inferHome } from "../lib/format";
-import { href } from "../lib/router";
-import { DekitAbout } from "./runners/DekitAbout";
+import { href, navigate } from "../lib/router";
+import { Menu, type MenuItem } from "../components/Menu";
 import { DekitHelpHost } from "./runners/DekitHelp";
 import { RunnerJob, RunnerRow } from "./runners/RunnerList";
 import { setRunnerJob, useRunners } from "./runners/useRunners";
@@ -62,23 +62,16 @@ function RunnersBody({ picker }: { picker: ReactNode }) {
   };
 
   const value = load.status === "ok" ? load.value : null;
+  const more: MenuItem[] = [];
+  if (value?.available) {
+    if (value.stale) more.push({ label: `Clean ${value.stale === 1 ? "one stale record" : `${value.stale} stale records`}…`, icon: "trash", onSelect: () => setAsking("clean") });
+    if (value.live) more.push({ label: "Upgrade every runner…", icon: "arrowUp", onSelect: () => setAsking("upgrade") });
+    more.push({ label: "About dekit", icon: "info", onSelect: () => navigate({ view: "dekit", machine: scope.remote ? scope.id : undefined }) });
+  }
   const actions = (
     <>
       {picker}
-      {value?.available && (
-        <>
-      <button type="button" className="btn" disabled={!value.stale} title={value.stale ? undefined : "No stale records"} onClick={() => setAsking("clean")}>
-        <Icon name="trash" size={14} />
-        Clean stale records{value.stale ? ` (${value.stale})` : ""}
-      </button>
-      {value.live && (
-        <button type="button" className="btn" onClick={() => setAsking("upgrade")}>
-          <Icon name="arrowUp" size={14} />
-          Upgrade all
-        </button>
-      )}
-        </>
-      )}
+      {more.length > 0 && <Menu label="More runner actions" items={more} />}
     </>
   );
 
@@ -95,7 +88,7 @@ function RunnersBody({ picker }: { picker: ReactNode }) {
           </>
         ) : (
           <>
-            Install dekit from <a href={href({ view: "settings", section: "tools" })}>Settings → Tools</a>.
+            Install it from <a href={href({ view: "onboarding", step: "install" })}>Setup</a>.
           </>
         )}
       </EmptyState>
@@ -104,7 +97,6 @@ function RunnersBody({ picker }: { picker: ReactNode }) {
     const v = load.value;
     body = (
       <>
-        <DekitAbout />
         {!v.live && (
           <p className="dk-note">
             <Icon name="info" size={14} /> On Windows dekit can't restart or upgrade a runner in place: stop it and start it again to switch versions.
@@ -124,8 +116,8 @@ function RunnersBody({ picker }: { picker: ReactNode }) {
         </section>
         <section className="dk-section" aria-labelledby="dk-projects-title">
           <h2 className="section-title" id="dk-projects-title">
-            <Icon name="layers" size={14} />
-            Projects
+            <Icon name="folder" size={14} />
+            Folders with a dekit.yaml
           </h2>
           {v.runners.length ? (
             <ul className="dk-runners">
@@ -157,7 +149,7 @@ function RunnersBody({ picker }: { picker: ReactNode }) {
       <ViewHeader
         section="dekit"
         title="Runners"
-        description={`dekit runs one supervisor per project folder, plus one for ${name ?? "this computer"}. An app can only start while its runner is up.`}
+        description={`A runner is dekit's supervisor for one folder with a dekit.yaml: it starts that folder's apps and keeps them up. There is one per folder, plus one for ${name ?? "this computer"} itself. Open one to edit its tasks.`}
         actions={actions}
       />
       <RemoteStatusBanner />

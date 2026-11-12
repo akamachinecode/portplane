@@ -5,66 +5,42 @@ import { MachinePicker, MachineScope, RemoteStatusBanner, useMachineChoice, useM
 import { StateDot } from "../components/StateDot";
 import { SubNav } from "../components/SubNav";
 import { ViewHeader } from "../components/ViewHeader";
-import { hostsSectionVisible } from "../lib/portless";
+import { hostsSectionVisible, proxyAnswers } from "../lib/portless";
 import type { DomainSection } from "../lib/router";
 import { DOMAIN_LABELS, domainGroupOf } from "../shell/nav";
 import { useShell } from "../shell/ShellContext";
-import { AliasesSection } from "./domains/AliasesSection";
 import { CertificatesSection } from "./domains/CertificatesSection";
 import "./domains/commands";
-import { ComposeSection } from "./domains/ComposeSection";
 import { ConfigSection } from "./domains/ConfigSection";
-import { DoctorSection } from "./domains/DoctorSection";
 import { HostsSection } from "./domains/HostsSection";
 import { LanSection } from "./domains/LanSection";
 import { MaintenanceSection } from "./domains/MaintenanceSection";
 import { PlanDialog } from "./domains/PlanDialog";
 import "./domains/problems";
 import { ProxySection } from "./domains/ProxySection";
-import { RoutesSection } from "./domains/RoutesSection";
 import { SharingSection } from "./domains/SharingSection";
 import { useIntent, usePortlessDoctor, usePortlessStatus, useRefreshOnJobs, valueOf } from "./domains/store";
 import "./DomainsView.css";
 
-/** One component per section, each in domains/, so the portless center can grow them apart. */
+/** One component per section, each in domains/, so portless's pages can grow apart. */
 const SECTIONS: Record<DomainSection, { icon: IconName; Section: ComponentType }> = {
   proxy: { icon: "shield", Section: ProxySection },
-  routes: { icon: "link", Section: RoutesSection },
-  aliases: { icon: "plug", Section: AliasesSection },
+  hosts: { icon: "terminal", Section: HostsSection },
+  certificates: { icon: "lock", Section: CertificatesSection },
   sharing: { icon: "share", Section: SharingSection },
-  compose: { icon: "box", Section: ComposeSection },
   lan: { icon: "wifi", Section: LanSection },
   config: { icon: "file", Section: ConfigSection },
-  certificates: { icon: "check", Section: CertificatesSection },
-  hosts: { icon: "terminal", Section: HostsSection },
-  doctor: { icon: "pulse", Section: DoctorSection },
-  maintenance: { icon: "gear", Section: MaintenanceSection },
-};
-
-/** What each of portless's pages is for, in a sentence. */
-const GROUP_TEXT: Record<string, ReactNode> = {
-  routes: (
-    <>
-      Every <code>.localhost</code> address portless answers, and the aliases you added for servers it doesn't start.
-    </>
-  ),
-  proxy: (
-    <>
-      The local server behind every <code>.localhost</code> address, its HTTPS certificate, and how your system finds it.
-    </>
-  ),
-  sharing: <>Open an app to someone else: a public link, every device on your network, or a Docker Compose project at its own address.</>,
-  doctor: <>portless checks its own setup and fixes what it can; maintenance keeps its state tidy.</>,
+  maintenance: { icon: "info", Section: MaintenanceSection },
 };
 
 function ProxyPill() {
   const status = valueOf(usePortlessStatus().state);
   if (!status?.installed) return null;
-  const p = status.proxy;
+  const { up, port } = proxyAnswers(status);
   return (
-    <span className="pill" title={p.responding ? `The proxy answers on port ${p.port}` : "The proxy isn't running"}>
-      <StateDot state={p.responding ? "on" : "failed"} />
-      {p.responding ? `Proxy on :${p.port}` : "Proxy stopped"}
+    <span className="pill" title={up ? `The proxy answers on port ${port}` : "The proxy isn't running"}>
+      <StateDot state={up ? "on" : "failed"} />
+      {up ? `Proxy on :${port}` : "Proxy stopped"}
     </span>
   );
 }
@@ -103,7 +79,7 @@ function DomainsBody({ picker }: { picker: ReactNode }) {
       <ViewHeader
         section="portless"
         title={group.label}
-        description={scope.remote ? <>{GROUP_TEXT[group.id]} On {machineName}; you open its addresses here through Portplane.</> : GROUP_TEXT[group.id]}
+        description={group.id === "proxy" ? (scope.remote ? <>On {machineName}; you open its addresses here through Portplane.</> : undefined) : scope.remote ? <>{group.text} On {machineName}; you open its addresses here through Portplane.</> : group.text}
         actions={
           <>
             {picker}

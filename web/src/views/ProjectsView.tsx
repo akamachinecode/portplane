@@ -157,9 +157,9 @@ function HostDetail({ ms }: { ms: MachineSnapshot }) {
   return (
     <MachineScope machine={ms.machine.id}>
       <section className="runner-detail" aria-labelledby="runner-detail-title">
-        <a className="back-link" href={href({ view: "projects" })}>
+        <a className="back-link" href={href({ view: "runners", machine: ms.machine.local ? undefined : ms.machine.id })}>
           <Icon name="chevronLeft" size={14} />
-          All projects
+          Runners
         </a>
         <header className="runner-detail-head">
           <div>
@@ -168,10 +168,6 @@ function HostDetail({ ms }: { ms: MachineSnapshot }) {
             </h2>
             <p className="runner-detail-path mono">~/.config/dekit/host/dekit.yaml{ms.machine.local ? "" : ` on ${ms.machine.name}`}</p>
           </div>
-          <a className="btn" href={href({ view: "runners", machine: ms.machine.id })}>
-            <Icon name="layers" size={14} />
-            Runner
-          </a>
         </header>
         <p className="runner-detail-status">Tasks that are yours rather than a project's, such as a database you always want up.</p>
         <ProjectEditor runner="host" up />
@@ -190,14 +186,14 @@ function RunnerDetail({ entry }: { entry: RunnerEntry }) {
   return (
     <MachineScope machine={ms.machine.id}>
       <section className="runner-detail" aria-labelledby="runner-detail-title">
-        <a className="back-link" href={href({ view: "projects" })}>
+        <a className="back-link" href={href({ view: "runners", machine: local ? undefined : ms.machine.id })}>
           <Icon name="chevronLeft" size={14} />
-          All projects
+          Runners
         </a>
         <header className="runner-detail-head">
           <div>
             <h2 className="runner-detail-title" id="runner-detail-title">
-              {folderName(runner.root)}
+              {folderName(runner.root)}/dekit.yaml
             </h2>
             <p className="runner-detail-path mono">{shortenPath(runner.root, entry.home)}</p>
           </div>
@@ -223,7 +219,7 @@ function RunnerDetail({ entry }: { entry: RunnerEntry }) {
         </p>
 
         {reachable && ms.tools.dekit ? (
-          <ProjectEditor runner={runner.root} up={runner.up} os={ms.machine.os} apps={<ProjectBlocks ms={ms} projects={projects} />} />
+          <ProjectEditor runner={runner.root} up={runner.up} os={ms.machine.os} />
         ) : (
           <>
             <ProjectBlocks ms={ms} projects={projects} />
@@ -248,13 +244,11 @@ function Body({ snapshot }: { snapshot: Snapshot }) {
   const hostMs = sel?.root === "host" ? hostMachines.find((m) => m.machine.id === sel.machine) : undefined;
   const host = !!hostMs;
 
-  // Nothing picked: open the first dekit.yaml (often the only one), unless a
-  // dialog is asking which one to use.
-  const first = entries[0];
+  // Nothing picked and no dialog asking which one: the list lives on Runners.
   useEffect(() => {
-    if (sel || dialog || !first) return;
-    navigate({ view: "projects", runner: { machine: first.ms.machine.id, root: first.runner.root } }, { replace: true });
-  }, [sel, dialog, first]);
+    if (sel || dialog) return;
+    navigate({ view: "runners" }, { replace: true });
+  }, [sel, dialog]);
 
   if (entries.length === 0 && !host) {
     const local = snapshot.machines.find((m) => m.machine.local);
@@ -275,15 +269,28 @@ function Body({ snapshot }: { snapshot: Snapshot }) {
     );
   }
 
+  if (hostMs) return <HostDetail ms={hostMs} />;
+  if (selected) return <RunnerDetail entry={selected} />;
+  if (sel) {
+    return (
+      <EmptyState icon="box" title="This dekit.yaml isn't there any more">
+        <a href={href({ view: "runners" })}>See every runner</a>
+      </EmptyState>
+    );
+  }
+  // A palette command asks which dekit.yaml to use.
   return (
-    <div className={`projects-layout${sel ? " has-selection" : ""}`}>
-      <ul className="runner-list" aria-label="dekit.yaml files">
+    <section aria-labelledby="pick-title">
+      <h2 className="sgroup-title" id="pick-title">
+        {dialog?.kind === "add-app" ? "Which project gets the new app?" : "Where should the command run?"}
+      </h2>
+      <ul className="runner-list runner-pick" aria-label="dekit.yaml files">
         {entries.map((e) => (
-          <RunnerLink key={`${e.ms.machine.id}|${e.runner.root}`} entry={e} current={selected === e} multiMachine={multiMachine} />
+          <RunnerLink key={`${e.ms.machine.id}|${e.runner.root}`} entry={e} current={false} multiMachine={multiMachine} />
         ))}
         {hostMachines.map((m) => (
           <li key={`host|${m.machine.id}`}>
-            <a className="runner-link" href={href({ view: "projects", runner: { machine: m.machine.id, root: "host" } })} aria-current={hostMs === m ? "page" : undefined}>
+            <a className="runner-link" href={href({ view: "projects", runner: { machine: m.machine.id, root: "host" } })}>
               <Icon name={m.machine.local ? "monitor" : "machine"} size={14} />
               <span className="runner-link-text">
                 <span className="runner-link-name">{m.machine.local ? "This computer" : m.machine.name}</span>
@@ -293,34 +300,20 @@ function Body({ snapshot }: { snapshot: Snapshot }) {
           </li>
         ))}
       </ul>
-      <div className="projects-detail">
-        {hostMs ? (
-          <HostDetail ms={hostMs} />
-        ) : selected ? (
-          <RunnerDetail entry={selected} />
-        ) : sel ? (
-          <EmptyState icon="box" title="This dekit.yaml isn't there any more">
-            <a href={href({ view: "projects" })}>See every dekit.yaml</a>
-          </EmptyState>
-        ) : (
-          <EmptyState icon="arrowRight" title={dialog?.kind === "add-app" ? "Choose the project for the new app" : dialog?.kind === "run-command" ? "Choose where to run the command" : "Pick a dekit.yaml"}>
-            Its tasks, its runner and its settings show here, ready to edit.
-          </EmptyState>
-        )}
-      </div>
-    </div>
+    </section>
   );
 }
 
-/** dekit projects, their runners and their configuration (plan §4.5, §6.2). */
+/**
+ * One dekit.yaml and its runner (plan §4.5, ADR-0028): Settings › dekit ›
+ * Runners › a folder. Its tasks as forms or YAML, its settings, and every
+ * change as a diff before it is written. A project's own tasks are also on
+ * the project's page.
+ */
 export function ProjectsView() {
   return (
     <>
-      <ViewHeader
-        section="dekit"
-        title="Configuration"
-        description="Each dekit.yaml Portplane reads, with the tasks it defines. Edit a task with a form or as YAML; every change shows as a diff before it is written."
-      />
+      <ViewHeader section="dekit" title="Configuration" description="Edit a task with a form or as YAML; every change shows as a diff before it is written, and dekit picks it up when you reload." />
       <SnapshotGate>{(snapshot) => <Body snapshot={snapshot} />}</SnapshotGate>
     </>
   );

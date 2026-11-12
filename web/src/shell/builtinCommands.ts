@@ -2,10 +2,10 @@ import type { App, MachineSnapshot, Theme } from "../api/types";
 import { actOnApp, copyWithToast } from "../components/appActions";
 import { appHref, copyableUrl, isAlive, isVisible } from "../lib/apps";
 import { inferHome, shortenPath } from "../lib/format";
-import { appRoute, DOMAIN_SECTIONS, navigate, SETTINGS_SECTIONS } from "../lib/router";
+import { appRoute, navigate } from "../lib/router";
 import { registerCommandSource, type Command, type CommandContext } from "./commands";
 import { sidebarProjects } from "../lib/projects";
-import { DOMAIN_GROUPS, DOMAIN_LABELS, NAV, SETTINGS_LABELS, SETTINGS_NAV } from "./nav";
+import { NAV, SETTINGS_GROUPS, SETTINGS_NAV } from "./nav";
 import { isSidebarCollapsed, setSidebarCollapsed } from "./sidebarState";
 
 // The palette's built-in commands. Other files add theirs the same way:
@@ -17,35 +17,22 @@ function navigationCommands(): Command[] {
     title: item.label,
     group: "Go to",
     icon: item.icon,
-    keywords: item.view === "settings" ? ["preferences", "options"] : undefined,
+    keywords: item.view === "settings" ? ["preferences", "options"] : item.view === "addresses" ? ["routes", "aliases", "domains", "urls", "localhost"] : item.view === "onboarding" ? ["setup", "onboarding", "install", "get started"] : undefined,
     run: () => navigate(item.route),
   }));
-  const groups = DOMAIN_GROUPS.map<Command>((g) => ({
-    id: `go.portless.${g.id}`,
-    title: `portless: ${g.label}`,
-    group: "Go to",
-    icon: g.icon,
-    keywords: ["domains", ...g.sections.map((s) => DOMAIN_LABELS[s])],
-    run: () => navigate({ view: "domains", section: g.sections[0] }),
-  }));
-  const domains = DOMAIN_SECTIONS.map<Command>((section) => ({
-    id: `go.domains.${section}`,
-    title: `portless: ${DOMAIN_LABELS[section]}`,
-    group: "Go to",
-    icon: "globe",
-    keywords: ["domains"],
-    searchOnly: true,
-    run: () => navigate({ view: "domains", section }),
-  }));
-  const settings = SETTINGS_SECTIONS.map<Command>((section) => ({
-    id: `go.settings.${section}`,
-    title: `Settings: ${SETTINGS_LABELS[section]}`,
-    group: "Go to",
-    icon: "gear",
-    searchOnly: true,
-    run: () => navigate({ view: "settings", section }),
-  }));
-  return [...views.filter((v) => v.id !== "go.domains"), ...groups, ...domains, ...settings];
+  // Every page of Settings, by its name in Settings' sidebar.
+  const settings = SETTINGS_GROUPS.flatMap((g) =>
+    g.links.map<Command>((l) => ({
+      id: `go.settings.${g.id}.${l.id}`,
+      title: g.id === "portplane" ? `Settings: ${l.label}` : `${g.label}: ${l.label}`,
+      group: "Go to",
+      icon: l.icon,
+      keywords: ["settings", g.label],
+      searchOnly: g.id === "portplane",
+      run: () => navigate(l.route),
+    })),
+  );
+  return [...views, ...settings];
 }
 
 /** Every project, to open its page. */
@@ -202,11 +189,20 @@ function actionCommands(ctx: CommandContext): Command[] {
               run: () => navigate({ view: "runners", machine: m.id }),
             },
             {
-              id: `machines.domains.${m.id}`,
-              title: `Domains on ${m.name}`,
+              id: `machines.addresses.${m.id}`,
+              title: `Addresses on ${m.name}`,
               group: "Go to",
-              icon: "globe" as const,
-              keywords: ["portless", "proxy", "routes"],
+              icon: "link" as const,
+              keywords: ["portless", "routes", "aliases", "domains"],
+              searchOnly: true,
+              run: () => navigate({ view: "addresses", filter: "all", machine: m.id }),
+            },
+            {
+              id: `machines.domains.${m.id}`,
+              title: `Proxy on ${m.name}`,
+              group: "Go to",
+              icon: "shield" as const,
+              keywords: ["portless", "proxy", "https", "domains"],
               searchOnly: true,
               run: () => navigate({ view: "domains", section: "proxy", machine: m.id }),
             },

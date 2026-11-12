@@ -19,6 +19,9 @@ import { ProxyStep } from "./onboarding/ProxyStep";
 import { ReviewStep } from "./onboarding/ReviewStep";
 import { StartStep } from "./onboarding/StartStep";
 import { flowOf, nextStep, parseStep, reached, resumeStep, STEPS, stepIndex, type StepId } from "./onboarding/steps";
+import { stepRecord, stepStatuses, type TimelineFacts } from "./onboarding/timeline";
+import { ViewHeader } from "../components/ViewHeader";
+import { inferHome } from "../lib/format";
 import { WelcomeStep } from "./onboarding/WelcomeStep";
 import "./OnboardingView.css";
 
@@ -46,10 +49,12 @@ function ScanDriver({ folder, edits, onState }: { folder: string; edits: SetupEd
 }
 
 /**
- * The guided setup (plan §3), full window: from a computer without dekit,
- * portless or Node.js to the first app at https://<name>.localhost. The
- * step is in the URL (#/onboarding/<step>) and the progress in the
- * preferences, so it resumes where it was left. On a machine over SSH
+ * Setup (plan §3, ADR-0028): a page of the app, with the sidebar, that
+ * shows every step from a computer without dekit, portless or Node.js to
+ * the first app at https://<name>.localhost as a timeline. Each step says
+ * what it found; the open one does its work in place. The step is in the
+ * URL (#/onboarding/<step>) and the progress in the preferences, so it
+ * resumes where it was left. On a machine over SSH
  * (#/setup/<machine>/<step>, ADR-0026) the same steps act on that machine:
  * its tools, its folders, its apps; its progress is not saved.
  */
@@ -191,7 +196,7 @@ function OnboardingFlow() {
     const ok = await updatePreferences((p) => ({ ...p, onboarding: { ...p.onboarding, skipped: true, step } }));
     setLeaving(false);
     if (ok) {
-      toast.info("Get started, on the Apps page, picks up where you left off.");
+      toast.info("Setup, in the sidebar, picks up where you left off.");
       navigate({ view: "apps" });
     }
   };
@@ -199,66 +204,81 @@ function OnboardingFlow() {
   const View = STEP_VIEWS[step];
   const done = new Set<string>(machineId ? STEPS.filter((_, i) => i < (remoteFurthest.get(machineId) ?? 0)).map((s) => s.id) : (prefs?.onboarding.done ?? []));
   const scanning = step === "apps" || step === "review";
+  const facts: TimelineFacts = {
+    checks: checks.items,
+    flow,
+    folders: folders ?? [],
+    ms: scope.ms,
+    done,
+    home: inferHome([...(folders ?? []), ...(scope.ms?.folders ?? [])]),
+  };
+  const statuses = stepStatuses(
+    steps.map((s) => s.id),
+    step,
+    facts,
+  );
+  const doneSteps = steps.filter((s) => s.id !== "welcome" && s.id !== "done" && statuses[s.id] === "done").length;
+  const countable = steps.length - 2;
 
   return (
     <OnboardingContext value={ctx}>
-      <main className="onboarding" id="main">
-        <header className="ob-top" data-drag-region>
-          <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="" width={24} height={24} className="ob-top-mark" />
-          <span className="ob-top-name">{remote ? `Set up ${remote}` : "Set up Portplane"}</span>
-          <span className="ob-top-step">
-            Step {index + 1} of {steps.length}
-            <span className="ob-top-step-label"> · {labelOf(step, remote)}</span>
-          </span>
-          {step !== "done" && (
-            <button type="button" className="btn btn-ghost btn-sm" onClick={() => void skip()} disabled={leaving} aria-busy={leaving || undefined}>
-              {leaving && <Spinner size={12} />}
-              {remote ? "Back to machines" : "Back to Portplane"}
+      <ViewHeader
+        title={remote ? `Set up ${remote}` : "Setup"}
+        summary={`${doneSteps} of ${countable} done`}
+        description={
+          remote
+            ? `Everything Portplane sets up on ${remote}, step by step, acting on that machine over SSH.`
+            : "Everything Portplane checked, installed and set up on this computer, step by step. Each step reads how things are now, so work done in a terminal counts too; open any step to see it or do it again."
+        }
+        actions={
+          <>
+            <button type="button" className="btn" onClick={() => void checks.run()} title="Check this computer again">
+              <Icon name="restart" size={14} />
+              Check again
             </button>
-          )}
-        </header>
-        <div
-          className="ob-progress"
-          role="progressbar"
-          aria-label="Setup progress"
-          aria-valuemin={0}
-          aria-valuemax={steps.length}
-          aria-valuenow={index + 1}
-          aria-valuetext={`Step ${index + 1} of ${steps.length}: ${labelOf(step, remote)}`}
-        >
-          <span className="ob-progress-bar" style={{ width: `${Math.max(4, (index / (steps.length - 1)) * 100)}%` }} />
-        </div>
-        <RemoteStatusBanner className="ob-remote-banner" />
-        <div className="ob-body">
-          <nav className="ob-rail" aria-label="Setup steps">
-            <ol>
-              {steps.map((s, i) => {
-                const current = s.id === step;
-                const reachable = i <= index || done.has(s.id);
-                const finished = done.has(s.id) && !current;
-                return (
-                  <li key={s.id}>
-                    <button
-                      type="button"
-                      className={`ob-rail-item${current ? " is-current" : ""}${finished ? " is-done" : ""}`}
-                      aria-current={current ? "step" : undefined}
-                      disabled={!reachable}
-                      onClick={() => go(s.id)}
-                    >
-                      <span className="ob-rail-dot" aria-hidden="true">
-                        {finished ? <Icon name="check" size={11} /> : i + 1}
-                      </span>
-                      <span className="ob-rail-label">{labelOf(s.id, remote)}</span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ol>
-          </nav>
-          <View key={step} />
-        </div>
-        {scanning && ctx.folders.map((f) => <ScanDriver key={f} folder={f} edits={edits[f] ?? NO_EDITS} onState={onScan} />)}
-      </main>
+            {remote && (
+              <button type="button" className="btn btn-ghost" onClick={() => void skip()} disabled={leaving} aria-busy={leaving || undefined}>
+                {leaving && <Spinner size={12} />}
+                Back to machines
+              </button>
+            )}
+          </>
+        }
+      />
+      <RemoteStatusBanner className="ob-remote-banner" />
+      <ol className="timeline" aria-label="Setup steps">
+        {steps.map((s, i) => {
+          const status = statuses[s.id];
+          const current = s.id === step;
+          const reachable = i <= index || status === "done" || done.has(s.id);
+          return (
+            <li key={s.id} className={`tl-item is-${status}`} aria-current={current ? "step" : undefined}>
+              <span className="tl-marker" aria-hidden="true">
+                {status === "done" ? <Icon name="check" size={12} /> : current ? <span className="tl-pulse" /> : <span className="tl-num">{i + 1}</span>}
+              </span>
+              <div className="tl-content">
+                <button type="button" className="tl-head" disabled={current || !reachable} onClick={() => go(s.id)} aria-expanded={current}>
+                  <span className="tl-title">{current ? `Step ${i + 1} of ${steps.length}` : labelOf(s.id, remote)}</span>
+                  <span className="tl-record">{stepRecord(s.id, facts)}</span>
+                  {!current && reachable && (
+                    <span className="tl-open">
+                      {status === "done" ? "Open" : "Start"}
+                      <Icon name="chevronRight" size={13} />
+                    </span>
+                  )}
+                  <span className="sr-only">{status === "done" ? " (done)" : current ? " (open)" : " (to do)"}</span>
+                </button>
+                {current && (
+                  <div className="tl-panel">
+                    <View key={step} />
+                  </div>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+      {scanning && ctx.folders.map((f) => <ScanDriver key={f} folder={f} edits={edits[f] ?? NO_EDITS} onState={onScan} />)}
     </OnboardingContext>
   );
 }

@@ -55,9 +55,9 @@ sha256sum --check --ignore-missing checksums.txt
 ## What else you need
 
 - **[dekit](https://dekit.run)** runs your dev servers.
-- **[portless](https://github.com/vercel-labs/portless)** (Node.js 24+) gives them `https://<name>.localhost` URLs. Its proxy is installed once as a service, so it starts with your computer and its certificate is trusted. Portplane's guided setup does it for you, or click **Install the service** in **Domains → Proxy**. **Domains → Maintenance** updates or removes portless later, with the tool that installed it.
+- **[portless](https://github.com/vercel-labs/portless)** (Node.js 24+) gives them `https://<name>.localhost` URLs. Its proxy is installed once as a service, so it starts with your computer and its certificate is trusted. Portplane's guided setup does it for you, or click **Install the service** in **Settings → portless → Proxy**. **Settings → portless → About portless** updates or removes portless later, with the tool that installed it.
 
-Optional, for the extras in **Domains** (each section says what's missing and how to get it):
+Optional, for sharing and the other extras in **Settings → portless** (each page says what's missing and how to get it):
 
 - **[Tailscale](https://tailscale.com/download)** to share an app with your tailnet, or publicly with Funnel; **[ngrok](https://ngrok.com/download)** (with a free account) or **[cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/)** to share one publicly.
 - **[Docker](https://docs.docker.com/get-started/get-docker/)** with Compose, for compose projects started through portless.
@@ -65,7 +65,7 @@ Optional, for the extras in **Domains** (each section says what's missing and ho
 
 You don't have to install them first: the guided setup does it (below). Without dekit and portless, Portplane still lists the ports open on your machine.
 
-Once dekit is installed, **Runners → Update…** updates it: with dekit's own updater when it came from the install script, or with Homebrew, npm or pip when it came from one of them, and then switches the running projects to the new version.
+Once dekit is installed, **Settings → dekit → About dekit → Update…** updates it: with dekit's own updater when it came from the install script, or with Homebrew, npm or pip when it came from one of them, and then switches the running projects to the new version.
 
 ## First run
 
@@ -93,7 +93,7 @@ portplane autostart on                         # optional: start at login
 
 ### Another machine over SSH
 
-Add it in **Machines → Add a machine** (any host your `ssh` reaches without a prompt). Then **Set up** on its card runs the same guided setup on that machine: the check, installing dekit, Node.js and portless into your home folder there (no password), its folders and apps. Steps that need an administrator there, such as the proxy service, show the command to paste into a terminal here, `ssh -t <machine> 'sudo portless service install'`, then **Check again**. Afterwards pick the machine at the top of **Runners** and **Domains**, or open one of its projects, to manage its dekit and portless from Portplane.
+Add it in **Settings → Machines → Add a machine** (any host your `ssh` reaches without a prompt). Then **Set up** on its card runs the same guided setup on that machine: the check, installing dekit, Node.js and portless into your home folder there (no password), its folders and apps. Steps that need an administrator there, such as the proxy service, show the command to paste into a terminal here, `ssh -t <machine> 'sudo portless service install'`, then **Check again**. Afterwards pick the machine at the top of **Addresses** or of a page in **Settings → dekit** or **Settings → portless**, or open one of its projects, to manage its dekit and portless from Portplane.
 
 Pin the apps you use most with the star on their row: they come first in the Apps view and get start and stop in the tray. Settings → General has the theme, notifications (failures only, at first) and **Check for updates**, which only goes online when you click it, or once a day if you turn that on.
 

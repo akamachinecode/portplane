@@ -298,7 +298,7 @@
 /* ---------- rows: selection, pins, cursor ---------- */
 
 .row-main.has-check {
-  grid-template-columns: 16px 8px minmax(0, 1fr) auto;
+  grid-template-columns: 16px 28px minmax(0, 1fr) auto;
   padding-left: var(--space-2);
 }
 

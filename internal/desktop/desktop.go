@@ -142,9 +142,41 @@ func pickerCommand() []string {
 	return nil
 }
 
+// CanPickImage reports whether PickImage can work here.
+func CanPickImage() bool { return imagePickerCommand() != nil }
+
+func imagePickerCommand() []string {
+	switch runtime.GOOS {
+	case "darwin":
+		return []string{"osascript", "-e", `POSIX path of (choose file with prompt "Choose an icon" of type {"public.image", "public.svg-image"})`}
+	case "windows":
+		return []string{"powershell", "-NoProfile", "-STA", "-Command",
+			`Add-Type -AssemblyName System.Windows.Forms; $d = New-Object System.Windows.Forms.OpenFileDialog; $d.Title = 'Choose an icon'; $d.Filter = 'Images|*.svg;*.png;*.ico;*.webp;*.jpg;*.jpeg;*.gif'; if ($d.ShowDialog() -eq 'OK') { $d.FileName } else { exit 1 }`}
+	default:
+		if os.Getenv("DISPLAY") == "" && os.Getenv("WAYLAND_DISPLAY") == "" {
+			return nil
+		}
+		if p, err := exec.LookPath("zenity"); err == nil {
+			return []string{p, "--file-selection", "--title=Choose an icon", "--file-filter=Images | *.svg *.png *.ico *.webp *.jpg *.jpeg *.gif"}
+		}
+		if p, err := exec.LookPath("kdialog"); err == nil {
+			return []string{p, "--getopenfilename", os.Getenv("HOME"), "*.svg *.png *.ico *.webp *.jpg *.jpeg *.gif|Images", "--title", "Choose an icon"}
+		}
+	}
+	return nil
+}
+
+// PickImage shows the OS file picker for an image and returns the chosen file.
+func PickImage(ctx context.Context) (string, error) {
+	return runPicker(ctx, imagePickerCommand())
+}
+
 // PickFolder shows the OS folder picker and returns the chosen folder.
 func PickFolder(ctx context.Context) (string, error) {
-	argv := pickerCommand()
+	return runPicker(ctx, pickerCommand())
+}
+
+func runPicker(ctx context.Context, argv []string) (string, error) {
 	if argv == nil {
 		return "", ErrUnsupported
 	}

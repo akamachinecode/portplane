@@ -65,7 +65,7 @@ describe("help", () => {
     const groups = shortcutGroups(true);
     expect(groups.map((g) => g.title)).toEqual(["Anywhere", "Go to", "Apps list"]);
     expect(groups[0].items[0].keys).toEqual(["⌘", "K"]);
-    expect(groups[1].items.map((i) => i.keys.join(" "))).toEqual(["g a", "g c", "g d", "g r", "g m", "g h", "g s"]);
+    expect(groups[1].items.map((i) => i.keys.join(" "))).toEqual(["g a", "g d", "g h", "g s", "g r", "g p", "g m"]);
     expect(shortcutGroups(false)[0].items[0].keys).toEqual(["Ctrl", "K"]);
     expect(withShortcut("Start web", "s")).toBe("Start web (S)");
     expect(withShortcut("Show details", "Enter")).toBe("Show details (Enter)");
