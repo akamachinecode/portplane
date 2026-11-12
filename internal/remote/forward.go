@@ -112,6 +112,9 @@ func (w *forwardingAgent) Snapshot(ctx context.Context) (model.MachineSnapshot, 
 	return w.f.decorate(s), nil
 }
 
+// Unwrap returns the agent behind the forwards (the machine API reaches it).
+func (w *forwardingAgent) Unwrap() agent.Agent { return w.Agent }
+
 func (w *forwardingAgent) Close() error {
 	w.f.closeMachine(w.label)
 	return w.Agent.Close()

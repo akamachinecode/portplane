@@ -44,6 +44,10 @@ type Hello struct {
 	OS       string `json:"os"`
 	Arch     string `json:"arch"`
 	Hostname string `json:"hostname"`
+
+	// Machine is the id Portplane knows the agent's machine by (sent by
+	// Portplane; older agents ignore it).
+	Machine string `json:"machine,omitempty"`
 }
 
 type actParams struct {
@@ -102,6 +106,11 @@ func (s stdio) Close() error {
 // Serve runs the agent side on conn (stdin+stdout of `portplane agent
 // --stdio`) until the session ends.
 func Serve(ctx context.Context, conn io.ReadWriteCloser, a agent.Agent) error {
+	return ServeWith(ctx, conn, a, ServeOptions{})
+}
+
+// ServeWith is Serve with the machine's API and jobs (ADR-0026).
+func ServeWith(ctx context.Context, conn io.ReadWriteCloser, a agent.Agent, o ServeOptions) error {
 	sess, err := yamux.Server(conn, yamuxConfig())
 	if err != nil {
 		return err
@@ -128,7 +137,7 @@ func Serve(ctx context.Context, conn io.ReadWriteCloser, a agent.Agent) error {
 			go serveDial(ctx, s, a)
 		}
 	}()
-	return serveControl(ctx, ctl, a)
+	return serveControl(ctx, ctl, a, o)
 }
 
 func serveDial(ctx context.Context, s net.Conn, a agent.Agent) {
@@ -182,7 +191,7 @@ func pipe(a, b net.Conn) {
 	<-done
 }
 
-func serveControl(ctx context.Context, ctl net.Conn, a agent.Agent) error {
+func serveControl(ctx context.Context, ctl net.Conn, a agent.Agent, o ServeOptions) error {
 	defer func() { _ = ctl.Close() }()
 	var wmu sync.Mutex
 	enc := json.NewEncoder(ctl)
@@ -191,7 +200,19 @@ func serveControl(ctx context.Context, ctl net.Conn, a agent.Agent) error {
 		defer wmu.Unlock()
 		return enc.Encode(m)
 	}
-	var watchOnce sync.Once
+	var watchOnce, jobsOnce sync.Once
+	watchJobs := func() {
+		jobsOnce.Do(func() {
+			go func() {
+				for j := range o.Jobs.Subscribe(ctx) {
+					b, _ := json.Marshal(j)
+					if send(message{Method: "job", Params: b}) != nil {
+						return
+					}
+				}
+			}()
+		})
+	}
 	dec := json.NewDecoder(bufio.NewReader(ctl))
 	for {
 		var m message
@@ -202,7 +223,12 @@ func serveControl(ctx context.Context, ctl net.Conn, a agent.Agent) error {
 			return err
 		}
 		go func(m message) {
-			res, err := dispatch(ctx, a, m, func() {
+			if m.Method == "watchJobs" && o.Jobs != nil {
+				watchJobs()
+				_ = send(message{ID: m.ID, Result: json.RawMessage("{}")})
+				return
+			}
+			res, err := dispatch(ctx, a, o, m, func() {
 				watchOnce.Do(func() {
 					go func() {
 						for s := range a.Watch(ctx) {
@@ -234,13 +260,16 @@ func expandHome(p string) string {
 	return p
 }
 
-func dispatch(ctx context.Context, a agent.Agent, m message, watch func()) (any, error) {
+func dispatch(ctx context.Context, a agent.Agent, o ServeOptions, m message, watch func()) (any, error) {
 	switch m.Method {
 	case "hello":
 		var h Hello
 		_ = json.Unmarshal(m.Params, &h)
 		if h.Protocol != Protocol {
 			return nil, fmt.Errorf("protocol %d not supported (agent speaks %d)", h.Protocol, Protocol)
+		}
+		if h.Machine != "" && o.OnHello != nil {
+			o.OnHello(h)
 		}
 		host, _ := os.Hostname()
 		return Hello{Protocol: Protocol, Version: buildinfo.Version(), OS: runtime.GOOS, Arch: runtime.GOARCH, Hostname: host}, nil
@@ -295,6 +324,15 @@ func dispatch(ctx context.Context, a agent.Agent, m message, watch func()) (any,
 			return nil, err
 		}
 		return a.Output(ctx, p.Runner, p.Task)
+	case "http":
+		if o.API == nil {
+			break // like an agent from before ADR-0026
+		}
+		var req APIRequest
+		if err := json.Unmarshal(m.Params, &req); err != nil {
+			return nil, err
+		}
+		return serveAPI(ctx, o.API, req)
 	case "setInterval":
 		var p intervalParams
 		if err := json.Unmarshal(m.Params, &p); err != nil {
