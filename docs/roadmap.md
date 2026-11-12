@@ -229,6 +229,20 @@ The milestone is done when:
 
 **Done when:** every portless command has a place in the app except `mcp`, in mock mode too (`?mock=tailnet`, `?mock=bare`, `?mock=compose`), with parsers and command builders tested against portless 0.16's formats and no test running `tailscale`, `ngrok`, `cloudflared`, `docker` or a state-changing `portless` command.
 
+### M5.7: Projects first
+
+The first weeks of daily use on macOS asked for a layout around projects and a window that looks like a current Mac app (ADR-0027).
+
+- [x] A project is a task folder with the repositories configured in it: their linked worktrees join it from any folder of any `dekit.yaml`, with each checkout's branch and folder; a product of several repositories stays one project.
+- [x] Health says when Portplane runs as the Intel build through Rosetta on Apple silicon; `install.sh` picks the arm64 build from a shell running through Rosetta.
+- [x] Apps as one column of foldable projects and checkouts; idle worktrees start folded.
+- [x] A page per project, with its checkouts, actions and the `dekit.yaml` files that declare it.
+- [x] Sidebar with the projects, then dekit (Configuration, Runners) and portless (Routes, Proxy & HTTPS, Sharing, Doctor); views in a panel with a toolbar.
+- [x] macOS window without a system title bar: the traffic lights in the sidebar, drag and double-click from the toolbar, full screen and inactive states.
+- [x] First run on Apps with a "Get started" checklist read from the live state, instead of a full-window wizard.
+
+**Done when:** the owner's own setup (one `dekit.yaml` for every repository, worktrees in a `worktrees/` folder) shows each worktree under its repository, and the macOS window is checked by hand: drag, double-click, full screen, hidden sidebar.
+
 ## Phase 8: v1.0 release
 
 - [ ] Namespaces claimed for `portplane`: domain, npm, Homebrew tap, winget.

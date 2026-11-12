@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import type { App, MachineSnapshot, Project, Runner, Snapshot } from "../api/types";
 import { appKey, runnerKey, startRunner } from "../components/appActions";
 import { useApp } from "../components/AppContext";
@@ -10,7 +10,8 @@ import { ViewHeader } from "../components/ViewHeader";
 import { indexApps, projectApps, serviceCounts, visibleApps, worktreeApps } from "../lib/apps";
 import { inferHome, shortenPath, stateLabel } from "../lib/format";
 import { appsFingerprint } from "../lib/pending";
-import { projectTarget } from "../lib/targets";
+import { checkoutKey, checkoutName } from "../lib/projects";
+import { projectTargets } from "../lib/targets";
 import { appRoute, href, navigate } from "../lib/router";
 import { SnapshotGate } from "../shell/SnapshotGate";
 import { useShell } from "../shell/ShellContext";
@@ -99,7 +100,7 @@ function ProjectBlock({ ms, project }: { ms: MachineSnapshot; project: Project }
             disabled={busy}
             aria-busy={ctx.pending.has(key) || undefined}
             title="Restarts the apps of this project that are running"
-            onClick={() => void ctx.pending.run(key, appsFingerprint(ms.machine.id, apps.map((a) => a.id)), () => ctx.api.act(projectTarget(ms.machine.id, project, byId), "restart"))}
+            onClick={() => void ctx.pending.run(key, appsFingerprint(ms.machine.id, apps.map((a) => a.id)), () => Promise.all(projectTargets(ms.machine.id, project, byId).map((t) => ctx.api.act(t, "restart"))).then(() => undefined))}
           >
             {ctx.pending.has(key) ? <Spinner size={12} /> : <Icon name="restart" size={13} />}
             Restart all
@@ -109,11 +110,11 @@ function ProjectBlock({ ms, project }: { ms: MachineSnapshot; project: Project }
       {project.worktrees.map((wt) => {
         const apps = visibleApps(worktreeApps(wt, byId));
         return (
-          <div key={wt.name} className="proj-wt">
+          <div key={checkoutKey(wt)} className="proj-wt">
             {multi && (
               <p className="proj-wt-name">
                 <Icon name="branch" size={13} />
-                {wt.name || "main"}
+                {checkoutName(project, wt)}
               </p>
             )}
             {apps.length ? (
@@ -247,13 +248,21 @@ function Body({ snapshot }: { snapshot: Snapshot }) {
   const hostMs = sel?.root === "host" ? hostMachines.find((m) => m.machine.id === sel.machine) : undefined;
   const host = !!hostMs;
 
+  // Nothing picked: open the first dekit.yaml (often the only one), unless a
+  // dialog is asking which one to use.
+  const first = entries[0];
+  useEffect(() => {
+    if (sel || dialog || !first) return;
+    navigate({ view: "projects", runner: { machine: first.ms.machine.id, root: first.runner.root } }, { replace: true });
+  }, [sel, dialog, first]);
+
   if (entries.length === 0 && !host) {
     const local = snapshot.machines.find((m) => m.machine.local);
     const folder = local?.folders[0];
     return (
       <EmptyState
         icon="box"
-        title="No dekit projects yet"
+        title="No dekit.yaml yet"
         action={
           <button type="button" className="btn btn-primary" onClick={() => (folder ? openSetup(folder) : navigate({ view: "settings", section: "folders" }))}>
             <Icon name="wand" size={14} />
@@ -261,14 +270,14 @@ function Body({ snapshot }: { snapshot: Snapshot }) {
           </button>
         }
       >
-        A project is a folder with a <code>dekit.yaml</code>. Setup finds your apps and writes one for you.
+        dekit reads its tasks from a <code>dekit.yaml</code>. Setup finds the apps in your folders and writes one for you.
       </EmptyState>
     );
   }
 
   return (
     <div className={`projects-layout${sel ? " has-selection" : ""}`}>
-      <ul className="runner-list" aria-label="dekit projects">
+      <ul className="runner-list" aria-label="dekit.yaml files">
         {entries.map((e) => (
           <RunnerLink key={`${e.ms.machine.id}|${e.runner.root}`} entry={e} current={selected === e} multiMachine={multiMachine} />
         ))}
@@ -290,12 +299,12 @@ function Body({ snapshot }: { snapshot: Snapshot }) {
         ) : selected ? (
           <RunnerDetail entry={selected} />
         ) : sel ? (
-          <EmptyState icon="box" title="This project isn't there any more">
-            <a href={href({ view: "projects" })}>See all projects</a>
+          <EmptyState icon="box" title="This dekit.yaml isn't there any more">
+            <a href={href({ view: "projects" })}>See every dekit.yaml</a>
           </EmptyState>
         ) : (
-          <EmptyState icon="arrowRight" title={dialog?.kind === "add-app" ? "Choose the project for the new app" : dialog?.kind === "run-command" ? "Choose where to run the command" : "Pick a project"}>
-            Its apps, worktrees and dekit runner show here, with its configuration.
+          <EmptyState icon="arrowRight" title={dialog?.kind === "add-app" ? "Choose the project for the new app" : dialog?.kind === "run-command" ? "Choose where to run the command" : "Pick a dekit.yaml"}>
+            Its tasks, its runner and its settings show here, ready to edit.
           </EmptyState>
         )}
       </div>
@@ -307,7 +316,11 @@ function Body({ snapshot }: { snapshot: Snapshot }) {
 export function ProjectsView() {
   return (
     <>
-      <ViewHeader title="Projects" description="Each dekit.yaml Portplane reads, the apps it defines, and its configuration." />
+      <ViewHeader
+        section="dekit"
+        title="Configuration"
+        description="Each dekit.yaml Portplane reads, with the tasks it defines. Edit a task with a form or as YAML; every change shows as a diff before it is written."
+      />
       <SnapshotGate>{(snapshot) => <Body snapshot={snapshot} />}</SnapshotGate>
     </>
   );

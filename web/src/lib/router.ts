@@ -6,8 +6,9 @@ import { useSyncExternalStore } from "react";
 //
 //   #/apps                                  #/runners/<machine?>
 //   #/apps/<machine>/<appId>/<tab?>         #/machines
-//   #/projects                              #/health
-//   #/projects/<machine>/<runner>           #/settings/<section?>
+//   #/project/<machine>/<name>/<runner?>    #/health
+//   #/projects                              #/settings/<section?>
+//   #/projects/<machine>/<runner>
 //   #/domains/<section?>/<machine?>         #/onboarding/<step?>
 //   #/setup/<machine>/<step?>  (the guided setup on a machine over SSH)
 //
@@ -29,8 +30,16 @@ export interface AppRef {
   appId: string;
 }
 
+/** A project (a git repository, or a task folder outside git) on a machine; the runner tells apart two of the same name. */
+export interface ProjectRef {
+  machine: string;
+  name: string;
+  runner?: string;
+}
+
 export type Route =
   | { view: "apps"; detail?: AppRef & { tab: AppTab } }
+  | ({ view: "project" } & ProjectRef)
   | { view: "projects"; runner?: { machine: string; root: string } }
   | { view: "domains"; section: DomainSection; machine?: string }
   | { view: "runners"; machine?: string }
@@ -65,6 +74,9 @@ export function parseRoute(hash: string): Route {
         const tab = pick(APP_TABS, c, "summary");
         return tab && { view: "apps", detail: { machine: a, appId: b, tab } };
       }
+      case "project":
+        if (!a || !b || rest.length || c === "") return null;
+        return c === undefined ? { view: "project", machine: a, name: b } : { view: "project", machine: a, name: b, runner: c };
       case "projects":
         if (a === undefined) return { view: "projects" };
         if (!a || !b || c !== undefined) return null;
@@ -108,6 +120,8 @@ export function href(route: Route): string {
       if (!d) return "#/apps";
       return `#/apps/${enc(d.machine)}/${enc(d.appId)}${d.tab === "summary" ? "" : `/${d.tab}`}`;
     }
+    case "project":
+      return `#/project/${enc(route.machine)}/${enc(route.name)}${route.runner ? `/${enc(route.runner)}` : ""}`;
     case "projects":
       return route.runner ? `#/projects/${enc(route.runner.machine)}/${enc(route.runner.root)}` : "#/projects";
     case "domains":

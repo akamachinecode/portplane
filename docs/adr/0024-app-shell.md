@@ -1,6 +1,6 @@
 # ADR-0024: Turn the UI into an app shell with a sidebar, a hash router and background jobs
 
-- **Status:** Accepted
+- **Status:** Accepted. The layout (sidebar entries, top bar, first run) is superseded by [ADR-0027](0027-projects-first-layout.md); the router, palette, drawer and jobs stay.
 - **Date:** 2026-11-12
 - **Builds on:** [ADR-0003](0003-ui-react-vite.md). React, Vite, plain CSS with custom properties, and the JSON API with its event stream all stay.
 

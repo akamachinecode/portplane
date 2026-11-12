@@ -7,6 +7,9 @@ import { Icon } from "../components/Icon";
 import { MachineSection, ProjectGrid } from "../components/MachineSection";
 import { EntryRows } from "../components/ProjectCard";
 import { SkeletonCards } from "../components/Skeleton";
+import { projectFoldKey, useFolds, worktreeFoldKey } from "../hooks/useFolds";
+import { indexApps } from "../lib/apps";
+import { checkoutKey, foldedByDefault } from "../lib/projects";
 import { EmptyState } from "../components/States";
 import { ViewHeader } from "../components/ViewHeader";
 import { appHref, copyableUrl, isAlive } from "../lib/apps";
@@ -18,6 +21,7 @@ import { SnapshotGate } from "../shell/SnapshotGate";
 import { useShell } from "../shell/ShellContext";
 import { AppsTable, projectSections } from "./apps/AppsTable";
 import { AppsToolbar } from "./apps/AppsToolbar";
+import { GettingStarted } from "./apps/GettingStarted";
 import { HealthLine } from "./apps/HealthLine";
 import {
   canAct,
@@ -80,7 +84,7 @@ export function AppsView() {
     <>
       <ViewHeader
         title="Apps"
-        description={
+        summary={
           summary && (
             <span className="summary">
               {summaryParts(summary).map((p) => (
@@ -92,6 +96,7 @@ export function AppsView() {
           )
         }
       />
+      <GettingStarted />
       <SnapshotGate loading={<SkeletonCards label="Connecting to Portplane…" />}>
         {(snapshot) =>
           snapshot.machines.length === 0 ? (
@@ -140,7 +145,26 @@ function AppsBody({ snapshot, keysOn }: { snapshot: Snapshot; keysOn: boolean })
   const anchor = useRef<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  const layout: AppsLayout = useMemo(() => layoutApps(snapshot, favSet, filters, sort), [snapshot, favSet, filters, sort]);
+  const folds = useFolds();
+  const filtering = hasFilters(filters);
+  const computed: AppsLayout = useMemo(() => layoutApps(snapshot, favSet, filters, sort), [snapshot, favSet, filters, sort]);
+  // The keyboard walks only the rows on screen: folded projects and
+  // worktrees are skipped (the table and a search show everything).
+  const layout: AppsLayout = useMemo(() => {
+    if (filtering || mode === "table") return computed;
+    const order = [...computed.pinned];
+    for (const m of computed.machines) {
+      const byId = indexApps(m.ms.apps);
+      for (const p of m.projects) {
+        if (folds.isFolded(projectFoldKey(m.ms.machine.id, p.project.runner, p.project.name), false)) continue;
+        for (const w of p.worktrees) {
+          if ((p.multi || w.name) && folds.isFolded(worktreeFoldKey(m.ms.machine.id, p.project.runner, p.project.name, checkoutKey(w.worktree)), p.worktrees.length > 1 && foldedByDefault(w.worktree, byId))) continue;
+          order.push(...w.entries);
+        }
+      }
+    }
+    return { ...computed, order };
+  }, [computed, folds, filtering, mode]);
   const layoutRef = useRef(layout);
   layoutRef.current = layout;
   const byKey = useMemo(() => new Map(layout.order.map((e) => [e.key, e])), [layout]);
@@ -289,7 +313,6 @@ function AppsBody({ snapshot, keysOn }: { snapshot: Snapshot; keysOn: boolean })
 
   const onSelectBy = (by: SelectBy) => setSelection((s) => selectBy(s, layout.order, by));
   const setLayout = (appsLayout: LayoutPref) => void updatePreferences((p) => ({ ...p, appsLayout }));
-  const filtering = hasFilters(filters);
   const multiMachine = layout.machines.length > 1;
   const selected = layout.order.filter((e) => selection.has(e.key));
   const clearFocusKey = useCallback(() => setFocusKey(null), []);
@@ -327,21 +350,23 @@ function AppsBody({ snapshot, keysOn }: { snapshot: Snapshot; keysOn: boolean })
     ));
 
   return (
-    <div className={`apps apps-${mode}`} onFocusCapture={onFocusCapture}>
+    <div className={`apps apps-${mode}${selection.size > 0 ? " has-selection" : ""}`} onFocusCapture={onFocusCapture}>
       <HealthLine />
-      <AppsToolbar
-        snapshot={snapshot}
-        order={layout.order}
-        filters={filters}
-        onFilters={setFilters}
-        sort={sort}
-        onSort={setSort}
-        layout={mode}
-        onLayout={setLayout}
-        onSelectBy={onSelectBy}
-        searchRef={searchRef}
-        onSearchDown={() => layout.order[0] && moveTo(layout.order[0].key)}
-      />
+      {layout.total > 0 && (
+        <AppsToolbar
+          snapshot={snapshot}
+          order={layout.order}
+          filters={filters}
+          onFilters={setFilters}
+          sort={sort}
+          onSort={setSort}
+          layout={mode}
+          onLayout={setLayout}
+          onSelectBy={onSelectBy}
+          searchRef={searchRef}
+          onSearchDown={() => layout.order[0] && moveTo(layout.order[0].key)}
+        />
+      )}
       {filtering && layout.order.length === 0 ? (
         <EmptyState
           icon="search"
@@ -366,6 +391,7 @@ function AppsBody({ snapshot, keysOn }: { snapshot: Snapshot; keysOn: boolean })
                 ms={ms}
                 projects={group?.projects ?? []}
                 filtering={filtering}
+                showHeader={snapshot.machines.length > 1}
                 renderProjects={(projects) =>
                   mode === "table" ? (
                     <AppsTable
@@ -380,7 +406,7 @@ function AppsBody({ snapshot, keysOn }: { snapshot: Snapshot; keysOn: boolean })
                       onFocusDone={clearFocusKey}
                     />
                   ) : (
-                    <ProjectGrid ms={ms} projects={projects} extras={extras} />
+                    <ProjectGrid ms={ms} projects={projects} extras={extras} folds={folds} forceOpen={filtering} />
                   )
                 }
               />

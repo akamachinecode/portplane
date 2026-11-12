@@ -9,6 +9,12 @@ describe("snapshotProblems", () => {
     expect(summary(snapshotProblems(mockSnapshot("default")))).toEqual(["error: admin failed [Start again]", "error: Can't reach mac-mini [Edit machine]"]);
   });
 
+  it("says when Portplane runs through Rosetta", () => {
+    const s = mockSnapshot("empty");
+    s.machines[0].machine.translated = true;
+    expect(summary(snapshotProblems(s))).toEqual(["warning: Portplane runs as an Intel app on this Mac [Download the Apple silicon build]"]);
+  });
+
   it("links a failed app to its details", () => {
     const failed = snapshotProblems(mockSnapshot("default"))[0];
     expect(failed.link?.route).toEqual({ view: "apps", detail: { machine: "local", appId: "/home/dev/code#my-monorepo/admin", tab: "summary" } });

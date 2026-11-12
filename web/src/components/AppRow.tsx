@@ -188,7 +188,7 @@ function AppRowImpl({ app, ms, extras, variant = "list", showProject, placeCell,
         onClick={() => act(toggleVerb)}
       />
       {alive ? (
-        <IconButton icon="restart" label={`Restart ${app.label}`} shortcut="r" pending={pending.has(key + "restart")} busy={busy} onClick={() => act("restart")} />
+        <IconButton icon="restart" className="row-restart" label={`Restart ${app.label}`} shortcut="r" pending={pending.has(key + "restart")} busy={busy} onClick={() => act("restart")} />
       ) : (
         <IconSlot />
       )}

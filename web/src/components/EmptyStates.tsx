@@ -1,4 +1,6 @@
+import { useMemo } from "react";
 import type { MachineSnapshot } from "../api/types";
+import { checklist, checklistVisible } from "../lib/gettingStarted";
 import { href } from "../lib/router";
 import { useShell } from "../shell/ShellContext";
 import { resumeStep } from "../views/onboarding/steps";
@@ -13,13 +15,17 @@ import "./EmptyStates.css";
  */
 export function FirstRun() {
   const { api } = useApp();
-  const { preferences } = useShell();
+  const { preferences, snapshot } = useShell();
+  const local = snapshot?.machines.find((m) => m.machine.local);
+  const steps = useMemo(() => checklist(local), [local]);
   const step = preferences.status === "ok" ? resumeStep(preferences.value.onboarding) : "welcome";
   const add = async (path: string) => {
     const current = await api.settings();
     if (current.folders.includes(path)) return;
     await api.saveSettings({ folders: [...current.folders, path] });
   };
+  // "Get started" above says the same, with every step.
+  if (checklistVisible(preferences.status === "ok" ? preferences.value : null, steps)) return null;
   return (
     <section className="panel first-run" aria-labelledby="first-run-title">
       <span className="panel-icon">

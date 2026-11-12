@@ -38,6 +38,8 @@ describe("collectEntries", () => {
       "local:api",
       "local:site",
       "local:studio",
+      "local:site",
+      "local:studio",
       "box:web",
       "box:api",
       "box:worker",
@@ -53,7 +55,7 @@ describe("filters", () => {
     expect(labels(filterEntries(entries, f({ states: ["failed"] })).map((x) => x.entry))).toEqual(["admin"]);
     expect(labels(filterEntries(entries, f({ states: ["running", "busy"] })).map((x) => x.entry))).toEqual(["web", "api", "docs", "install@checkout", "web@checkout", "web", "api"]);
     expect(labels(filterEntries(entries, f({ machines: ["box"] })).map((x) => x.entry))).toEqual(["web", "api", "worker"]);
-    expect(labels(filterEntries(entries, f({ projects: ["local|blog"] })).map((x) => x.entry))).toEqual(["site", "studio"]);
+    expect(labels(filterEntries(entries, f({ projects: ["local|blog"] })).map((x) => x.entry))).toEqual(["site", "studio", "site@redesign", "studio@redesign"]);
     expect(labels(filterEntries(entries, f({ tags: ["backend"], machines: ["local"] })).map((x) => x.entry))).toEqual(["api", "api@checkout"]);
     expect(filterEntries(entries, f({ tags: ["backend"], states: ["failed"] }))).toEqual([]);
   });
@@ -65,7 +67,7 @@ describe("filters", () => {
     expect(matchScore(e("my-monorepo/docs"), "apps/docs")).not.toBeNull(); // the path
     expect(matchScore(e("my-monorepo/docs"), "zzz")).toBeNull();
     const hits = filterEntries(entries, f({ query: "studio" }));
-    expect(labels(hits.map((x) => x.entry))).toEqual(["studio"]);
+    expect(labels(hits.map((x) => x.entry))).toEqual(["studio", "studio@redesign"]);
   });
 
   it("knows when any filter is on", () => {
@@ -80,11 +82,11 @@ describe("filters", () => {
       { value: "running", label: "Running", count: 4 },
       { value: "busy", label: "Starting or stopping", count: 3 },
       { value: "failed", label: "Failed", count: 1 },
-      { value: "stopped", label: "Stopped", count: 4 },
+      { value: "stopped", label: "Stopped", count: 6 },
     ]);
-    expect(o.machines.map((m) => `${m.label}=${m.count}`)).toEqual(["This computer=9", "box=3"]);
-    expect(o.projects.map((m) => `${m.label}=${m.count}`)).toEqual(["blog · This computer=2", "my-monorepo · This computer=7", "shop · box=3"]);
-    expect(o.tags.map((m) => `${m.label}=${m.count}`)).toEqual(["autostart=2", "backend=2", "cms=1", "docs=1", "frontend=4"]);
+    expect(o.machines.map((m) => `${m.label}=${m.count}`)).toEqual(["This computer=11", "box=3"]);
+    expect(o.projects.map((m) => `${m.label}=${m.count}`)).toEqual(["blog · This computer=4", "my-monorepo · This computer=7", "shop · box=3"]);
+    expect(o.tags.map((m) => `${m.label}=${m.count}`)).toEqual(["autostart=2", "backend=2", "cms=2", "docs=1", "frontend=5"]);
   });
 });
 
@@ -100,8 +102,10 @@ describe("layoutApps", () => {
       "main: web, api, docs, admin",
       "checkout: install@checkout, web@checkout, api@checkout",
     ]);
-    expect(l.order).toHaveLength(12);
-    expect(l.total).toBe(12);
+    // blog's worktree, declared under worktrees/, shows inside blog
+    expect(local[1].worktrees.map((w) => `${w.name || "main"}: ${labels(w.entries).join(", ")}`)).toEqual(["main: site, studio", "redesign: site@redesign, studio@redesign"]);
+    expect(l.order).toHaveLength(14);
+    expect(l.total).toBe(14);
   });
 
   it("puts failures first when sorting by state, and sorts by name", () => {
@@ -122,7 +126,7 @@ describe("layoutApps", () => {
   });
 
   it("drops empty groups and ranks matches when searching", () => {
-    const l = layoutApps(mockSnapshot("default"), new Set(), f({ query: "worker" }), "activity");
+    const l = layoutApps(mockSnapshot("default"), new Set(), f({ query: "apps/worker" }), "activity");
     expect(l.machines.map((m) => m.projects.length)).toEqual([0, 1]);
     expect(labels(l.order)).toEqual(["worker"]);
   });
@@ -143,10 +147,10 @@ describe("selection", () => {
   });
 
   it("selects by state, project and tag", () => {
-    expect(selectBy(new Set(), l.order, { kind: "state", state: "stopped" }).size).toBe(4);
+    expect(selectBy(new Set(), l.order, { kind: "state", state: "stopped" }).size).toBe(6);
     expect(selectBy(new Set(), l.order, { kind: "project", project: "box|shop" }).size).toBe(3);
     expect([...selectBy(new Set(), l.order, { kind: "tag", tag: "backend" })]).toEqual([key("my-monorepo/api"), key("my-monorepo-checkout/api")]);
-    expect(selectBy(new Set(), l.order, { kind: "all" }).size).toBe(12);
+    expect(selectBy(new Set(), l.order, { kind: "all" }).size).toBe(14);
   });
 
   it("forgets what is no longer shown", () => {
@@ -158,7 +162,7 @@ describe("selection", () => {
 
   it("starts what is stopped, stops and restarts what runs, where dekit is", () => {
     const all = l.order;
-    expect(labels(bulkTargets(all, "start"))).toEqual(["admin", "api@checkout", "site", "studio", "worker"]);
+    expect(labels(bulkTargets(all, "start"))).toEqual(["admin", "api@checkout", "site", "studio", "site@redesign", "studio@redesign", "worker"]);
     expect(labels(bulkTargets(all, "stop"))).toEqual(["web", "api", "docs", "install@checkout", "web@checkout", "web", "api"]);
     const noDekit = mockSnapshot("default");
     noDekit.machines[0].tools.dekit = undefined;

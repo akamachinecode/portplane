@@ -1,8 +1,19 @@
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 
 // Long tables render only the rows near the screen (plan §6.6: from 200
-// rows). Every row has the same height and the page itself scrolls, so the
-// visible range follows from the table's position.
+// rows). Every row has the same height and the view's panel scrolls (the
+// window, outside the shell), so the visible range follows from the table's
+// position in it.
+
+/** What scrolls the table: the shell's panel, or the window. */
+function scroller(el: Element | null): { target: EventTarget; top: number; height: number; scrollBy(dy: number): void } {
+  const panel = el?.closest(".shell-body");
+  if (panel instanceof HTMLElement) {
+    const r = panel.getBoundingClientRect();
+    return { target: panel, top: r.top, height: r.height, scrollBy: (dy) => panel.scrollBy({ top: dy }) };
+  }
+  return { target: window, top: 0, height: window.innerHeight, scrollBy: (dy) => window.scrollBy({ top: dy }) };
+}
 
 /** Lists this long or longer are windowed. */
 export const WINDOW_FROM = 200;
@@ -42,18 +53,20 @@ export function useWindowed(count: number, rowHeight: number): Windowed {
       frame = 0;
       const el = ref.current;
       if (!el) return;
-      const next = visibleRange(count, rowHeight, el.getBoundingClientRect().top, window.innerHeight);
+      const view = scroller(el);
+      const next = visibleRange(count, rowHeight, el.getBoundingClientRect().top - view.top, view.height);
       setRange((r) => (r.start === next.start && r.end === next.end ? r : next));
     };
     const schedule = () => {
       if (!frame) frame = requestAnimationFrame(update);
     };
     update();
-    window.addEventListener("scroll", schedule, { passive: true });
+    const target = scroller(ref.current).target;
+    target.addEventListener("scroll", schedule, { passive: true });
     window.addEventListener("resize", schedule);
     return () => {
       cancelAnimationFrame(frame);
-      window.removeEventListener("scroll", schedule);
+      target.removeEventListener("scroll", schedule);
       window.removeEventListener("resize", schedule);
     };
   }, [enabled, count, rowHeight]);
@@ -62,10 +75,11 @@ export function useWindowed(count: number, rowHeight: number): Windowed {
     (i: number) => {
       const el = ref.current;
       if (!el) return;
-      const rowTop = el.getBoundingClientRect().top + i * rowHeight;
-      const margin = 96; // the top bar and the sticky table head
-      if (rowTop < margin) window.scrollBy({ top: rowTop - margin });
-      else if (rowTop + rowHeight > window.innerHeight - 24) window.scrollBy({ top: rowTop + rowHeight - window.innerHeight + 24 });
+      const view = scroller(el);
+      const rowTop = el.getBoundingClientRect().top - view.top + i * rowHeight;
+      const margin = 96; // the toolbar and the sticky table head
+      if (rowTop < margin) view.scrollBy(rowTop - margin);
+      else if (rowTop + rowHeight > view.height - 24) view.scrollBy(rowTop + rowHeight - view.height + 24);
     },
     [rowHeight],
   );

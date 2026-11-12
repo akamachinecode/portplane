@@ -72,8 +72,8 @@ export function HealthView() {
     <>
       <ViewHeader
         title="Health"
-        description={
-          !snapshot ? undefined : serious ? `${serious} ${serious === 1 ? "thing needs" : "things need"} your attention.` : "Nothing needs your attention."
+        summary={
+          !snapshot ? undefined : serious ? `${serious} ${serious === 1 ? "thing needs" : "things need"} your attention` : "Nothing needs your attention"
         }
         actions={<ExportDiagnosticsButton variant="ghost" />}
       />

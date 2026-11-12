@@ -3,11 +3,11 @@ import { useApp } from "../components/AppContext";
 import { Banner } from "../components/Banner";
 import { LoadingState } from "../components/States";
 import { isMac, isPaletteShortcut, isTypingTarget } from "../lib/keyboard";
+import { installWindowDrag } from "../lib/nativeWindow";
 import { href, navigate, type View } from "../lib/router";
 import { AppsView } from "../views/AppsView";
 import { Announcer } from "./Announcer";
-import { FinishSetupNotice } from "../views/onboarding/FinishSetupNotice";
-import { firstRunAction, resumeStep } from "../views/onboarding/steps";
+import { firstRunAction } from "../views/onboarding/steps";
 // Palette commands and Health problems register when their module loads,
 // so they come with the shell even though their views load on first use.
 import "../views/onboarding/problems";
@@ -24,6 +24,8 @@ import { useShell } from "./ShellContext";
 import { ShortcutsDialog } from "./ShortcutsDialog";
 import { Sidebar } from "./Sidebar";
 import { useSidebarCollapsed } from "./sidebarState";
+import { TabBar } from "./TabBar";
+import { ToolbarSlot } from "./toolbarSlot";
 import { TopBar } from "./TopBar";
 import { useGlobalKeys } from "./useGlobalKeys";
 import "./shell.css";
@@ -38,10 +40,12 @@ const HealthView = lazy(() => import("../views/HealthView").then((m) => ({ defau
 const SettingsView = lazy(() => import("../views/SettingsView").then((m) => ({ default: m.SettingsView })));
 const OnboardingView = lazy(() => import("../views/OnboardingView").then((m) => ({ default: m.OnboardingView })));
 const AppDetail = lazy(() => import("../views/AppDetail").then((m) => ({ default: m.AppDetail })));
+const ProjectView = lazy(() => import("../views/ProjectView").then((m) => ({ default: m.ProjectView })));
 
 /** One component per view; each reads the route and the shell's data itself. */
 const VIEWS: Record<Exclude<View, "onboarding">, ComponentType> = {
   apps: AppsView,
+  project: ProjectView,
   projects: ProjectsView,
   domains: DomainsView,
   runners: RunnersView,
@@ -77,8 +81,11 @@ export function Shell() {
   const collapsed = useSidebarCollapsed();
   const [palette, setPalette] = useState(false);
   const [help, setHelp] = useState(false);
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
   const main = useRef<HTMLElement>(null);
+  const body = useRef<HTMLDivElement>(null);
   const mac = isMac(info?.os);
+  useEffect(() => installWindowDrag(), []);
   useGlobalKeys(useCallback(() => setHelp(true), []));
   useEffect(() => {
     const open = () => setHelp(true);
@@ -97,18 +104,17 @@ export function Shell() {
     return () => window.removeEventListener("keydown", onKey);
   }, [mac]);
 
-  // First run (plan §3.1): the guided setup takes the window, once per
-  // start; someone already set up is marked done without seeing it.
+  // First run (ADR-0027): the app opens on Apps, where the "Get started"
+  // checklist leads into the guided setup; someone already set up is
+  // marked done without seeing it.
   const firstRun = useRef(false);
   useEffect(() => {
     if (firstRun.current || preferences.status !== "ok" || !snapshot) return;
     const local = snapshot.machines.find((m) => m.machine.local);
     if (!local) return;
     firstRun.current = true;
-    const action = firstRunAction(preferences.value, local);
-    if (action === "complete") void updatePreferences((p) => ({ ...p, onboarding: { ...p.onboarding, completed: true } }));
-    else if (action === "show" && route.view !== "onboarding") navigate({ view: "onboarding", step: resumeStep(preferences.value.onboarding) }, { replace: true });
-  }, [preferences, snapshot, route.view, updatePreferences]);
+    if (firstRunAction(preferences.value, local) === "complete") void updatePreferences((p) => ({ ...p, onboarding: { ...p.onboarding, completed: true } }));
+  }, [preferences, snapshot, updatePreferences]);
 
   // An unknown or non-canonical URL becomes the route it showed.
   useEffect(() => {
@@ -120,9 +126,9 @@ export function Shell() {
   useEffect(() => {
     if (lastView.current === route.view) return;
     lastView.current = route.view;
-    window.scrollTo({ top: 0 });
+    body.current?.scrollTo({ top: 0 });
     const raf = requestAnimationFrame(() => {
-      if (!document.querySelector("dialog[open]")) document.querySelector<HTMLElement>("#main h1, .onboarding h1")?.focus({ preventScroll: true });
+      if (!document.querySelector("dialog[open]")) document.querySelector<HTMLElement>(".toolbar h1, #main h1, .onboarding h1")?.focus({ preventScroll: true });
     });
     return () => cancelAnimationFrame(raf);
   }, [route.view]);
@@ -161,17 +167,27 @@ export function Shell() {
       >
         Skip to content
       </a>
-      <Sidebar />
-      <div className="shell-body">
-        <TopBar onSearch={() => setPalette(true)} />
-        <main id="main" className="view" ref={main} tabIndex={-1}>
-          {status === "expired" && <ExpiredBanner />}
-          <FinishSetupNotice />
-          <Suspense fallback={<LoadingState />}>
-            <View />
-          </Suspense>
-        </main>
-      </div>
+      <Sidebar onSearch={() => setPalette(true)} />
+      <ToolbarSlot value={slot}>
+        <div
+          className="shell-body"
+          ref={body}
+          onScroll={(e) => {
+            // a line under the toolbar once the page scrolls under it
+            const el = e.currentTarget;
+            el.classList.toggle("is-scrolled", el.scrollTop > 2);
+          }}
+        >
+          <TopBar slotRef={setSlot} />
+          <main id="main" className={`view view-${route.view}`} ref={main} tabIndex={-1}>
+            {status === "expired" && <ExpiredBanner />}
+            <Suspense fallback={<LoadingState />}>
+              <View />
+            </Suspense>
+          </main>
+        </div>
+      </ToolbarSlot>
+      <TabBar />
       {route.view === "apps" && route.detail && (
         <Suspense fallback={null}>
           <AppDetail key={`${route.detail.machine}|${route.detail.appId}`} target={route.detail} />

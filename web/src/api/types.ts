@@ -21,6 +21,10 @@ export interface App {
   kind: "service" | "job";
   project: string;
   worktree?: string;
+  /** The git repository's main checkout, the checkout the app is in, and the branch it has out. */
+  repo?: string;
+  checkout?: string;
+  branch?: string;
   dir?: string;
   command?: string[];
   deps?: string[];
@@ -79,10 +83,16 @@ export interface Machine {
   status: "online" | "connecting" | "offline";
   error?: string;
   agent?: string;
+  /** An Intel build running through Rosetta on an Apple silicon Mac. */
+  translated?: boolean;
 }
 
 export interface Worktree {
   name: string; // empty for the main checkout
+  path?: string; // the checkout's folder
+  branch?: string; // what it has out now
+  runner?: string; // its apps' runner, when they share one
+  repo?: string; // the repository it is a checkout of
   prefix?: string;
   running: number;
   apps: string[];
@@ -90,7 +100,12 @@ export interface Worktree {
 
 export interface Project {
   name: string;
-  runner: string;
+  runner: string; // its main checkout's runner
+  /** Every runner its apps come from, when more than one (a worktree's tasks in another dekit.yaml). */
+  runners?: string[];
+  repo?: string; // the git repository's main checkout, when it has one
+  /** Its repositories' main checkouts, when its folder holds several (a product made of a backend, a front…). */
+  repos?: string[];
   prefix?: string; // shared task path prefix, for project-wide actions
   running: number; // services alive (jobs excluded)
   total: number; // every app, jobs included

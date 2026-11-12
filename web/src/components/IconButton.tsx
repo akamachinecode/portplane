@@ -14,15 +14,16 @@ interface Props {
   tone?: "go" | "halt";
   /** A single-key shortcut that does the same in a list: shown in the tooltip. */
   shortcut?: string;
+  className?: string;
 }
 
 /** A square ghost button with an accessible name and a tooltip. */
-export function IconButton({ icon, label, onClick, pending, busy, disabled, tone, shortcut }: Props) {
+export function IconButton({ icon, label, onClick, pending, busy, disabled, tone, shortcut, className }: Props) {
   const inert = pending || busy;
   return (
     <button
       type="button"
-      className={tone ? `icon-btn tone-${tone}` : "icon-btn"}
+      className={["icon-btn", tone && `tone-${tone}`, className].filter(Boolean).join(" ")}
       aria-label={label}
       title={shortcut ? withShortcut(label, shortcut) : label}
       aria-keyshortcuts={shortcut?.toUpperCase()}

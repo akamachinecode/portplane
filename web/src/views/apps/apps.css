@@ -421,7 +421,7 @@
 
 .apps-table thead th {
   position: sticky;
-  top: var(--topbar-h);
+  top: var(--toolbar-h, 52px);
   z-index: 2;
   height: 32px;
   padding: 0 var(--space-2);
@@ -681,5 +681,144 @@ body:has(.selection-bar) .toasts {
 
   .health-line-go {
     display: none;
+  }
+}
+
+/* ---------- Get started (ADR-0027) ---------- */
+
+.getting-started {
+  margin-bottom: var(--space-5);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 7%, transparent), var(--shadow-card);
+  overflow: hidden;
+}
+
+.gs-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-3) var(--space-4) var(--space-5);
+}
+
+.gs-head-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.gs-title {
+  font-size: var(--text-lg);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.gs-sub {
+  margin-top: 2px;
+  color: var(--text-2);
+  font-size: var(--text-sm);
+}
+
+.gs-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gs-item {
+  border-top: 1px solid var(--border);
+}
+
+.gs-item-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: 12px var(--space-4) 12px var(--space-5);
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.gs-item-head:hover {
+  background: color-mix(in srgb, var(--surface-2) 55%, transparent);
+}
+
+.gs-check {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  color: var(--text-2);
+}
+
+.gs-item.is-done .gs-check {
+  border-color: transparent;
+  background: var(--on-soft);
+  color: var(--on);
+}
+
+.gs-item-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.gs-item-title {
+  font-size: var(--text-md);
+  font-weight: 560;
+}
+
+.gs-item.is-done .gs-item-title {
+  color: var(--text-2);
+}
+
+.gs-item-summary {
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+
+.gs-chevron {
+  color: var(--text-3);
+  transition: transform var(--dur-fast) var(--ease);
+}
+
+.gs-item.is-open .gs-chevron {
+  transform: rotate(180deg);
+}
+
+.gs-item-body {
+  padding: 0 var(--space-5) var(--space-4) calc(var(--space-5) + 28px + var(--space-3));
+  color: var(--text-2);
+  font-size: var(--text-sm);
+  animation: gs-in var(--dur) var(--ease-out);
+}
+
+.gs-item-body p {
+  max-width: 70ch;
+}
+
+.gs-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.gs-hint {
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+
+@keyframes gs-in {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
   }
 }

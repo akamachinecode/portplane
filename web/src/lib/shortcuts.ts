@@ -65,9 +65,9 @@ export function listAction(e: KeyLike): ListAction | null {
 }
 
 /** g, then one of these letters, goes to a view. */
-export const GO_KEYS: Record<string, Exclude<View, "onboarding">> = {
+export const GO_KEYS: Record<string, Exclude<View, "onboarding" | "project">> = {
   a: "apps",
-  p: "projects",
+  c: "projects",
   d: "domains",
   r: "runners",
   m: "machines",
@@ -75,7 +75,7 @@ export const GO_KEYS: Record<string, Exclude<View, "onboarding">> = {
   s: "settings",
 };
 
-export type GlobalAction = { kind: "help" } | { kind: "go"; view: Exclude<View, "onboarding"> } | { kind: "pending" };
+export type GlobalAction = { kind: "help" } | { kind: "go"; view: Exclude<View, "onboarding" | "project"> } | { kind: "pending" };
 
 /** How long after g the second key counts. */
 export const CHORD_TIMEOUT = 1500;
@@ -150,9 +150,9 @@ export function shortcutGroups(mac: boolean): ShortcutGroup[] {
   ];
 }
 
-const VIEW_NAMES: Record<Exclude<View, "onboarding">, string> = {
+const VIEW_NAMES: Record<Exclude<View, "onboarding" | "project">, string> = {
   apps: "Apps",
-  projects: "Projects",
+  projects: "dekit configuration",
   domains: "Domains",
   runners: "Runners",
   machines: "Machines",

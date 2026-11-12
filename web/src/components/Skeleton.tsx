@@ -9,7 +9,7 @@ export function SkeletonCards({ cards = 2, rows = 4, label = "Loading…" }: { c
     <div className="skeleton" role="status">
       <span className="sr-only">{label}</span>
       <div className="skeleton-line skeleton-heading" aria-hidden="true" />
-      <div className="grid" aria-hidden="true">
+      <div className="projects" aria-hidden="true">
         {Array.from({ length: cards }, (_, c) => (
           <div key={c} className="card skeleton-card">
             <div className="skeleton-card-head">

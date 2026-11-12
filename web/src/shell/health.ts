@@ -37,6 +37,8 @@ export type ProblemSource = (snapshot: Snapshot) => Problem[];
 
 const SEVERITY_ORDER: Record<Severity, number> = { error: 0, warning: 1, info: 2 };
 
+const RELEASES = "https://github.com/akamachinecode/portplane/releases/latest";
+
 /**
  * Setup explains how to install each tool; without a folder to set up,
  * Folders comes first. A machine over SSH has its own guided setup.
@@ -57,6 +59,16 @@ function machineProblems(ms: MachineSnapshot): Problem[] {
 
   if (machine.local && machine.error) {
     out.push({ id: `machine-error|${machine.id}`, severity: "error", title: "Problem with this computer", code: machine.error, machine: where });
+  }
+  if (machine.translated) {
+    out.push({
+      id: `rosetta|${machine.id}`,
+      severity: "warning",
+      title: machine.local ? "Portplane runs as an Intel app on this Mac" : `Portplane runs as an Intel app on ${machine.name}`,
+      detail: "This is the Intel (amd64) build, running through Rosetta on Apple silicon: slower to start and heavier than it needs to be. Install the Apple silicon build, the darwin_arm64 .dmg, over it.",
+      machine: where,
+      fix: { label: "Download the Apple silicon build", run: (ctx) => ctx.api.open("local", [RELEASES]) },
+    });
   }
   if (!machine.local && machine.status === "offline") {
     out.push({
