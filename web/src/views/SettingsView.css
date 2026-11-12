@@ -1,0 +1,149 @@
+.sgroup {
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+}
+
+.sgroup + .sgroup {
+  margin-top: var(--space-4);
+}
+
+.sgroup-title {
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+
+.sgroup-desc {
+  margin-top: var(--space-1);
+  color: var(--text-2);
+  font-size: var(--text-sm);
+}
+
+.sgroup-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.sgroup-body > .state {
+  margin: var(--space-4) auto;
+}
+
+.sgroup-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding-top: var(--space-1);
+}
+
+.srow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-6);
+}
+
+.srow + .srow {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+}
+
+.srow-text {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
+.srow-label {
+  font-weight: 550;
+}
+
+.srow-desc {
+  margin-top: 2px;
+  color: var(--text-2);
+  font-size: var(--text-sm);
+}
+
+.srow-control {
+  flex: none;
+  max-width: 100%;
+  font-size: var(--text-sm);
+}
+
+.sgroup .switch-row {
+  padding: 0;
+  border: 0;
+}
+
+.folders-empty {
+  font-size: var(--text-sm);
+}
+
+.folder-list {
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  list-style: none;
+}
+
+.folder-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 4px 6px 4px 10px;
+}
+
+.folder-item + .folder-item {
+  border-top: 1px solid var(--border);
+}
+
+.folder-item-icon {
+  color: var(--text-3);
+}
+
+.folder-path {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tool-row {
+  display: grid;
+  grid-template-columns: 8px 88px minmax(0, auto) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.tool-row + .tool-row {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+}
+
+.tool-name {
+  font-weight: 600;
+}
+
+.tool-why {
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+
+@media (max-width: 560px) {
+  .sgroup {
+    padding: var(--space-4);
+  }
+  .tool-row {
+    grid-template-columns: 8px minmax(0, 1fr) auto;
+  }
+  .tool-why {
+    grid-column: 2 / -1;
+  }
+}

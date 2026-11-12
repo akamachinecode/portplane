@@ -1,0 +1,7 @@
+.with-subnav-main > .sgroup .inline-state {
+  font-size: var(--text-sm);
+}
+
+.with-subnav-main > .state:first-child {
+  margin-top: var(--space-6);
+}

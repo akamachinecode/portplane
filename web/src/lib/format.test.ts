@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { App, Port } from "../api/types";
-import { appAddress, dekitCommand, displayHost, inferHome, portLabel, shellQuote, shortenPath, sortOtherPorts, stateLabel } from "./format";
+import { appAddress, dekitCommand, displayHost, formatDuration, inferHome, portLabel, shellQuote, shortenPath, sortOtherPorts, stateLabel } from "./format";
 
 describe("displayHost", () => {
   it("drops the scheme and a trailing slash", () => {
@@ -66,5 +66,14 @@ describe("sortOtherPorts", () => {
     const p = (port: number, inFolder: boolean): Port => ({ port, address: "127.0.0.1", inFolder });
     const sorted = sortOtherPorts([p(8080, false), p(5173, true), p(22, false), p(3000, true)]);
     expect(sorted.map((x) => x.port)).toEqual([3000, 5173, 22, 8080]);
+  });
+});
+
+describe("formatDuration", () => {
+  it("reads like a stopwatch", () => {
+    expect(formatDuration(-5)).toBe("0s");
+    expect(formatDuration(42_400)).toBe("42s");
+    expect(formatDuration(185_000)).toBe("3m 05s");
+    expect(formatDuration(3_720_000)).toBe("1h 02m");
   });
 });

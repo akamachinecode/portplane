@@ -1,0 +1,53 @@
+.onboarding {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  padding: var(--space-6) var(--space-4);
+  background:
+    radial-gradient(60% 50% at 50% 0%, var(--accent-soft), transparent 70%),
+    var(--bg);
+}
+
+.onboarding:focus {
+  outline: none;
+}
+
+.onboarding-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  max-width: 520px;
+  text-align: center;
+  animation: fade-in var(--dur) var(--ease-out);
+}
+
+.onboarding-mark {
+  margin-bottom: var(--space-2);
+  border-radius: 12px;
+  box-shadow: var(--shadow-2);
+}
+
+.onboarding-title {
+  font-size: var(--text-2xl);
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+
+.onboarding-text {
+  color: var(--text-2);
+  font-size: var(--text-md);
+  line-height: 1.55;
+}
+
+.onboarding-text.muted {
+  font-size: var(--text-sm);
+}
+
+.onboarding-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
