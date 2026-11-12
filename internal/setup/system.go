@@ -67,54 +67,62 @@ func (s *System) Gather(ctx context.Context, only []string) Facts {
 	in := s.Installer
 	oenv := in.OriginEnv()
 
-	// Ready needs the three tools whichever checks are asked for.
-	do(func() {
-		p := in.Lookup(installer.Dekit)
-		t := Tool{Path: p}
-		if p != "" {
-			t.Version = s.Version(ctx, p)
-			o := installer.DetectOrigin(installer.Dekit, p, oenv)
-			t.Origin = &o
-		}
-		plan := in.DekitPlan()
-		set(func(f *Facts) { f.DekitTool, f.Dekit, f.Plans[installer.Dekit] = t, t.Version, plan })
-	})
-	do(func() {
-		n := in.FindNode(ctx)
-		var o *installer.Origin
-		if n.Path != "" {
-			x := installer.DetectOrigin(installer.Node, n.Path, oenv)
-			o = &x
-		} else if n.UserPath != "" {
-			x := installer.DetectOrigin(installer.Node, n.UserPath, oenv)
-			o = &x
-		}
-		plan := in.NodePlan()
-		managers := in.NodeManagers()
-		var portlessPlan installer.Plan
-		if want("portless") {
-			portlessPlan = in.PortlessPlan(ctx, n)
-		}
-		set(func(f *Facts) {
-			f.NodeInfo, f.Node, f.NodeOrigin, f.NodeManagers, f.Plans[installer.Node] = n, n.Version, o, managers, plan
-			if f.Node == "" {
-				f.Node = n.UserVersion
+	// Each tool is probed only for the checks that read it, so the UI can
+	// ask for checks one by one without running every probe each time.
+	// Ready is meaningful when dekit, node and portless were all asked for.
+	if want("dekit") {
+		do(func() {
+			p := in.Lookup(installer.Dekit)
+			t := Tool{Path: p}
+			if p != "" {
+				t.Version = s.Version(ctx, p)
+				o := installer.DetectOrigin(installer.Dekit, p, oenv)
+				t.Origin = &o
 			}
-			if portlessPlan.Tool != "" {
-				f.Plans[installer.Portless] = portlessPlan
-			}
+			plan := in.DekitPlan()
+			set(func(f *Facts) { f.DekitTool, f.Dekit, f.Plans[installer.Dekit] = t, t.Version, plan })
 		})
-	})
-	do(func() {
-		p := s.Portless.Path()
-		t := Tool{Path: p}
-		if p != "" {
-			t.Version = s.Version(ctx, p)
-			o := installer.DetectOrigin(installer.Portless, p, oenv)
-			t.Origin = &o
-		}
-		set(func(f *Facts) { f.PortlessTool, f.Portless = t, t.Version })
-	})
+	}
+	if want("node", "portless") {
+		do(func() {
+			n := in.FindNode(ctx)
+			var o *installer.Origin
+			if n.Path != "" {
+				x := installer.DetectOrigin(installer.Node, n.Path, oenv)
+				o = &x
+			} else if n.UserPath != "" {
+				x := installer.DetectOrigin(installer.Node, n.UserPath, oenv)
+				o = &x
+			}
+			plan := in.NodePlan()
+			managers := in.NodeManagers()
+			var portlessPlan installer.Plan
+			if want("portless") {
+				portlessPlan = in.PortlessPlan(ctx, n)
+			}
+			set(func(f *Facts) {
+				f.NodeInfo, f.Node, f.NodeOrigin, f.NodeManagers, f.Plans[installer.Node] = n, n.Version, o, managers, plan
+				if f.Node == "" {
+					f.Node = n.UserVersion
+				}
+				if portlessPlan.Tool != "" {
+					f.Plans[installer.Portless] = portlessPlan
+				}
+			})
+		})
+	}
+	if want("portless", "proxy", "ca") {
+		do(func() {
+			p := s.Portless.Path()
+			t := Tool{Path: p}
+			if p != "" {
+				t.Version = s.Version(ctx, p)
+				o := installer.DetectOrigin(installer.Portless, p, oenv)
+				t.Origin = &o
+			}
+			set(func(f *Facts) { f.PortlessTool, f.Portless = t, t.Version })
+		})
+	}
 	if want("git") {
 		do(func() {
 			v := ""

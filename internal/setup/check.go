@@ -363,13 +363,12 @@ func (f Facts) packages() Requirement {
 		}
 	}
 	switch {
-	case len(have) > 0:
-		r.Detail = strings.Join(have, " · ")
+	case len(have) == 0:
+		r.Detail = "None found yet: " + strings.Join(missing, ", ") + "."
+	case len(missing) > 0:
+		r.Detail = strings.Join(have, " · ") + " (not found: " + strings.Join(missing, ", ") + ")"
 	default:
-		r.Detail = "None found yet."
-	}
-	if len(missing) > 0 {
-		r.Detail += " (not found: " + strings.Join(missing, ", ") + ")"
+		r.Detail = strings.Join(have, " · ")
 	}
 	return r
 }
