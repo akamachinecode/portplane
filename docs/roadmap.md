@@ -100,7 +100,7 @@ Quality:
 - [x] Generator applying the field-note defaults: run from the app folder, `<pm> run <script>`, a single install job per checkout, agent variables unset, the cross-platform wrapper from ADR-0010. (`portless alias` jobs for servers that cannot be wrapped are recognised when written by hand.)
 - [x] Preview as a diff, write only after confirmation (digest-checked), never touch hand-written config.
 - [x] Re-scan: new apps and worktrees appear as a proposed diff.
-- [ ] Add an app by hand from the UI (command and folder); moved to M5.3. A hand-written task in `dekit.yaml` works today.
+- [x] Add an app by hand from the UI (command and folder); done in M5.3.
 - [x] Warnings the app cannot fix: parent cookie domain, CORS allowlists.
 
 **Exit:** on a fresh machine with Node, the setup flow takes a real monorepo with worktrees from nothing to every app reachable at its stable URL, with no hand edits.
@@ -187,12 +187,13 @@ The milestone is done when:
 
 ### M5.3: dekit center
 
-- [ ] Runners: list with state and warnings; up, down, stop, restart, upgrade and clean; the host runner.
-- [ ] Every task state and mark (pinned, vetoed, needed by); kill, veto, force restart and remove; bulk actions; restart a whole project.
-- [ ] App detail drawer with "why" (`dekit why --json`) and the task's dependencies.
-- [ ] Task and project forms, a YAML tab with dekit's schema, and the reload review (ADR-0022).
-- [ ] Add an app by hand, in any language, and run a one-off command (`dekit spawn`).
-- [ ] dekit itself: version, how it was installed, kernel, update, and dekit's help inside the app.
+- [x] Runners: list with state and warnings; up, down, stop, restart, upgrade and clean; the host runner.
+- [x] Every task state and mark (pinned, vetoed, needed by); kill, veto, force restart and remove; restart a whole project. Bulk actions come with the dense table (M5.5), reusing `appActionList`.
+- [x] App detail drawer with "why" (`dekit why --json`) and the task's dependencies.
+- [x] Task and project forms, a YAML tab with dekit's schema, and the reload review (ADR-0022).
+- [x] Add an app by hand, in any language, and run a one-off command (`dekit spawn`).
+- [x] dekit itself: version, how it was installed, kernel, update, and dekit's help inside the app.
+- [ ] Runners and config of other machines (local first, plan §10); dekit 0.10.3 has no "retry in" for `backoff`, so the UI shows restart attempts instead.
 
 **Done when:** every dekit command has a place in the app, except `attach` (M5.4) and what is left out on purpose: `mprocs`, `runner run` and the settings of dekit's own TUI.
 
