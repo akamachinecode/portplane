@@ -15,6 +15,7 @@ import "../views/domains/commands";
 import "../views/domains/problems";
 import "../views/projects/commands";
 import "../views/runners/problems";
+import "./agentProblems";
 import { BackgroundData } from "./BackgroundData";
 import "./builtinCommands";
 import { SHORTCUTS_EVENT } from "./polishCommands";
