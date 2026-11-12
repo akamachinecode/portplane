@@ -125,7 +125,8 @@ Quality:
 - [x] Start at login on each OS.
 - [x] Installers on GitHub Releases: macOS `.dmg` (unsigned), Linux `.tar.gz`, `.deb` and `.rpm`, Windows `.zip` or `.msi`, all with cosign-signed checksums.
 - [x] A one-line install script per OS that verifies the checksum, plus our own Homebrew tap (needs a `homebrew-tap` repository and a token; not set up yet).
-- [ ] Update notice: on a click, or automatically when the user turns it on (ADR-0025); comes with M5.
+- [x] Update notice: on a click, or automatically when the user turns it on (ADR-0025); the sidebar asks once, and a notification announces each new version (ADR-0031).
+- [x] Update and restart in one click, for the `.app`, the install scripts, the archives, the `.deb` and the `.rpm`; checked against `checksums.txt`, with the old version put back if the new one doesn't run (ADR-0031).
 
 **Exit:** a user installs from the landing page or GitHub Releases, the app starts at login, and the tray reflects the real state.
 

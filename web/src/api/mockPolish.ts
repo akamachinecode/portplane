@@ -24,6 +24,21 @@ export function createMockPolish(ctx: MockContext): PolishApi {
       };
       return last;
     },
+    selfUpdatePlan: () => ctx.delay({ method: "archive" as const, auto: true, where: "/home/dev/.local/bin", running: "0.4.0" }),
+    async installUpdate(version) {
+      await ctx.delay(undefined, 150);
+      return ctx.jobs.start({
+        kind: "update",
+        title: `Update Portplane to ${version}`,
+        steps: [
+          { name: `Download Portplane ${version}`, ms: 1400, output: [`Downloading portplane_${version}_linux_amd64.tar.gz`, "25% of 14.2 MB", "50% of 14.2 MB", "100% of 14.2 MB", "SHA-256 matches checksums.txt"] },
+          { name: "Replace Portplane", ms: 500, output: ["Replaced /home/dev/.local/bin/portplane", "Replaced /home/dev/.local/bin/portplane-window"] },
+          { name: "Check the new version", ms: 400, output: [`/home/dev/.local/bin/portplane runs and is version ${version}`] },
+          { name: "Restart Portplane", ms: 300, output: [`Portplane ${version} is starting; this one quits.`] },
+        ],
+        result: { version, restarting: true },
+      });
+    },
     async exportDiagnostics() {
       await ctx.delay(undefined, 1200);
       return { path: "/home/dev/Downloads/portplane-diagnostics-2026-11-12-0930.zip", dialog: false, revealed: true };

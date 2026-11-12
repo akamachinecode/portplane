@@ -1,14 +1,18 @@
 import { useEffect, useState } from "react";
 import { errorText } from "../../api/errors";
-import type { UpdateCheck, UpdateItem } from "../../api/polish";
+import { useJob, useJobs } from "../../api/jobs";
+import type { SelfUpdatePlan, UpdateItem } from "../../api/polish";
 import type { Preferences } from "../../api/types";
 import { useApp } from "../../components/AppContext";
+import { CommandLine } from "../../components/Controls";
 import { Icon, Spinner } from "../../components/Icon";
+import { JobCard } from "../../components/JobCard";
 import { Segmented } from "../../components/Segmented";
 import { StateDot } from "../../components/StateDot";
 import { useNow } from "../../hooks/useNow";
 import { href } from "../../lib/router";
 import { timeAgo } from "../../lib/timeAgo";
+import { portplaneUpdate, setUpdateCheck, useUpdateCheck } from "../../lib/updateCheck";
 import { useShell } from "../../shell/ShellContext";
 import { SettingRow, SettingsGroup } from "./SettingsGroup";
 import "./updates.css";
@@ -18,7 +22,7 @@ const UPDATE_OPTIONS = [
   { value: "auto" as Preferences["updateCheck"], label: "Once a day" },
 ];
 
-type Load = { status: "loading" } | { status: "ok"; last: UpdateCheck | null } | { status: "error"; message: string };
+const RELEASES = "https://github.com/akamachinecode/portplane/releases/latest";
 
 /** What to do about one tool's answer: nothing, read what is new, or update it where it is installed. */
 function UpdateRow({ item }: { item: UpdateItem }) {
@@ -52,33 +56,142 @@ function UpdateRow({ item }: { item: UpdateItem }) {
             Update {item.name}…
           </a>
         )}
-        {item.update && item.id === "portplane" && (
-          <a className="btn btn-sm" href={item.notes ?? "https://github.com/akamachinecode/portplane/releases/latest"} target="_blank" rel="noopener noreferrer" title="Install it the same way you installed this one: your package manager, Homebrew or the archive.">
-            Get Portplane {item.latest}
-          </a>
-        )}
       </span>
     </li>
   );
 }
 
+/** What "Update and restart" replaces, in words. */
+function whereText(plan: SelfUpdatePlan): string {
+  switch (plan.method) {
+    case "app":
+      return `Replaces ${plan.where ?? "Portplane.app"} and opens the new version.`;
+    case "deb":
+    case "rpm":
+      return `Installs the new .${plan.method} package, which asks for your password, and opens the new version.`;
+    default:
+      return `Replaces Portplane in ${plan.where ?? "its folder"} and opens the new version.`;
+  }
+}
+
 /**
- * Settings → General → Updates (ADR-0025): checks Portplane, dekit and
- * portless on a click, or at most once a day when the user turns it on.
- * It only reads; updating happens in Settings → Tools.
+ * The new Portplane (ADR-0031): "Update and restart" when Portplane can
+ * update itself, with the job's progress; otherwise why not, and how.
+ */
+function SelfUpdate({ item }: { item: UpdateItem }) {
+  const { api, toast } = useApp();
+  const { jobs } = useJobs();
+  const [plan, setPlan] = useState<SelfUpdatePlan | null>(null);
+  const [planError, setPlanError] = useState<string | null>(null);
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [starting, setStarting] = useState(false);
+  const started = useJob(jobId);
+  // An update started earlier, from another page, still shows here.
+  const job = started ?? jobs.find((j) => j.kind === "update" && j.state === "running");
+  const version = item.latest ?? "";
+
+  useEffect(() => {
+    let live = true;
+    api.selfUpdatePlan().then(
+      (p) => live && setPlan(p),
+      (err: unknown) => live && setPlanError(errorText(err)),
+    );
+    return () => {
+      live = false;
+    };
+  }, [api, version]);
+
+  const install = async () => {
+    setStarting(true);
+    try {
+      const j = await api.installUpdate(version);
+      setJobId(j.id);
+    } catch (err) {
+      toast.error(`Couldn't update Portplane: ${errorText(err)}`);
+    } finally {
+      setStarting(false);
+    }
+  };
+
+  const busy = starting || job?.state === "running";
+  const restarting = job?.state === "succeeded";
+  return (
+    <div className="self-update">
+      <div className="self-update-head">
+        <Icon name="download" size={18} className="self-update-icon" />
+        <div className="self-update-text">
+          <p className="self-update-title">
+            Portplane <span className="mono">{version}</span> is ready
+          </p>
+          <p className="self-update-sub">
+            {planError
+              ? `Couldn't tell how Portplane was installed: ${planError}`
+              : !plan
+                ? "Looking at how Portplane was installed…"
+                : plan.auto
+                  ? whereText(plan)
+                  : plan.reason}
+          </p>
+        </div>
+        {plan?.auto && !restarting && (
+          <button
+            type="button"
+            className="btn btn-primary"
+            aria-busy={busy || undefined}
+            aria-disabled={busy || undefined}
+            title={plan.password ? "Asks for your password" : undefined}
+            onClick={() => !busy && void install()}
+          >
+            {busy ? <Spinner /> : <Icon name="restart" size={14} />}
+            {busy ? "Updating…" : "Update and restart"}
+          </button>
+        )}
+        {plan && !plan.auto && (
+          <a className="btn" href={item.notes ?? RELEASES} target="_blank" rel="noopener noreferrer">
+            Download
+            <Icon name="open" size={13} />
+          </a>
+        )}
+      </div>
+      {plan?.auto && plan.password && plan.command && !job && (
+        <div className="self-update-command">
+          <p className="self-update-sub">After your password, in the system's dialog, it runs:</p>
+          <CommandLine command={plan.command} />
+        </div>
+      )}
+      {plan && !plan.auto && plan.command && <CommandLine command={plan.command} />}
+      {job && <JobCard job={job} lines={6} headingLevel={3} />}
+      {restarting && (
+        <p className="self-update-restarting" role="status">
+          <Spinner /> Portplane {version} is starting. This window closes and opens again in a moment.
+        </p>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Settings › Updates (ADR-0025, ADR-0031): checks Portplane, dekit and
+ * portless on a click, or once a day when the user turns it on. Portplane
+ * updates itself on a click; dekit and portless update in their own pages.
  */
 export function UpdatesGroup({ prefs }: { prefs: Preferences }) {
   const { api } = useApp();
   const { updatePreferences } = useShell();
-  const [load, setLoad] = useState<Load>({ status: "loading" });
+  const last = useUpdateCheck();
+  const [error, setError] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
-  const now = useNow(load.status === "ok" && !!load.last, 30_000);
+  const now = useNow(!!last, 30_000);
 
   useEffect(() => {
     let live = true;
     api.updates().then(
-      (last) => live && setLoad({ status: "ok", last }),
-      (err: unknown) => live && setLoad({ status: "error", message: errorText(err) }),
+      (c) => {
+        if (!live) return;
+        setUpdateCheck(c);
+        setError(null);
+      },
+      (err: unknown) => live && setError(errorText(err)),
     );
     return () => {
       live = false;
@@ -88,31 +201,38 @@ export function UpdatesGroup({ prefs }: { prefs: Preferences }) {
   const check = async () => {
     setChecking(true);
     try {
-      setLoad({ status: "ok", last: await api.checkUpdates() });
+      setUpdateCheck(await api.checkUpdates());
+      setError(null);
     } catch (err) {
-      setLoad({ status: "error", message: errorText(err) });
+      setError(errorText(err));
     } finally {
       setChecking(false);
     }
   };
 
-  const last = load.status === "ok" ? load.last : null;
   const updates = last?.items.filter((i) => i.update).length ?? 0;
+  const self = portplaneUpdate(last);
   return (
     <SettingsGroup
       title="Updates"
-      description="Portplane goes online for this only when you check, or once a day if you choose so. It reads the latest versions from GitHub and the npm registry, sends nothing about you, and never installs anything by itself."
+      description="Portplane goes online for this only when you check, or once a day if you choose so. It reads the latest versions from GitHub and the npm registry and sends nothing about you. Nothing installs until you click."
     >
-      <SettingRow label="Check for new versions" description="Of Portplane, dekit and portless.">
-        <Segmented label="Check for new versions" value={prefs.updateCheck} options={UPDATE_OPTIONS} onChange={(updateCheck) => void updatePreferences((x) => ({ ...x, updateCheck }))} />
+      <SettingRow label="Check for new versions" description="Of Portplane, dekit and portless. With “Once a day”, a notification tells you about a new Portplane.">
+        <Segmented
+          label="Check for new versions"
+          value={prefs.updateCheck}
+          options={UPDATE_OPTIONS}
+          onChange={(updateCheck) => void updatePreferences((x) => ({ ...x, updateCheck, updateAsked: true }))}
+        />
       </SettingRow>
-      <div className="updates" aria-busy={checking || load.status === "loading" || undefined}>
+      <div className="updates" aria-busy={checking || last === undefined || undefined}>
+        {self && <SelfUpdate item={self} />}
         <div className="updates-head">
           <p className="updates-summary" role="status">
-            {load.status === "loading"
-              ? "Loading the last check…"
-              : load.status === "error"
-                ? `Couldn't check: ${load.message}`
+            {error
+              ? `Couldn't check: ${error}`
+              : last === undefined
+                ? "Loading the last check…"
                 : !last
                   ? "Not checked yet."
                   : `${updates === 0 ? "Everything is up to date" : updates === 1 ? "1 update available" : `${updates} updates available`} · checked ${timeAgo(last.checkedAt, now)}`}

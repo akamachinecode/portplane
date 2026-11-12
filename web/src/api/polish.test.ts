@@ -28,6 +28,17 @@ describe("createPolishHttp", () => {
     expect(f.calls[3].init.body).toBe('{"theme":"dark"}');
   });
 
+  it("asks how Portplane updates, and starts the update as a job", async () => {
+    const plan = { method: "app", auto: true, where: "/Applications/Portplane.app", running: "0.5.0" };
+    const job = { id: "j1", kind: "update", title: "Update Portplane to 0.6.0", state: "running", steps: [], output: [], startedAt: "x" };
+    const f = fakeFetch((url) => (url === "/api/updates/self" ? json(plan) : json(job, 202)));
+    const api = createPolishHttp(createHttp("t", f.fn));
+    expect(await api.selfUpdatePlan()).toEqual(plan);
+    expect(await api.installUpdate("0.6.0")).toEqual(job);
+    expect(f.calls.map((c) => `${c.init.method} ${c.url}`)).toEqual(["GET /api/updates/self", "POST /api/updates/self/install"]);
+    expect(f.calls[1].init.body).toBe('{"version":"0.6.0"}');
+  });
+
   it("returns null when the save dialog is cancelled, and the place otherwise", async () => {
     const cancelled = createPolishHttp(createHttp("t", fakeFetch(() => new Response(null, { status: 204 })).fn));
     expect(await cancelled.exportDiagnostics()).toBeNull();

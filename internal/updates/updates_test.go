@@ -24,6 +24,8 @@ func fakeSources(t *testing.T) (*httptest.Server, func() []*http.Request) {
 		switch r.URL.Path {
 		case "/akamachinecode/portplane/releases/latest":
 			http.Redirect(w, r, "/akamachinecode/portplane/releases/tag/v0.5.0", http.StatusFound)
+		case "/akamachinecode/portplane/releases/download/v0.5.0/checksums.txt":
+			http.Redirect(w, r, "/release-assets/checksums.txt", http.StatusFound)
 		case "/pvolok/dekit/releases/latest":
 			http.Redirect(w, r, "/pvolok/dekit/releases/tag/v0.10.3", http.StatusFound)
 		case "/portless/latest":
@@ -65,11 +67,27 @@ func TestCheck(t *testing.T) {
 			t.Fatalf("request %s %s %v", req.Method, req.URL, req.Header)
 		}
 	}
-	// The redirect was read, not followed.
+	// The redirects were read, not followed.
 	for _, req := range seen() {
-		if strings.Contains(req.URL.Path, "/releases/tag/") {
+		if strings.Contains(req.URL.Path, "/releases/tag/") || strings.Contains(req.URL.Path, "/release-assets/") {
 			t.Fatalf("followed the redirect to %s", req.URL)
 		}
+	}
+}
+
+// A release whose files are not uploaded yet is not an update.
+func TestCheckWaitsForTheReleaseFiles(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/akamachinecode/portplane/releases/latest" {
+			http.Redirect(w, r, "/akamachinecode/portplane/releases/tag/v0.6.0", http.StatusFound)
+			return
+		}
+		http.NotFound(w, r)
+	}))
+	defer srv.Close()
+	r := (&Checker{GitHub: srv.URL, NPM: srv.URL}).Check(context.Background(), Installed{Portplane: "0.5.0"}, time.Now())
+	if p := r.Items[0]; p.Update || !strings.Contains(p.Error, "still being published") {
+		t.Fatalf("%+v", p)
 	}
 }
 

@@ -28,6 +28,8 @@ type deps struct {
 	// headless is true in a remote machine's agent (ADR-0026): no window,
 	// no desktop, nobody to answer a password dialog.
 	headless bool
+	// quit ends this Portplane, as Quit in the tray does; nil in an agent.
+	quit func()
 }
 
 // areas add their routes from their own files (wire_*.go), so work on one

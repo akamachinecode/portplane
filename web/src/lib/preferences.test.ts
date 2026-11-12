@@ -79,6 +79,7 @@ describe("normalizePreferences", () => {
       favorites: ["local|/home/dev/code#web"],
       notifications: { failures: false, recoveries: true, jobs: false, config: true },
       updateCheck: "auto",
+      updateAsked: true,
       onboarding: { completed: true, skipped: false, step: "folders", done: ["welcome", "tools"] },
       appsLayout: "table",
     };

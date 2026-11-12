@@ -9,6 +9,7 @@ import { isMac, paletteShortcutLabel } from "../lib/keyboard";
 import { sidebarProjects, type SidebarProject } from "../lib/projects";
 import { HOME, href, type Route } from "../lib/router";
 import { safeLocalStorage } from "../lib/storage";
+import { portplaneUpdate, shouldAskAboutUpdates, useUpdateCheck } from "../lib/updateCheck";
 import { problemBadge } from "./health";
 import { isSettingsRoute, SETTINGS_GROUPS, SETTINGS_NAV } from "./nav";
 import { useShell } from "./ShellContext";
@@ -230,12 +231,57 @@ function WorkNav() {
       </div>
 
       <div className="sidebar-foot">
+        <UpdateNotice setupLeft={setupLeft} />
         <ul className="nav-list">
           {!setupLeft && <NavLink route={{ view: "onboarding" }} label="Setup" icon="timeline" current={onSetup} />}
           <NavLink route={SETTINGS_NAV.route} label="Settings" icon="gear" current={false} />
         </ul>
       </div>
     </>
+  );
+}
+
+/**
+ * A new Portplane, or (once) whether Portplane may look for one every day
+ * (ADR-0031). The update itself runs in Settings › Updates, which shows
+ * its progress.
+ */
+function UpdateNotice({ setupLeft }: { setupLeft: boolean }) {
+  const { route, preferences, updatePreferences } = useShell();
+  const check = useUpdateCheck();
+  const prefs = preferences.status === "ok" ? preferences.value : null;
+  const update = portplaneUpdate(check);
+  const onUpdates = route.view === "settings" && route.section === "updates";
+
+  if (update) {
+    return (
+      <a className="setup-callout update-callout" href={href({ view: "settings", section: "updates" })} aria-current={onUpdates ? "page" : undefined}>
+        <Icon name="download" size={16} className="update-callout-icon" />
+        <span className="setup-callout-text">
+          <span className="setup-callout-title">Portplane {update.latest} is out</span>
+          <span className="setup-callout-sub">Update and restart</span>
+        </span>
+        <Icon name="chevronRight" size={14} className="setup-callout-chevron" />
+      </a>
+    );
+  }
+  if (!shouldAskAboutUpdates(prefs, setupLeft)) return null;
+  const answer = (updateCheck: "manual" | "auto") => void updatePreferences((p) => ({ ...p, updateCheck, updateAsked: true }));
+  return (
+    <div className="setup-callout update-ask" role="group" aria-label="Updates">
+      <span className="setup-callout-text">
+        <span className="setup-callout-title">Get new versions?</span>
+        <span className="setup-callout-sub">Portplane asks GitHub once a day and tells you when there's one. Nothing installs without your click.</span>
+        <span className="update-ask-actions">
+          <button type="button" className="btn btn-sm btn-primary" onClick={() => answer("auto")}>
+            Check daily
+          </button>
+          <button type="button" className="btn btn-sm btn-ghost" onClick={() => answer("manual")}>
+            Not now
+          </button>
+        </span>
+      </span>
+    </div>
   );
 }
 
