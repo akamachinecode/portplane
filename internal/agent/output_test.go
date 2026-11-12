@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"errors"
+	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -257,4 +258,21 @@ func waitFor(t *testing.T, ok func() bool) {
 		}
 		time.Sleep(time.Millisecond)
 	}
+}
+
+// TestLiveOutput prints the Output of PORTPLANE_LIVE_TASK in
+// PORTPLANE_LIVE_FOLDER (a dekit project). Like TestLiveSnapshot, it is a
+// manual check against a real dekit and runs only when both are set.
+func TestLiveOutput(t *testing.T) {
+	folder, task := os.Getenv("PORTPLANE_LIVE_FOLDER"), os.Getenv("PORTPLANE_LIVE_TASK")
+	if folder == "" || task == "" {
+		t.Skip("set PORTPLANE_LIVE_FOLDER and PORTPLANE_LIVE_TASK to run")
+	}
+	l := NewLocal(Options{Folders: []string{folder}})
+	defer func() { _ = l.Close() }()
+	out, err := l.Output(context.Background(), folder, task)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("%+q\ntruncated=%v runnerDown=%v command=%s", out.Screen, out.Truncated, out.RunnerDown, out.Command)
 }
