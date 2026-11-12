@@ -68,23 +68,25 @@ function ProjectBody({ ms, project }: { ms: MachineSnapshot; project: Project })
   const home = inferHome([...ms.folders, ...ms.runners.map((r) => r.root)]);
   const favorites = useMemo(() => new Set(preferences.status === "ok" ? preferences.value.favorites : []), [preferences]);
   const runners = project.runners?.length ? project.runners : [project.runner];
-  const repo = project.repo ?? project.worktrees[0]?.path;
+  const repo = project.repo ?? (project.repos?.length ? undefined : project.worktrees[0]?.path);
   const canAct = !!ms.tools.dekit && (ms.machine.local || ms.machine.status === "online");
 
   const group: ProjectGroup = {
     key: `${machine}|${project.runner}|${project.name}`,
     project,
-    multi: project.worktrees.length > 1,
-    worktrees: project.worktrees.map((wt) => ({
-      name: wt.name,
-      worktree: wt,
-      entries: worktreeApps(wt, byId)
-        .filter(isVisible)
-        .map((app) => {
-          const key = entryKey(machine, app.id);
-          return { key, ms, app, favorite: favorites.has(key), order: app.order };
-        }),
-    })),
+    multi: project.worktrees.filter((wt) => worktreeApps(wt, byId).some(isVisible)).length > 1,
+    worktrees: project.worktrees
+      .map((wt) => ({
+        name: wt.name,
+        worktree: wt,
+        entries: worktreeApps(wt, byId)
+          .filter(isVisible)
+          .map((app) => {
+            const key = entryKey(machine, app.id);
+            return { key, ms, app, favorite: favorites.has(key), order: app.order };
+          }),
+      }))
+      .filter((w) => w.entries.length > 0), // a finished install job alone shows nothing
   };
 
   const restartKey = `project|${machine}|${project.runner}|${project.name}|restart`;
@@ -141,9 +143,17 @@ function ProjectBody({ ms, project }: { ms: MachineSnapshot; project: Project })
             </dd>
           </div>
         )}
+        {project.repos && project.repos.length > 1 && (
+          <div>
+            <dt>Repositories</dt>
+            <dd className="mono" title={project.repos.join("\n")}>
+              {project.repos.map((r) => shortenPath(r, home)).join(", ")}
+            </dd>
+          </div>
+        )}
         <div>
           <dt>Checkouts</dt>
-          <dd>{linked ? `main and ${linked}` : "main only"}</dd>
+          <dd>{linked ? (project.repos && project.repos.length > 1 ? linked : `main and ${linked}`) : "main only"}</dd>
         </div>
         <div>
           <dt>Apps</dt>

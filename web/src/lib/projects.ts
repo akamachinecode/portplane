@@ -59,9 +59,24 @@ export function sidebarProjects(snapshot: Snapshot): SidebarProject[] {
   return out;
 }
 
-/** "main checkout" or the worktree's folder name. */
-export function checkoutName(wt: Worktree): string {
-  return wt.name || "main checkout";
+const base = (p: string) => p.replace(/[\\/]+$/, "").split(/[\\/]/).pop() ?? p;
+
+/** A checkout's stable key within its project: its folder, or its name. */
+export function checkoutKey(wt: Worktree): string {
+  return wt.path || `\u0000${wt.name}`;
+}
+
+/**
+ * What a checkout is called: a linked worktree by its folder name, a main
+ * checkout as such; in a project of several repositories, each one names
+ * its repository ("acme-front", "acme-front / new-ui").
+ */
+export function checkoutName(project: Project, wt: Worktree): string {
+  const multi = (project.repos?.length ?? 0) > 1;
+  const repo = wt.repo ? base(wt.repo) : "";
+  if (wt.name) return multi && repo ? `${repo} / ${wt.name}` : wt.name;
+  if (!wt.path && (project.repo || project.repos)) return "outside git";
+  return multi && repo ? repo : "main checkout";
 }
 
 /** Whether a worktree starts folded in a list: a linked one with nothing running or failing. */
@@ -71,9 +86,12 @@ export function foldedByDefault(wt: Worktree, byId: Map<string, App>): boolean {
   return state === "off";
 }
 
-/** The worktrees of a project, as a sentence: "main and 2 worktrees". */
+/** A project's repositories and worktrees, as a few words: "3 repositories · 1 worktree". */
 export function checkoutsText(project: Project): string {
+  const parts: string[] = [];
+  const repos = project.repos?.length ?? 0;
+  if (repos > 1) parts.push(`${repos} repositories`);
   const linked = project.worktrees.filter((w) => w.name).length;
-  if (!linked) return "";
-  return `${linked} ${linked === 1 ? "worktree" : "worktrees"}`;
+  if (linked) parts.push(`${linked} ${linked === 1 ? "worktree" : "worktrees"}`);
+  return parts.join(" · ");
 }

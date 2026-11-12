@@ -46,6 +46,9 @@ import type {
 //   bare       no Tailscale, ngrok, cloudflared, Docker or Avahi
 //   compose    Docker Compose projects: running, stopped and brought down
 //
+//   products   one dekit.yaml for every repository: a product of three
+//              repositories, worktrees in a worktrees/ folder, a task
+//              outside git next to a repository's worktree
 //   oldagent   like default, but the remote machine runs an agent older
 //              than this Portplane (ADR-0026: "Update the agent")
 //
@@ -65,7 +68,8 @@ export type Scenario =
   | "tailnet"
   | "bare"
   | "compose"
-  | "oldagent";
+  | "oldagent"
+  | "products";
 
 /** The agent version ?mock=oldagent gives the remote machine: one from before the machine API. */
 export const MOCK_OLD_AGENT = "0.2.0";
@@ -163,38 +167,111 @@ function commonPrefix(tasks: string[]): string {
   return common.length ? `${common.join("/")}/` : "";
 }
 
-/** Groups like internal/model.Group, enough for the mock (the server does this for real). */
+/**
+ * Groups like internal/model.Group (the server does this for real): a task
+ * folder with the repositories configured in it and their worktrees from
+ * any folder, plus tasks outside git in a folder of the same name. Renames
+ * each app's project, as the agent does.
+ */
 export function groupForMock(apps: App[]): MachineSnapshot["projects"] {
-  // Every app of a git repository is one project, wherever its task sits
-  // (model.JoinRepos names it): the agent already renamed them.
-  const keyOf = (a: App) => (a.repo ? `repo\u0000${a.repo}` : `${a.runner}\u0000${a.project}`);
+  const parent = new Map<string, string>();
+  const find = (x: string): string => {
+    const p = parent.get(x);
+    if (p === undefined) {
+      parent.set(x, x);
+      return x;
+    }
+    if (p === x) return x;
+    const r = find(p);
+    parent.set(x, r);
+    return r;
+  };
+  const union = (a: string, b: string) => {
+    const ra = find(a);
+    const rb = find(b);
+    if (ra !== rb) parent.set(rb, ra);
+  };
+  const folderNode = (a: App) => `f\u0000${a.runner}\u0000${a.project}`;
+  const repoNode = (r: string) => `r\u0000${r}`;
+  const node = apps.map((a) => {
+    const n = a.repo ? repoNode(a.repo) : folderNode(a);
+    if (a.repo && !a.worktree) union(folderNode(a), n);
+    else find(n);
+    return n;
+  });
+  const naming = () => {
+    const folders = new Map<string, string[]>();
+    const repos = new Map<string, string[]>();
+    const push = (m: Map<string, string[]>, k: string, v: string) => {
+      const l = m.get(k) ?? [];
+      if (!l.includes(v)) l.push(v);
+      m.set(k, l);
+    };
+    for (const a of apps) {
+      if (a.repo) push(repos, find(repoNode(a.repo)), a.repo);
+      if (a.repo && a.worktree) continue;
+      push(folders, find(folderNode(a)), a.project);
+    }
+    const names = new Map<string, string>();
+    for (const n of node) {
+      const root = find(n);
+      if (names.has(root)) continue;
+      const f = folders.get(root) ?? [];
+      const r = repos.get(root) ?? [];
+      const base = (x: string) => x.split("/").pop() ?? x;
+      names.set(root, f.length === 1 ? f[0] : r.length === 1 || (f.length === 0 && r.length > 0) ? base(r[0]) : f[0]);
+    }
+    return { names, repos };
+  };
+  let { names, repos } = naming();
+  const withRepo = new Map<string, string[]>();
+  for (const [root, n] of names) if ((repos.get(root) ?? []).length) withRepo.set(n, [...(withRepo.get(n) ?? []), root]);
+  let merged = false;
+  for (const [root, n] of names) {
+    const target = withRepo.get(n);
+    if (!(repos.get(root) ?? []).length && target?.length === 1) {
+      union(target[0], root);
+      merged = true;
+    }
+  }
+  if (merged) ({ names, repos } = naming());
+  apps.forEach((a, i) => (a.project = names.get(find(node[i]))!));
+
   const byProject = new Map<string, App[]>();
-  for (const a of apps) byProject.set(keyOf(a), [...(byProject.get(keyOf(a)) ?? []), a]);
+  apps.forEach((a, i) => {
+    const k = find(node[i]);
+    byProject.set(k, [...(byProject.get(k) ?? []), a]);
+  });
   const alive = (a: App) => a.kind !== "job" && ["on", "starting", "stopping"].includes(a.state);
   const clash = (runner: string, prefix: string, members: App[]) => apps.some((a) => a.runner === runner && a.task.startsWith(prefix) && !members.includes(a));
-  const projects = [...byProject.values()].map((list) => {
+  const projects = [...byProject.entries()].map(([root, list]) => {
     const wts = new Map<string, App[]>();
-    for (const a of list) wts.set(a.worktree ?? "", [...(wts.get(a.worktree ?? "") ?? []), a]);
+    for (const a of list) {
+      const k = a.checkout || `\u0000${a.worktree ?? ""}`;
+      wts.set(k, [...(wts.get(k) ?? []), a]);
+    }
     const runners = [...new Set(list.map((a) => a.runner))];
-    const main = list.find((a) => !a.worktree) ?? list[0];
+    const main = list.find((a) => !a.repo || !a.worktree) ?? list[0];
+    const rs = repos.get(root) ?? [];
     const prefix = runners.length === 1 ? commonPrefix(list.map((a) => a.task)) : "";
     return {
-      name: main.project,
+      name: names.get(root)!,
       runner: main.runner,
       ...(runners.length > 1 ? { runners } : {}),
-      ...(main.repo ? { repo: main.repo } : {}),
+      ...(rs.length === 1 ? { repo: rs[0] } : rs.length > 1 ? { repos: rs } : {}),
       prefix: prefix && !clash(main.runner, prefix, list) ? prefix : undefined,
       running: list.filter(alive).length,
       total: list.filter((a) => a.kind !== "job").length,
-      worktrees: [...wts.entries()]
-        .sort(([a], [b]) => Number(a !== "") - Number(b !== ""))
-        .map(([wt, wl]) => {
+      worktrees: [...wts.values()]
+        .sort((a, b) => Number(!!a[0].worktree) - Number(!!b[0].worktree))
+        .map((wl) => {
           const wtRunners = new Set(wl.map((a) => a.runner));
           const p = wtRunners.size === 1 ? commonPrefix(wl.map((a) => a.task)) : "";
           return {
-            name: wt,
+            name: wl[0].worktree ?? "",
             ...(wl[0].checkout ? { path: wl[0].checkout } : {}),
             ...(wl[0].branch ? { branch: wl[0].branch } : {}),
+            ...(wl[0].repo ? { repo: wl[0].repo } : {}),
             ...(wtRunners.size === 1 ? { runner: wl[0].runner } : {}),
             prefix: p && !clash(wl[0].runner, p, wl) ? p : undefined,
             running: wl.filter(alive).length,
@@ -206,6 +283,22 @@ export function groupForMock(apps: App[]): MachineSnapshot["projects"] {
   });
   projects.sort((a, b) => Number(b.running > 0) - Number(a.running > 0) || a.order - b.order);
   return projects.map(({ order: _order, ...p }) => p);
+}
+
+/** The owner's kind of setup (?mock=products): one dekit.yaml for every repository. */
+export function mockProductApps(): App[] {
+  const R = ROOT;
+  const at = (repo: string, checkout = repo, branch = "main", worktree?: string) => ({ repo: `${R}/${repo}`, checkout: `${R}/${checkout}`, branch, ...(worktree ? { worktree } : {}) });
+  return [
+    app({ task: "acme/api", label: "api", project: "acme", ...at("acme-backend"), dir: `${R}/acme-backend`, state: "on", rawState: "running", url: "https://api.acme.localhost", hostname: "api.acme.localhost", port: 4637, ports: [4637], pid: 5001, order: 0 }),
+    app({ task: "acme/web", label: "web", project: "acme", ...at("acme-front"), dir: `${R}/acme-front`, state: "on", rawState: "running", url: "https://acme.localhost", hostname: "acme.localhost", port: 4405, ports: [4405], pid: 5002, order: 1 }),
+    app({ task: "acme/app", label: "app", project: "acme", ...at("acme-webapp"), dir: `${R}/acme-webapp`, state: "on", rawState: "running", url: "https://app.acme.localhost", hostname: "app.acme.localhost", port: 4609, ports: [4609], pid: 5003, order: 2 }),
+    app({ task: "worktrees/new-ui/web", label: "web (feat/new-ui)", project: "worktrees", ...at("acme-front", "worktrees/new-ui", "feat/new-ui", "new-ui"), dir: `${R}/worktrees/new-ui`, state: "off", rawState: "stopped", hostname: "new-ui.acme.localhost", order: 3 }),
+    app({ task: "worktrees/v2/web", label: "web (v2)", project: "worktrees", ...at("symposium", "worktrees/v2", "v2/new-platform", "v2"), dir: `${R}/worktrees/v2`, state: "off", rawState: "stopped", hostname: "v2.symposium.localhost", order: 4 }),
+    app({ task: "worktrees/v2/api", label: "api (v2)", project: "worktrees", ...at("symposium", "worktrees/v2", "v2/new-platform", "v2"), dir: `${R}/worktrees/v2/api`, state: "off", rawState: "stopped", hostname: "api.v2.symposium.localhost", order: 5 }),
+    app({ task: "symposium/install", label: "install", kind: "job", project: "symposium", state: "done", rawState: "exited", order: 6 }),
+    app({ task: "panel", label: "panel", project: "panel", ...at("panel"), dir: `${R}/panel`, state: "on", rawState: "running", url: "https://panel.localhost", hostname: "panel.localhost", port: 4136, ports: [4136], pid: 5010, order: 7 }),
+  ];
 }
 
 const REMOTE_ROOT = MOCK_REMOTE_ROOT;
@@ -267,7 +360,7 @@ export const MOCK_CANDIDATES: MachineCandidate[] = [
 
 export function mockSnapshot(scenario: Scenario = "default"): Snapshot {
   const first = FIRST_RUN.includes(scenario);
-  const apps = scenario === "empty" || scenario === "readonly" || first ? [] : scenario === "many" ? mockManyApps() : mockApps();
+  const apps = scenario === "empty" || scenario === "readonly" || first ? [] : scenario === "many" ? mockManyApps() : scenario === "products" ? mockProductApps() : mockApps();
   const ms: MachineSnapshot = {
     machine: { id: "local", name: "This computer", local: true, hostname: "workstation", os: "linux", arch: "amd64", status: "online" },
     tools: { dekit: "0.10.3", portless: "0.16.0", proxyRunning: true, proxyHttps: true, proxyPort: 443 },

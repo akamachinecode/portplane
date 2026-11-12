@@ -29,6 +29,11 @@ case "$(uname -m)" in
   arm64 | aarch64) arch=arm64 ;;
   *) die "unsupported architecture $(uname -m)" ;;
 esac
+# A shell running through Rosetta on an Apple silicon Mac says x86_64:
+# the arm64 build is the one that runs natively.
+if [ "$os" = darwin ] && [ "$arch" = amd64 ] && [ "$(sysctl -n sysctl.proc_translated 2>/dev/null)" = 1 ]; then
+  arch=arm64
+fi
 
 if [ -z "$tag" ]; then
   tag=$(curl -fsSL "https://api.github.com/repos/$repo/releases/latest" | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -n 1)

@@ -233,7 +233,8 @@ The milestone is done when:
 
 The first weeks of daily use on macOS asked for a layout around projects and a window that looks like a current Mac app (ADR-0027).
 
-- [x] A project is a git repository: its linked worktrees join it from any folder of any `dekit.yaml`, with each checkout's branch and folder.
+- [x] A project is a task folder with the repositories configured in it: their linked worktrees join it from any folder of any `dekit.yaml`, with each checkout's branch and folder; a product of several repositories stays one project.
+- [x] Health says when Portplane runs as the Intel build through Rosetta on Apple silicon; `install.sh` picks the arm64 build from a shell running through Rosetta.
 - [x] Apps as one column of foldable projects and checkouts; idle worktrees start folded.
 - [x] A page per project, with its checkouts, actions and the `dekit.yaml` files that declare it.
 - [x] Sidebar with the projects, then dekit (Configuration, Runners) and portless (Routes, Proxy & HTTPS, Sharing, Doctor); views in a panel with a toolbar.

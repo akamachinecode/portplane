@@ -243,8 +243,7 @@ func (l *Local) collect(ctx context.Context) model.MachineSnapshot {
 		return snap.OtherPorts[i].Port < snap.OtherPorts[j].Port
 	})
 
-	model.JoinRepos(snap.Apps)
-	snap.Projects = model.Group(snap.Apps)
+	snap.Projects = model.Group(snap.Apps) // also names each app's project
 	snap.UpdatedAt = time.Now().UTC()
 	return snap
 }

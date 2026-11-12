@@ -197,7 +197,7 @@ func (l *Local) machine() model.Machine {
 	return model.Machine{
 		ID: id, Name: l.name, Local: true, Hostname: host,
 		OS: runtime.GOOS, Arch: runtime.GOARCH, Status: "online",
-		Agent: buildinfo.Version(),
+		Agent: buildinfo.Version(), Translated: osinfo.Translated(),
 	}
 }
 

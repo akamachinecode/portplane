@@ -139,6 +139,9 @@ type Machine struct {
 	Status   string `json:"status"` // online, connecting, offline
 	Error    string `json:"error,omitempty"`
 	Agent    string `json:"agent,omitempty"` // agent version
+	// Translated: an Intel build running through Rosetta on an Apple silicon
+	// Mac, slower and heavier than the arm64 build.
+	Translated bool `json:"translated,omitempty"`
 }
 
 // MachineSnapshot is everything one agent reports.
@@ -159,16 +162,17 @@ type Snapshot struct {
 	Version  uint64            `json:"version"` // increases on every change
 }
 
-// Project groups the apps of one project, by worktree. A project is a git
-// repository when its apps live in one: its linked worktrees join it from any
-// folder of any dekit.yaml. Apps outside git group by their task folder.
+// Project groups the apps of one project, by checkout. A project is a task
+// folder with the git repositories configured in it, and their linked
+// worktrees from any folder of any dekit.yaml (model.Group).
 type Project struct {
 	Name   string `json:"name"`
 	Runner string `json:"runner"` // the runner of its main checkout's apps (its first one's otherwise)
 	// Runners lists every runner its apps come from when there is more than
 	// one (a worktree's tasks in another dekit.yaml); empty otherwise.
 	Runners   []string   `json:"runners,omitempty"`
-	Repo      string     `json:"repo,omitempty"`   // the repository's main checkout
+	Repo      string     `json:"repo,omitempty"`   // the repository's main checkout, when it has one repository
+	Repos     []string   `json:"repos,omitempty"`  // its repositories' main checkouts, when it has several
 	Prefix    string     `json:"prefix,omitempty"` // shared task path prefix, for project-wide actions
 	Running   int        `json:"running"`          // services alive
 	Total     int        `json:"total"`            // services (jobs are steps, not counted)
@@ -180,6 +184,7 @@ type Worktree struct {
 	Name    string   `json:"name"`             // empty for the main checkout
 	Path    string   `json:"path,omitempty"`   // the checkout's folder
 	Branch  string   `json:"branch,omitempty"` // what it has out now
+	Repo    string   `json:"repo,omitempty"`   // the repository it is a checkout of
 	Runner  string   `json:"runner,omitempty"` // its apps' runner, when they share one
 	Prefix  string   `json:"prefix,omitempty"`
 	Running int      `json:"running"`

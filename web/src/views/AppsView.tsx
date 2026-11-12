@@ -9,7 +9,7 @@ import { EntryRows } from "../components/ProjectCard";
 import { SkeletonCards } from "../components/Skeleton";
 import { projectFoldKey, useFolds, worktreeFoldKey } from "../hooks/useFolds";
 import { indexApps } from "../lib/apps";
-import { foldedByDefault } from "../lib/projects";
+import { checkoutKey, foldedByDefault } from "../lib/projects";
 import { EmptyState } from "../components/States";
 import { ViewHeader } from "../components/ViewHeader";
 import { appHref, copyableUrl, isAlive } from "../lib/apps";
@@ -158,7 +158,7 @@ function AppsBody({ snapshot, keysOn }: { snapshot: Snapshot; keysOn: boolean })
       for (const p of m.projects) {
         if (folds.isFolded(projectFoldKey(m.ms.machine.id, p.project.runner, p.project.name), false)) continue;
         for (const w of p.worktrees) {
-          if (p.multi && folds.isFolded(worktreeFoldKey(m.ms.machine.id, p.project.runner, p.project.name, w.name), foldedByDefault(w.worktree, byId))) continue;
+          if ((p.multi || w.name) && folds.isFolded(worktreeFoldKey(m.ms.machine.id, p.project.runner, p.project.name, checkoutKey(w.worktree)), p.worktrees.length > 1 && foldedByDefault(w.worktree, byId))) continue;
           order.push(...w.entries);
         }
       }

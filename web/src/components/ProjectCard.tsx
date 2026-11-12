@@ -3,7 +3,7 @@ import { projectFoldKey, worktreeFoldKey, type Folds } from "../hooks/useFolds";
 import { indexApps, isAlive, projectApps, runningUrls, serviceCounts, worktreeApps } from "../lib/apps";
 import { inferHome, shortenPath } from "../lib/format";
 import { appsFingerprint } from "../lib/pending";
-import { checkoutsText, foldedByDefault, groupState, projectRoute } from "../lib/projects";
+import { checkoutKey, checkoutName, checkoutsText, foldedByDefault, groupState, projectRoute } from "../lib/projects";
 import { href } from "../lib/router";
 import { projectTargets, worktreeTargets } from "../lib/targets";
 import type { AppEntry, ProjectGroup, WorktreeGroup } from "../views/apps/model";
@@ -117,10 +117,13 @@ function CheckoutSection({
   extras,
   folds,
   forceOpen,
+  only,
 }: {
   ms: MachineSnapshot;
   project: Project;
   group: WorktreeGroup;
+  /** The only checkout shown: open unless the user folded it. */
+  only?: boolean;
   byId: Map<string, App>;
   multi: boolean;
   extras?: (e: AppEntry) => RowExtras;
@@ -130,20 +133,23 @@ function CheckoutSection({
   const wt = group.worktree;
   const apps = worktreeApps(wt, byId);
   const linked = !!wt.name;
-  const name = wt.name || "main";
-  const foldKey = worktreeFoldKey(ms.machine.id, project.runner, project.name, wt.name);
-  const folded = !forceOpen && !!folds?.isFolded(foldKey, foldedByDefault(wt, byId));
+  const name = checkoutName(project, wt);
+  const foldKey = worktreeFoldKey(ms.machine.id, project.runner, project.name, checkoutKey(wt));
+  // A linked worktree always says which it is; the main checkout only next
+  // to others. Only a checkout with a header can fold: there'd be no way back.
+  const head = multi || linked;
+  const folded = head && !forceOpen && !!folds?.isFolded(foldKey, !only && foldedByDefault(wt, byId));
   const path = usePath(ms, wt.path);
   const listId = `rows-${foldKey}`.replace(/[^\w-]/g, "_");
   const showBranch = wt.branch && wt.branch !== wt.name;
   return (
-    <div className={`checkout${folded ? " is-folded" : ""}${linked ? " is-linked" : ""}`}>
-      {multi && (
+    <div className={`checkout${folded ? " is-folded" : ""}${linked || (project.repos?.length ?? 0) > 1 ? " is-linked" : ""}`}>
+      {head && (
         <div className="checkout-head">
           {folds && <FoldButton folded={folded} label={`the apps of ${name}`} controls={listId} onToggle={() => folds.setFolded(foldKey, !folded)} />}
           <Icon name="branch" size={13} className="checkout-icon" />
           <span className="checkout-name" title={wt.prefix || undefined}>
-            {linked ? wt.name : "main checkout"}
+            {name}
           </span>
           {showBranch && (
             <span className="branch-chip" title="The branch it has out">
@@ -160,7 +166,7 @@ function CheckoutSection({
           <GroupActions
             ms={ms}
             name={`${project.name} (${name})`}
-            keyBase={`wt|${ms.machine.id}|${project.runner}|${project.name}|${wt.name}|`}
+            keyBase={`wt|${ms.machine.id}|${project.runner}|${project.name}|${checkoutKey(wt)}|`}
             apps={apps}
             targets={worktreeTargets(ms.machine.id, project, wt, byId)}
             withOpen={false}
@@ -211,7 +217,18 @@ export function ProjectCard({
   const body = !folded && (
     <div className="project-body" id={listId}>
       {group.worktrees.map((wt) => (
-        <CheckoutSection key={wt.name} ms={ms} project={project} group={wt} byId={byId} multi={group.multi} extras={extras} folds={folds} forceOpen={forceOpen} />
+        <CheckoutSection
+          key={checkoutKey(wt.worktree)}
+          ms={ms}
+          project={project}
+          group={wt}
+          byId={byId}
+          multi={group.multi}
+          extras={extras}
+          folds={folds}
+          forceOpen={forceOpen}
+          only={group.worktrees.length === 1}
+        />
       ))}
     </div>
   );

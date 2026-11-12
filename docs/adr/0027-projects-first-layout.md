@@ -36,11 +36,12 @@ Facts:
 
 **Grouping**
 
-| | By runner and task folder (today) | By git repository | By repository, but only for linked worktrees |
+| | By runner and task folder (today) | By git repository | By task folder, joined with the repositories configured in it |
 |---|---|---|---|
-| A worktree declared in another folder or file | Shows apart | Under its repository | Under its repository |
-| A repository with tasks in two `dekit.yaml` files | Two projects | One | Two |
-| Apps outside git | By task folder | By task folder | By task folder |
+| A worktree declared in another folder or file | Shows apart | Under its repository | Under its repository's project |
+| A repository with tasks in two `dekit.yaml` files | Two projects | One | One |
+| A folder for a product of three repositories (`acme/api`, `acme/web`, `acme/app`) | One | Three projects, all called "acme" | One, with a checkout per repository |
+| Apps outside git | By task folder | By task folder | By task folder, joining a repository's project of the same name |
 
 **Title bar on macOS**
 
@@ -60,22 +61,23 @@ Facts:
 
 ## Verdict
 
-**The app is laid out around projects, each a git repository with its worktrees; the sidebar lists the projects, then dekit's and portless's sections by name; and on macOS the page draws the title bar.**
+**The app is laid out around projects, each a task folder with the git repositories configured in it and all their worktrees; the sidebar lists dekit's and portless's sections by name, then the projects; and on macOS the page draws the title bar.**
 
-- **A project is a git repository.** The agent fills `repo`, `checkout` and `branch` on every app, and `JoinRepos` gives all apps of one repository the same project, wherever their tasks are declared. Its name is the task folder its main checkout's apps share, or the repository's folder name when they disagree or there are none. `Group` keys projects by repository (by runner and task folder outside git) and fills each worktree's `path`, `branch` and `runner`. A project whose apps come from several runners lists them in `runners` and has no `prefix`, so the UI acts on it with one target per runner. All new fields are optional: an older agent's snapshot shows as before.
+- **A project is a task folder joined with its repositories.** The agent fills `repo`, `checkout` and `branch` on every app (the branch read from `HEAD` once per checkout and collection, the repository by its real path so symbolic links and Windows short names agree). `Group` links each main checkout's repository with the task folder its tasks sit in, and puts every linked worktree with its repository, wherever the worktree's task is declared. Tasks outside git in a folder named like a repository's project join it. A project takes the name of its one task folder, or the repository's folder name when one repository's tasks sit under several names or only its worktrees are configured. `Group` also renames each app's project to match. Each checkout is one group (`path`, `branch`, `repo`, `runner`): a product of three repositories has three main checkouts, named after their repositories. A project lists its repositories in `repos` when there are several, and its runners in `runners` when its apps come from several, in which case it has no `prefix` and the UI acts on it with one target per runner. All new fields are optional: an older agent's snapshot shows as before.
 - **The Apps view is one column of projects.** Each project folds, and inside it each checkout (the main one first, then each worktree with its branch and folder) folds too. A linked worktree with nothing running or failing starts folded. Rows line up under their project, and their secondary actions show on hover, while start or stop and the menu always show. The keyboard skips folded rows. The table layout stays.
 - **Each project has a page** (`#/project/<machine>/<name>`): its checkouts and apps, its actions, its folder, and links to the `dekit.yaml` files that declare it.
-- **The sidebar** has Apps and Health, then **Projects** with a state dot and a running count each, then **dekit** (Configuration, Runners) and **portless** (Routes, Proxy & HTTPS, Sharing, Doctor), then Machines; Settings and the setup progress sit at the foot. Groups fold. portless's eleven sections become four pages with tabs. Each tool page names its tool in the toolbar ("portless / Routes").
+- **The sidebar** has Apps, Health and Machines, then **dekit** (Configuration, Runners) and **portless** (Routes, Proxy & HTTPS, Sharing, Doctor), then **Projects** with a state dot and a running count each, last because it is the long list; Settings and the setup progress sit at the foot. Groups fold. portless's eleven sections become four pages with tabs. Each tool page names its tool in the toolbar ("portless / Routes").
 - **The view sits in a rounded panel beside the sidebar, with a toolbar along its top.** `ViewHeader` renders a view's title, a short summary and its actions into the toolbar through a portal, and its description at the top of the page. The panel scrolls, the window does not. Hiding the sidebar hides it completely, and the toolbar shows the button to bring it back. Under 760 px a tab bar replaces the sidebar.
 - **macOS window:** `NSWindowStyleMaskFullSizeContentView`, a transparent title bar and a hidden title (kept for the Window menu). Before the page loads, the window sets `data-window="mac"` on `<html>`, plus `--titlebar-h` and `--traffic-w` measured from the window (the title bar's height, and the zoom button's right edge plus 12 pt). It updates `data-fullscreen` and `data-active` (key window) as they change. The sidebar leaves that strip for the traffic lights. A mouse-down on an element inside `[data-drag-region]` that is not a control posts `"drag"` to the `portplane` message handler, and the window calls `performWindowDragWithEvent:` with the mouse-down it kept from a local event monitor. A double-click posts `"zoom"`, which does what `AppleActionOnDoubleClick` says (zoom, minimise or nothing). No toolbar: the top strip stays clickable. Linux and Windows keep their system frames.
 - **First run:** the app opens on Apps, with **Get started** at the top: four steps (install dekit and portless, turn on HTTPS, add your projects, start your first app), each read from the live snapshot so steps done from a terminal tick too. Each step leads into the guided setup at the right place, and the guided setup returns to the app. Get started hides itself when all four are done, or when the user hides it (Settings › General brings it back).
 
 **Cost we accept:**
 
-- One project for a repository can mean actions over several runners, sent as one request per runner.
-- Someone who split one repository's tasks into several task folders on purpose now sees one project; the checkouts and the table still tell the apps apart.
+- One project can mean actions over several runners, sent as one request per runner.
+- Someone who split one repository's tasks into several task folders on purpose now sees one project; the table still tells the apps apart.
+- A task folder that mixes unrelated repositories becomes one project with all of them.
 - About 80 more lines of Objective-C that only the macOS runner compiles and only a person can check: the drag, the zoom, the traffic lights' corner in full screen and with the sidebar hidden.
 - The page, not AppKit, decides what drags the window: a new control in the toolbar that is not a button, link or field needs `data-no-drag`.
 - The traffic lights keep their default position (the top 28 pt or so), not centred in the 52 pt toolbar.
 
-**What would make us revisit it:** monorepos where one repository holds unrelated projects that people want apart; a WKWebView that supports app regions; macOS changes that move or hide the traffic lights in a way the measured variables do not cover; Linux or Windows users asking for the same frameless window.
+**What would make us revisit it:** monorepos where one repository holds unrelated projects that people want apart, or task folders that group repositories people think of as separate; a WKWebView that supports app regions; macOS changes that move or hide the traffic lights in a way the measured variables do not cover; Linux or Windows users asking for the same frameless window.

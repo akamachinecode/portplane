@@ -7,55 +7,137 @@ import (
 	"strings"
 )
 
-// JoinRepos gives every app in a git repository the same project, wherever
-// its task is declared: a "worktrees/" folder of a dekit.yaml that covers
-// many repositories, another runner, the repository's own dekit.yaml. The
-// name is the task folder its main checkout's apps share, or the
-// repository's folder name when they name it differently or there are none
-// (only linked worktrees). Group keeps such apps in one project.
-func JoinRepos(apps []App) {
-	names := repoNames(apps)
-	for i := range apps {
-		if apps[i].Repo != "" {
-			apps[i].Project = names[apps[i].Repo]
-		}
-	}
+// A project is a task folder of a dekit.yaml together with every git
+// repository whose main checkout has tasks in it, plus every linked worktree
+// of those repositories, wherever the worktree's tasks are declared (a
+// "worktrees/" folder of a dekit.yaml that covers many repositories, another
+// runner). So a folder that names a product made of several repositories is
+// one project, a repository whose tasks sit in two dekit.yaml files is one
+// project, and a worktree always shows under its repository.
+type grouping struct {
+	key    []string          // per app: its project's key
+	name   map[string]string // per key
+	runner map[string]string // per key: the runner of its first main checkout or non-git app
+	repos  map[string][]string
 }
 
-// repoNames maps each repository to its project's name.
-func repoNames(apps []App) map[string]string {
-	seen := map[string]map[string]bool{}
-	first := map[string]string{}
-	for _, a := range apps {
-		if a.Repo == "" {
-			continue
+func groupApps(apps []App) grouping {
+	parent := map[string]string{}
+	var find func(string) string
+	find = func(x string) string {
+		p, ok := parent[x]
+		if !ok {
+			parent[x] = x
+			return x
 		}
-		if _, ok := seen[a.Repo]; !ok {
-			seen[a.Repo] = map[string]bool{}
+		if p == x {
+			return x
 		}
-		if a.Worktree != "" {
-			continue
-		}
-		seen[a.Repo][a.Project] = true
-		if _, ok := first[a.Repo]; !ok {
-			first[a.Repo] = a.Project
+		r := find(p)
+		parent[x] = r
+		return r
+	}
+	union := func(a, b string) {
+		if ra, rb := find(a), find(b); ra != rb {
+			parent[rb] = ra
 		}
 	}
-	names := map[string]string{}
-	for repo, ps := range seen {
-		if len(ps) == 1 {
-			names[repo] = first[repo]
-		} else {
-			names[repo] = filepath.Base(repo)
+	folderNode := func(a App) string { return "f\x00" + a.Runner + "\x00" + a.Project }
+	repoNode := func(r string) string { return "r\x00" + r }
+
+	node := make([]string, len(apps))
+	for i, a := range apps {
+		switch {
+		case a.Repo == "":
+			node[i] = folderNode(a)
+			find(node[i])
+		case a.Worktree != "":
+			node[i] = repoNode(a.Repo)
+			find(node[i])
+		default:
+			node[i] = repoNode(a.Repo)
+			union(folderNode(a), node[i])
 		}
 	}
-	return names
+
+	name := func() (map[string]string, map[string][]string) {
+		folders := map[string][]string{}
+		repos := map[string][]string{}
+		for _, a := range apps {
+			if a.Repo != "" {
+				root := find(repoNode(a.Repo))
+				if !slices.Contains(repos[root], a.Repo) {
+					repos[root] = append(repos[root], a.Repo)
+				}
+			}
+			if a.Repo != "" && a.Worktree != "" {
+				continue // a worktree's task folder ("worktrees/…") names nothing
+			}
+			root := find(folderNode(a))
+			if !slices.Contains(folders[root], a.Project) {
+				folders[root] = append(folders[root], a.Project)
+			}
+		}
+		names := map[string]string{}
+		for _, n := range node {
+			root := find(n)
+			if _, ok := names[root]; ok {
+				continue
+			}
+			f, r := folders[root], repos[root]
+			switch {
+			case len(f) == 1:
+				names[root] = f[0]
+			case len(r) == 1 || (len(f) == 0 && len(r) > 0):
+				names[root] = filepath.Base(r[0])
+			default:
+				names[root] = f[0]
+			}
+		}
+		return names, repos
+	}
+	names, repos := name()
+
+	// Tasks outside git in a folder named like a repository's project (its
+	// main checkout isn't configured, or isn't there) belong to it.
+	byName := map[string][]string{}
+	for root, n := range names {
+		if len(repos[root]) > 0 {
+			byName[n] = append(byName[n], root)
+		}
+	}
+	merged := false
+	for root, n := range names {
+		if len(repos[root]) == 0 && len(byName[n]) == 1 {
+			union(byName[n][0], root)
+			merged = true
+		}
+	}
+	if merged {
+		names, repos = name()
+	}
+
+	g := grouping{key: make([]string, len(apps)), name: map[string]string{}, runner: map[string]string{}, repos: map[string][]string{}}
+	for i, a := range apps {
+		root := find(node[i])
+		g.key[i] = root
+		g.name[root] = names[root]
+		g.repos[root] = repos[root]
+		if _, ok := g.runner[root]; !ok && (a.Repo == "" || a.Worktree == "") {
+			g.runner[root] = a.Runner
+		}
+	}
+	for i, a := range apps {
+		if _, ok := g.runner[g.key[i]]; !ok {
+			g.runner[g.key[i]] = a.Runner
+		}
+	}
+	return g
 }
 
-// Group arranges apps into projects and worktrees for display. Projects with
+// Group arranges apps into projects (see groupApps) and checkouts for
+// display, and sets each app's Project to its project's name. Projects with
 // something running come first; otherwise everything keeps config order.
-// Apps in a git repository form one project (JoinRepos names it), even from
-// several runners; the others group by runner and task folder.
 func Group(apps []App) []Project {
 	type wtAcc struct {
 		wt      Worktree
@@ -69,29 +151,27 @@ func Group(apps []App) []Project {
 		wts     map[string]*wtAcc
 		tasks   []string
 		runners []string
-		home    bool // the runner was set by a main checkout app
 	}
-	keyOf := func(a App) string {
-		if a.Repo != "" {
-			return "\x01" + a.Repo
-		}
-		return a.Runner + "\x00" + a.Project
+	g := groupApps(apps)
+	for i := range apps {
+		apps[i].Project = g.name[g.key[i]]
 	}
 	byKey := map[string]*projAcc{}
 	var keys []string
-	for _, a := range apps {
-		key := keyOf(a)
+	for i, a := range apps {
+		key := g.key[i]
 		pa, ok := byKey[key]
 		if !ok {
-			pa = &projAcc{p: Project{Name: a.Project, Runner: a.Runner}, order: a.Order, wts: map[string]*wtAcc{}}
+			pa = &projAcc{p: Project{Name: g.name[key], Runner: g.runner[key]}, order: a.Order, wts: map[string]*wtAcc{}}
+			switch rs := g.repos[key]; len(rs) {
+			case 0:
+			case 1:
+				pa.p.Repo = rs[0]
+			default:
+				pa.p.Repos = rs
+			}
 			byKey[key] = pa
 			keys = append(keys, key)
-		}
-		if a.Worktree == "" && !pa.home {
-			pa.p.Runner, pa.home = a.Runner, true
-		}
-		if pa.p.Repo == "" {
-			pa.p.Repo = a.Repo
 		}
 		if !slices.Contains(pa.runners, a.Runner) {
 			pa.runners = append(pa.runners, a.Runner)
@@ -99,10 +179,15 @@ func Group(apps []App) []Project {
 		if a.Order < pa.order {
 			pa.order = a.Order
 		}
-		wa, ok := pa.wts[a.Worktree]
+		// One group per checkout: a product's repositories each have a main one.
+		wkey := "\x00" + a.Worktree
+		if a.Checkout != "" {
+			wkey = a.Checkout
+		}
+		wa, ok := pa.wts[wkey]
 		if !ok {
-			wa = &wtAcc{wt: Worktree{Name: a.Worktree, Path: a.Checkout, Branch: a.Branch}, order: a.Order, runners: map[string]bool{}}
-			pa.wts[a.Worktree] = wa
+			wa = &wtAcc{wt: Worktree{Name: a.Worktree, Path: a.Checkout, Branch: a.Branch, Repo: a.Repo}, order: a.Order, runners: map[string]bool{}}
+			pa.wts[wkey] = wa
 		}
 		if a.Order < wa.order {
 			wa.order = a.Order

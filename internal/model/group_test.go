@@ -73,11 +73,10 @@ func TestGroupJoinsWorktreesToTheirRepository(t *testing.T) {
 		{ID: all + "#worktrees/redesign/site", Runner: all, Task: "worktrees/redesign/site", Project: "worktrees", Worktree: "redesign", Repo: blog, Checkout: "/r/worktrees/redesign", Branch: "design/new", Kind: "service", State: StateOff, Order: 3},
 		{ID: all + "#tools/panel", Runner: all, Task: "tools/panel", Project: "tools", Dir: other, Kind: "service", State: StateOff, Order: 4},
 	}
-	JoinRepos(apps)
-	if apps[1].Project != "shop" || apps[3].Project != "blog" || apps[4].Project != "tools" {
-		t.Fatalf("projects after JoinRepos: %q %q %q", apps[1].Project, apps[3].Project, apps[4].Project)
-	}
 	got := Group(apps)
+	if apps[1].Project != "shop" || apps[3].Project != "blog" || apps[4].Project != "tools" {
+		t.Fatalf("app projects after Group: %q %q %q", apps[1].Project, apps[3].Project, apps[4].Project)
+	}
 	if len(got) != 3 {
 		t.Fatalf("want shop, blog and tools, got %+v", got)
 	}
@@ -121,7 +120,6 @@ func TestGroupOneProjectPerRepository(t *testing.T) {
 		{ID: repo + "#web", Runner: repo, Task: "web", Project: "localhost-control-plane", Repo: repo, Checkout: repo, Kind: "service", State: StateOff, Order: 0},
 		{ID: "/r#other/web", Runner: "/r", Task: "other/web", Project: "other", Repo: "/r/other", Checkout: "/r/other", Kind: "service", State: StateOff, Order: 1},
 	}
-	JoinRepos(apps)
 	got := Group(apps)
 	if len(got) != 2 {
 		t.Fatalf("want two projects, got %+v", got)
@@ -133,5 +131,50 @@ func TestGroupOneProjectPerRepository(t *testing.T) {
 	// one runner, one name: the task folder wins over the repository's folder
 	if got[1].Name != "other" {
 		t.Fatalf("other: %+v", got[1])
+	}
+}
+
+// The owner's setup: a task folder "acme" for a product made of three
+// repositories, a worktree of one of them under "worktrees/", and a folder
+// "symposium" whose repository only has a worktree configured, next to a
+// task outside git in a folder of the same name. Each folder is one
+// project, with every checkout inside.
+func TestGroupAProductOfSeveralRepositories(t *testing.T) {
+	const all = "/r"
+	app := func(id, task, project, repo, checkout, wt string, order int) App {
+		return App{ID: all + "#" + id, Runner: all, Task: task, Project: project, Repo: repo, Checkout: checkout, Worktree: wt, Kind: "service", State: StateOff, Order: order}
+	}
+	apps := []App{
+		app("acme/api", "acme/api", "acme", "/r/acme-backend", "/r/acme-backend", "", 0),
+		app("acme/web", "acme/web", "acme", "/r/acme-front", "/r/acme-front", "", 1),
+		app("acme/app", "acme/app", "acme", "/r/acme-webapp", "/r/acme-webapp", "", 2),
+		app("worktrees/new-ui/web", "worktrees/new-ui/web", "worktrees", "/r/acme-front", "/r/worktrees/new-ui", "new-ui", 3),
+		app("worktrees/v2/web", "worktrees/v2/web", "worktrees", "/r/symposium", "/r/worktrees/v2", "v2", 4),
+		app("symposium/install", "symposium/install", "symposium", "", "", "", 5),
+	}
+	got := Group(apps)
+	if len(got) != 2 {
+		t.Fatalf("want acme and symposium, got %+v", got)
+	}
+	a := got[0]
+	if a.Name != "acme" || a.Repo != "" || !reflect.DeepEqual(a.Repos, []string{"/r/acme-backend", "/r/acme-front", "/r/acme-webapp"}) || a.Prefix != "" {
+		t.Fatalf("acme: %+v", a)
+	}
+	var names []string
+	for _, w := range a.Worktrees {
+		names = append(names, w.Name+"@"+w.Path+"|"+w.Repo)
+	}
+	want := []string{"@/r/acme-backend|/r/acme-backend", "@/r/acme-front|/r/acme-front", "@/r/acme-webapp|/r/acme-webapp", "new-ui@/r/worktrees/new-ui|/r/acme-front"}
+	if !reflect.DeepEqual(names, want) {
+		t.Fatalf("acme checkouts: %v", names)
+	}
+	s := got[1]
+	if s.Name != "symposium" || s.Repo != "/r/symposium" || len(s.Worktrees) != 2 {
+		t.Fatalf("symposium: %+v", s)
+	}
+	for _, x := range apps {
+		if x.Project != "acme" && x.Project != "symposium" {
+			t.Errorf("%s is in project %q", x.Task, x.Project)
+		}
 	}
 }

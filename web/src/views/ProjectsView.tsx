@@ -10,6 +10,7 @@ import { ViewHeader } from "../components/ViewHeader";
 import { indexApps, projectApps, serviceCounts, visibleApps, worktreeApps } from "../lib/apps";
 import { inferHome, shortenPath, stateLabel } from "../lib/format";
 import { appsFingerprint } from "../lib/pending";
+import { checkoutKey, checkoutName } from "../lib/projects";
 import { projectTargets } from "../lib/targets";
 import { appRoute, href, navigate } from "../lib/router";
 import { SnapshotGate } from "../shell/SnapshotGate";
@@ -109,11 +110,11 @@ function ProjectBlock({ ms, project }: { ms: MachineSnapshot; project: Project }
       {project.worktrees.map((wt) => {
         const apps = visibleApps(worktreeApps(wt, byId));
         return (
-          <div key={wt.name} className="proj-wt">
+          <div key={checkoutKey(wt)} className="proj-wt">
             {multi && (
               <p className="proj-wt-name">
                 <Icon name="branch" size={13} />
-                {wt.name || "main"}
+                {checkoutName(project, wt)}
               </p>
             )}
             {apps.length ? (

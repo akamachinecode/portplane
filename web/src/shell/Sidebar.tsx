@@ -111,9 +111,9 @@ const CONNECTION: Record<ConnectionStatus, string> = {
 };
 
 /**
- * The app's navigation (ADR-0027): the apps and their health on top, then
- * every project (a repository with its worktrees), then the dekit and
- * portless sections, machines, and settings at the foot. It runs up to the
+ * The app's navigation (ADR-0027): the apps, their health and the machines
+ * on top, then the dekit and portless sections, then every project (the
+ * long list, last), and settings at the foot. It runs up to the
  * window's top edge; on macOS the traffic lights sit in its first strip.
  */
 export function Sidebar({ onSearch }: { onSearch(): void }) {
@@ -162,7 +162,22 @@ export function Sidebar({ onSearch }: { onSearch(): void }) {
         <ul className="nav-list">
           <NavLink route={{ view: "apps" }} label="Apps" icon="apps" badge={appsBadge} current={route.view === "apps"} />
           <NavLink route={{ view: "health" }} label="Health" icon="pulse" badge={healthBadge} current={route.view === "health"} />
+          <NavLink
+            route={{ view: "machines" }}
+            label="Machines"
+            icon="machine"
+            current={route.view === "machines"}
+            badge={remoteCount > 0 ? { text: String(remoteCount + 1), label: `${remoteCount + 1} machines` } : undefined}
+          />
         </ul>
+
+        {TOOL_GROUPS.map((g) => (
+          <Group key={g.id} id={g.id} title={g.label} hint={g.hint} folded={folded.has(g.id)} onToggle={() => toggle(g.id)}>
+            {g.links.map((l) => (
+              <NavLink key={l.id} route={l.route} label={l.label} icon={l.icon} current={l.current(route)} />
+            ))}
+          </Group>
+        ))}
 
         <Group
           id="projects"
@@ -184,24 +199,6 @@ export function Sidebar({ onSearch }: { onSearch(): void }) {
             </li>
           )}
         </Group>
-
-        {TOOL_GROUPS.map((g) => (
-          <Group key={g.id} id={g.id} title={g.label} hint={g.hint} folded={folded.has(g.id)} onToggle={() => toggle(g.id)}>
-            {g.links.map((l) => (
-              <NavLink key={l.id} route={l.route} label={l.label} icon={l.icon} current={l.current(route)} />
-            ))}
-          </Group>
-        ))}
-
-        <ul className="nav-list nav-list-gap">
-          <NavLink
-            route={{ view: "machines" }}
-            label="Machines"
-            icon="machine"
-            current={route.view === "machines"}
-            badge={remoteCount > 0 ? { text: String(remoteCount + 1), label: `${remoteCount + 1} machines` } : undefined}
-          />
-        </ul>
       </div>
 
       <div className="sidebar-foot">

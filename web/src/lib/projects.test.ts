@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { mockSnapshot } from "../api/mock";
 import type { App } from "../api/types";
 import { indexApps } from "./apps";
-import { checkoutsText, findProject, foldedByDefault, groupState, projectRoute, sidebarProjects } from "./projects";
+import { checkoutKey, checkoutName, checkoutsText, findProject, foldedByDefault, groupState, projectRoute, sidebarProjects } from "./projects";
 
 const snap = mockSnapshot("default");
 const local = snap.machines[0];
@@ -53,5 +53,19 @@ describe("worktrees", () => {
   it("carries the branch and folder of each checkout", () => {
     const blog = local.projects.find((p) => p.name === "blog")!;
     expect(blog.worktrees.map((w) => `${w.name || "main"}@${w.branch} ${w.path}`)).toEqual(["main@main /home/dev/code/blog", "redesign@design/new /home/dev/code/worktrees/redesign"]);
+  });
+});
+
+describe("a product of several repositories (?mock=products)", () => {
+  const ms = mockSnapshot("products").machines[0];
+  it("groups like the agent: by folder, with each repository's worktrees", () => {
+    const acme = ms.projects.find((p) => p.name === "acme")!;
+    expect(acme.repos).toHaveLength(3);
+    expect(acme.worktrees.map((w) => checkoutName(acme, w))).toEqual(["acme-backend", "acme-front", "acme-webapp", "acme-front / new-ui"]);
+    expect(checkoutsText(acme)).toBe("3 repositories · 1 worktree");
+    const sym = ms.projects.find((p) => p.name === "symposium")!;
+    expect(sym.worktrees.map((w) => checkoutName(sym, w))).toEqual(["outside git", "v2"]);
+    expect(ms.projects.map((p) => p.name).sort()).toEqual(["acme", "panel", "symposium"]);
+    expect(new Set(ms.projects.map((p) => checkoutKey(p.worktrees[0]))).size).toBe(3);
   });
 });
