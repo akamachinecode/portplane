@@ -6,6 +6,7 @@ import type { RowExtras } from "../components/AppRow";
 import { Icon } from "../components/Icon";
 import { MachineSection, ProjectGrid } from "../components/MachineSection";
 import { EntryRows } from "../components/ProjectCard";
+import { SkeletonCards } from "../components/Skeleton";
 import { EmptyState } from "../components/States";
 import { ViewHeader } from "../components/ViewHeader";
 import { appHref, copyableUrl, isAlive } from "../lib/apps";
@@ -91,7 +92,7 @@ export function AppsView() {
           )
         }
       />
-      <SnapshotGate>
+      <SnapshotGate loading={<SkeletonCards label="Connecting to Portplane…" />}>
         {(snapshot) =>
           snapshot.machines.length === 0 ? (
             <EmptyState icon="machine" title="No machines to show" />

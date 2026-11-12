@@ -4,6 +4,8 @@ import { isMac } from "../lib/keyboard";
 import { shortcutGroups } from "../lib/shortcuts";
 import "./shortcuts.css";
 
+const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+
 /** "?": every keyboard shortcut, by where it works (plan §6.3). */
 export function ShortcutsDialog({ onClose }: { onClose(): void }) {
   const { info } = useApp();
@@ -13,8 +15,8 @@ export function ShortcutsDialog({ onClose }: { onClose(): void }) {
       <p className="dialog-text muted">Single keys work when you are not typing in a field.</p>
       <div className="shortcuts">
         {groups.map((g) => (
-          <section key={g.title} className="shortcuts-group" aria-labelledby={`sc-${g.title}`}>
-            <h3 className="shortcuts-title" id={`sc-${g.title}`}>
+          <section key={g.title} className="shortcuts-group" aria-labelledby={`sc-${slug(g.title)}`}>
+            <h3 className="shortcuts-title" id={`sc-${slug(g.title)}`}>
               {g.title}
             </h3>
             <dl className="shortcuts-list">

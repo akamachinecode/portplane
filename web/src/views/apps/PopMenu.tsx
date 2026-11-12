@@ -93,6 +93,8 @@ export function PopMenu({ label, button, buttonTitle, active, sections, empty, f
   };
 
   const nothing = sections.every((s) => s.items.length === 0);
+  // Roving focus: the first item is the menu's one tab stop, the arrows do the rest.
+  const firstLabel = sections.flatMap((s) => s.items)[0]?.label;
 
   return (
     <div className="popmenu" ref={wrap} onKeyDown={onKeyDown}>
@@ -121,7 +123,7 @@ export function PopMenu({ label, button, buttonTitle, active, sections, empty, f
                   </p>
                 )}
                 {section.items.map((item) => (
-                  <Item key={`${item.kind}:${item.label}`} item={item} close={() => close(true)} />
+                  <Item key={`${item.kind}:${item.label}`} item={item} tabIndex={item.label === firstLabel ? 0 : -1} close={() => close(true)} />
                 ))}
               </div>
             ),
@@ -148,11 +150,11 @@ export function PopMenu({ label, button, buttonTitle, active, sections, empty, f
   );
 }
 
-function Item({ item, close }: { item: PopItem; close(): void }) {
+function Item({ item, close, tabIndex }: { item: PopItem; close(): void; tabIndex: number }) {
   switch (item.kind) {
     case "check":
       return (
-        <button type="button" role="menuitemcheckbox" aria-checked={item.checked} tabIndex={-1} className="popmenu-item" onClick={item.onToggle}>
+        <button type="button" role="menuitemcheckbox" aria-checked={item.checked} tabIndex={tabIndex} className="popmenu-item" onClick={item.onToggle}>
           <span className={`popmenu-box${item.checked ? " is-on" : ""}`} aria-hidden="true">
             {item.checked && <Icon name="check" size={12} />}
           </span>
@@ -166,7 +168,7 @@ function Item({ item, close }: { item: PopItem; close(): void }) {
           type="button"
           role="menuitemradio"
           aria-checked={item.checked}
-          tabIndex={-1}
+          tabIndex={tabIndex}
           className="popmenu-item"
           onClick={() => {
             item.onSelect();
@@ -187,7 +189,7 @@ function Item({ item, close }: { item: PopItem; close(): void }) {
         <button
           type="button"
           role="menuitem"
-          tabIndex={-1}
+          tabIndex={tabIndex}
           className="popmenu-item"
           aria-disabled={item.disabled || undefined}
           onClick={() => {

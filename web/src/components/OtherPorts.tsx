@@ -128,7 +128,7 @@ export function OtherPorts({ ms, home }: { ms: MachineSnapshot; home: string | u
       </summary>
       {inside.length > 0 && (
         <>
-          <h4 className="others-group">In your folders</h4>
+          <h3 className="others-group">In your folders</h3>
           <ul className="port-list">
             {inside.map((p) => (
               <PortRow key={`${p.address}:${p.port}`} port={p} ms={ms} home={home} />
@@ -138,7 +138,7 @@ export function OtherPorts({ ms, home }: { ms: MachineSnapshot; home: string | u
       )}
       {outside.length > 0 && (
         <>
-          {inside.length > 0 && <h4 className="others-group">Elsewhere</h4>}
+          {inside.length > 0 && <h3 className="others-group">Elsewhere</h3>}
           <ul className="port-list">
             {outside.map((p) => (
               <PortRow key={`${p.address}:${p.port}`} port={p} ms={ms} home={home} />
