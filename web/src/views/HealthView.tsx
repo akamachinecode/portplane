@@ -7,6 +7,7 @@ import { href } from "../lib/router";
 import type { Problem, Severity } from "../shell/health";
 import { SnapshotGate } from "../shell/SnapshotGate";
 import { useShell } from "../shell/ShellContext";
+import { ExportDiagnosticsButton } from "./health/ExportDiagnostics";
 import "./HealthView.css";
 
 const ICON: Record<Severity, IconName> = { error: "xCircle", warning: "warning", info: "info" };
@@ -40,7 +41,7 @@ function ProblemRow({ problem, multiMachine }: { problem: Problem; multiMachine:
         {fix && (
           <button
             type="button"
-            className="btn btn-sm"
+            className="btn btn-sm btn-primary"
             aria-busy={busy || undefined}
             disabled={busy}
             onClick={() => {
@@ -70,6 +71,7 @@ export function HealthView() {
         description={
           !snapshot ? undefined : serious ? `${serious} ${serious === 1 ? "thing needs" : "things need"} your attention.` : "Nothing needs your attention."
         }
+        actions={<ExportDiagnosticsButton variant="ghost" />}
       />
       <SnapshotGate>
         {() =>
@@ -78,7 +80,7 @@ export function HealthView() {
               Tools, the proxy, runners, apps and machines are all fine.
             </EmptyState>
           ) : (
-            <ul className="problems">
+            <ul className="problems" aria-label={`${problems.length} ${problems.length === 1 ? "problem" : "problems"}, most serious first`}>
               {problems.map((p) => (
                 <ProblemRow key={p.id} problem={p} multiMachine={multiMachine} />
               ))}
