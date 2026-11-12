@@ -146,6 +146,50 @@ const PATHS = {
       <path d="M16 16l4 4" />
     </>
   ),
+  // Apps view, Health and Settings (M5.5)
+  star: <path d="M12 4.5l2.3 4.7 5.2.75-3.75 3.65.9 5.15L12 16.3l-4.65 2.45.9-5.15L4.5 9.95l5.2-.75z" />,
+  starFilled: <path d="M12 4.5l2.3 4.7 5.2.75-3.75 3.65.9 5.15L12 16.3l-4.65 2.45.9-5.15L4.5 9.95l5.2-.75z" fill="currentColor" />,
+  filter: <path d="M4.5 6.5h15M7.5 12h9M10.5 17.5h3" />,
+  sort: <path d="M7.5 5v14M4.5 16l3 3 3-3M16.5 19V5M13.5 8l3-3 3 3" />,
+  table: (
+    <>
+      <rect x="4" y="5" width="16" height="14" rx="2" />
+      <path d="M4 10h16M4 14.5h16M9.5 10v9" />
+    </>
+  ),
+  cards: (
+    <>
+      <rect x="4" y="4.5" width="7" height="7" rx="1.5" />
+      <rect x="13" y="4.5" width="7" height="7" rx="1.5" />
+      <rect x="4" y="13.5" width="7" height="6" rx="1.5" />
+      <rect x="13" y="13.5" width="7" height="6" rx="1.5" />
+    </>
+  ),
+  keyboard: (
+    <>
+      <rect x="3" y="6.5" width="18" height="11" rx="2" />
+      <path d="M7 10.5h.01M10.5 10.5h.01M14 10.5h.01M17.5 10.5h.01M8 14h8" />
+    </>
+  ),
+  download: (
+    <>
+      <path d="M12 4.5v10" />
+      <path d="M8 11l4 4 4-4" />
+      <path d="M5 19.5h14" />
+    </>
+  ),
+  bell: (
+    <>
+      <path d="M6.5 16.5V11a5.5 5.5 0 0 1 11 0v5.5l1.5 1.5h-14z" />
+      <path d="M10 20.5h4" />
+    </>
+  ),
+  tag: (
+    <>
+      <path d="M4.5 12.4V5.5a1 1 0 0 1 1-1h6.9l7.6 7.6-7.9 7.9z" />
+      <circle cx="8.5" cy="8.5" r="1.3" />
+    </>
+  ),
   sidebar: (
     <>
       <rect x="3.5" y="4.5" width="17" height="15" rx="2" />
