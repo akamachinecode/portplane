@@ -103,7 +103,11 @@ func (c *Checker) Check(ctx context.Context, in Installed, now time.Time) Result
 	}
 	items := []job{
 		{0, Item{ID: "portplane", Name: "Portplane", Installed: in.Portplane}, func(ctx context.Context) (string, string, error) {
-			return c.latestRelease(ctx, PortplaneRepo)
+			v, notes, err := c.latestRelease(ctx, PortplaneRepo)
+			if err == nil {
+				err = c.releaseReady(ctx, PortplaneRepo, v)
+			}
+			return v, notes, err
 		}},
 		{1, Item{ID: "dekit", Name: "dekit", Installed: in.Dekit}, func(ctx context.Context) (string, string, error) {
 			return c.latestRelease(ctx, DekitRepo)
@@ -182,6 +186,36 @@ func (c *Checker) latestRelease(ctx context.Context, repo string) (version, note
 		return "", "", fmt.Errorf("%s's latest release has an unexpected name: %q", repo, tag)
 	}
 	return strings.TrimPrefix(tag, "v"), base + "/" + repo + "/releases/tag/" + url.PathEscape(tag), nil
+}
+
+// releaseReady checks that a release's files are uploaded, by asking for
+// its checksums.txt without downloading it: GitHub names a release latest
+// minutes before the release workflow has uploaded them, and an update
+// can only install a release that has them (ADR-0031).
+func (c *Checker) releaseReady(ctx context.Context, repo, version string) error {
+	base := c.GitHub
+	if base == "" {
+		base = GitHub
+	}
+	req, err := c.request(ctx, base+"/"+repo+"/releases/download/v"+url.PathEscape(version)+"/checksums.txt")
+	if err != nil {
+		return err
+	}
+	cl := *c.client()
+	cl.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	resp, err := cl.Do(req)
+	if err != nil {
+		return offline(err)
+	}
+	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 64<<10))
+	_ = resp.Body.Close()
+	switch {
+	case resp.StatusCode < 400:
+		return nil
+	case resp.StatusCode == http.StatusNotFound:
+		return fmt.Errorf("version %s is still being published: check again in a few minutes", version)
+	}
+	return fmt.Errorf("GitHub answered %s for the files of %s %s", resp.Status, repo, version)
 }
 
 // latestNPM reads a package's latest version from the npm registry.

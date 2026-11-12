@@ -48,6 +48,7 @@
 - **Checked like an install:** only from GitHub's release URLs (the official hosts of ADR-0025). Each file must match `checksums.txt` of the same release, or nothing changes.
 - **Never left broken:** files are staged next to the target and renamed into place, keeping the old ones. The new binary must run `portplane version --json` and report the expected version. Otherwise the old files go back. Leftovers from an interrupted update are removed at the next start.
 - **Restart:** the old Portplane starts the new one detached, then quits. On macOS and Linux a fixed `/bin/sh` script waits for the old process to end and then `exec`s the new binary, so the restart works whatever version is installed. On Windows the new Portplane waits by itself, through `PORTPLANE_AFTER_PID`. Older versions ignore that variable, so it never breaks a start. The window opens again.
+- **Only a release with its files:** GitHub marks a release as latest minutes before the release workflow has uploaded its files. A check reports a new Portplane only once that release's `checksums.txt` answers. Until then it says the version is still being published.
 - **Only what the last check found:** the server installs the latest version from the last check, only when it is newer than the running one. The page can't choose another version.
 - **Finding out:**
   - **Ask once.** Until the user answers, the sidebar asks: "Get new versions? Portplane asks GitHub once a day…", with **Check daily** and **Not now**. The answer is kept (`updateAsked`). Checks stay off by default, as in ADR-0025.
