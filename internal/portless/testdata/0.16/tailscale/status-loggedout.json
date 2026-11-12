@@ -1,0 +1,27 @@
+{
+  "Version": "1.90.6-t1a2b3c4d5-g0123456789",
+  "TUN": true,
+  "BackendState": "NeedsLogin",
+  "HaveNodeKey": false,
+  "AuthURL": "",
+  "TailscaleIPs": null,
+  "Self": {
+    "ID": "",
+    "PublicKey": "nodekey:0000000000000000000000000000000000000000000000000000000000000000",
+    "HostName": "workstation",
+    "DNSName": "",
+    "OS": "linux",
+    "UserID": 0,
+    "TailscaleIPs": null,
+    "Online": false
+  },
+  "Health": [
+    "You are logged out. The last login error was: none"
+  ],
+  "MagicDNSSuffix": "",
+  "CurrentTailnet": null,
+  "CertDomains": null,
+  "Peer": null,
+  "User": null,
+  "ClientVersion": null
+}

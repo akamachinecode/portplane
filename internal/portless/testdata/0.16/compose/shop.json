@@ -1,0 +1,137 @@
+{
+  "name": "shop",
+  "services": {
+    "api": {
+      "build": {
+        "context": "/home/dev/code/shop/api",
+        "dockerfile": "Dockerfile"
+      },
+      "command": null,
+      "entrypoint": null,
+      "environment": {
+        "DATABASE_URL": "postgres://db:5432/shop",
+        "__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS": ".localhost"
+      },
+      "labels": {
+        "portless.name": "backend"
+      },
+      "networks": {
+        "default": null
+      },
+      "ports": [
+        {
+          "mode": "ingress",
+          "target": 8080,
+          "protocol": "tcp",
+          "host_ip": "127.0.0.1",
+          "published": "14002"
+        },
+        {
+          "mode": "ingress",
+          "target": 9229,
+          "protocol": "tcp",
+          "host_ip": "127.0.0.1",
+          "published": "14003"
+        }
+      ]
+    },
+    "db": {
+      "command": null,
+      "entrypoint": null,
+      "environment": {
+        "POSTGRES_PASSWORD": "dev"
+      },
+      "image": "postgres:17",
+      "networks": {
+        "default": null
+      },
+      "ports": [
+        {
+          "mode": "ingress",
+          "target": 5432,
+          "published": "5432",
+          "protocol": "tcp"
+        }
+      ],
+      "volumes": [
+        {
+          "type": "volume",
+          "source": "pgdata",
+          "target": "/var/lib/postgresql/data",
+          "volume": {}
+        }
+      ]
+    },
+    "mail": {
+      "image": "axllent/mailpit:v1.27",
+      "labels": {
+        "portless.enable": "false"
+      },
+      "networks": {
+        "default": null
+      },
+      "ports": [
+        {
+          "mode": "ingress",
+          "target": 8025,
+          "published": "8025",
+          "protocol": "tcp"
+        }
+      ]
+    },
+    "web": {
+      "build": {
+        "context": "/home/dev/code/shop/web",
+        "dockerfile": "Dockerfile"
+      },
+      "command": null,
+      "entrypoint": null,
+      "environment": {
+        "__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS": ".localhost"
+      },
+      "networks": {
+        "default": null
+      },
+      "ports": [
+        {
+          "mode": "ingress",
+          "target": 5173,
+          "protocol": "tcp",
+          "host_ip": "127.0.0.1",
+          "published": "14001"
+        }
+      ],
+      "volumes": [
+        {
+          "type": "bind",
+          "source": "/home/dev/code/shop/web/src",
+          "target": "/app/src",
+          "bind": {
+            "create_host_path": true
+          }
+        }
+      ]
+    },
+    "worker": {
+      "build": {
+        "context": "/home/dev/code/shop/api",
+        "dockerfile": "Dockerfile.worker"
+      },
+      "command": null,
+      "entrypoint": null,
+      "networks": {
+        "default": null
+      }
+    }
+  },
+  "networks": {
+    "default": {
+      "name": "shop_default"
+    }
+  },
+  "volumes": {
+    "pgdata": {
+      "name": "shop_pgdata"
+    }
+  }
+}
