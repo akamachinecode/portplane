@@ -9,7 +9,6 @@ package notify
 
 import (
 	"context"
-	"strings"
 
 	"github.com/akamachinecode/portplane/internal/settings"
 )
@@ -80,31 +79,3 @@ type Options struct {
 // New returns the sender for this system, or an error when notifications
 // cannot be shown here.
 func New(o Options) (Sender, error) { return newSender(o) }
-
-// encodeSegment escapes s like JavaScript's encodeURIComponent, so routes
-// built here match the UI's router (web/src/lib/router.ts).
-func encodeSegment(s string) string {
-	const keep = "-_.!~*'()"
-	var b strings.Builder
-	for _, c := range []byte(s) {
-		if c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || strings.IndexByte(keep, c) >= 0 {
-			b.WriteByte(c)
-			continue
-		}
-		const hex = "0123456789ABCDEF"
-		b.WriteByte('%')
-		b.WriteByte(hex[c>>4])
-		b.WriteByte(hex[c&15])
-	}
-	return b.String()
-}
-
-// AppRoute is the route of an app's detail panel.
-func AppRoute(machine, appID string) string {
-	return "#/apps/" + encodeSegment(machine) + "/" + encodeSegment(appID)
-}
-
-// ProjectRoute is the route of a dekit project on a machine.
-func ProjectRoute(machine, root string) string {
-	return "#/projects/" + encodeSegment(machine) + "/" + encodeSegment(root)
-}

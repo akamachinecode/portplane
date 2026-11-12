@@ -7,6 +7,7 @@ import (
 
 	"github.com/akamachinecode/portplane/internal/dekit"
 	"github.com/akamachinecode/portplane/internal/model"
+	"github.com/akamachinecode/portplane/internal/window"
 )
 
 // ConfigWatch notices dekit files that change on disk while their runner
@@ -82,7 +83,7 @@ func (w *ConfigWatch) Check(ms model.MachineSnapshot) []Notification {
 			Kind:  KindConfig,
 			Title: "dekit.yaml changed in " + name,
 			Body:  "dekit applies the change on a reload. Open the project to review and reload it.",
-			Route: ProjectRoute(ms.Machine.ID, r.Root),
+			Route: window.ProjectRoute(ms.Machine.ID, r.Root),
 		})
 	}
 	for root := range w.known {

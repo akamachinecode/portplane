@@ -10,6 +10,7 @@ import (
 	"errors"
 	"net/url"
 	"regexp"
+	"strings"
 )
 
 // Options describe the window. Start takes them once, before Show.
@@ -72,6 +73,34 @@ func Navigate(fragment string) {
 	if ValidFragment(fragment) {
 		navigate(fragment)
 	}
+}
+
+// AppRoute is the route of an app's detail panel in the UI.
+func AppRoute(machine, appID string) string {
+	return "#/apps/" + escapeSegment(machine) + "/" + escapeSegment(appID)
+}
+
+// ProjectRoute is the route of a dekit project on a machine.
+func ProjectRoute(machine, root string) string {
+	return "#/projects/" + escapeSegment(machine) + "/" + escapeSegment(root)
+}
+
+// escapeSegment escapes s like JavaScript's encodeURIComponent, so routes
+// built here match the UI's router (web/src/lib/router.ts).
+func escapeSegment(s string) string {
+	const keep = "-_.!~*'()"
+	var b strings.Builder
+	for _, c := range []byte(s) {
+		if c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || strings.IndexByte(keep, c) >= 0 {
+			b.WriteByte(c)
+			continue
+		}
+		const hex = "0123456789ABCDEF"
+		b.WriteByte('%')
+		b.WriteByte(hex[c>>4])
+		b.WriteByte(hex[c&15])
+	}
+	return b.String()
 }
 
 // RouteURL is the UI's address home with a route as its fragment.

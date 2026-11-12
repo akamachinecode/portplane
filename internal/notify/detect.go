@@ -6,6 +6,7 @@ import (
 
 	"github.com/akamachinecode/portplane/internal/jobs"
 	"github.com/akamachinecode/portplane/internal/model"
+	"github.com/akamachinecode/portplane/internal/window"
 )
 
 // Tracker turns successive snapshots into notifications: it remembers each
@@ -57,7 +58,7 @@ func (t *Tracker) Update(s model.Snapshot) []Notification {
 func transition(ms model.MachineSnapshot, a model.App, before model.State) (Notification, bool) {
 	where := place(ms, a)
 	id := "app|" + ms.Machine.ID + "|" + a.ID
-	route := AppRoute(ms.Machine.ID, a.ID)
+	route := window.AppRoute(ms.Machine.ID, a.ID)
 	switch {
 	case a.State == model.StateFailed && before != model.StateFailed:
 		title := a.Label + " failed"

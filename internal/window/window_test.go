@@ -41,3 +41,12 @@ func TestRouteURL(t *testing.T) {
 		}
 	}
 }
+
+func TestRoutes(t *testing.T) {
+	if got := AppRoute("local", "/home/dev/code#my-monorepo/web"); got != "#/apps/local/%2Fhome%2Fdev%2Fcode%23my-monorepo%2Fweb" || !ValidFragment(got) {
+		t.Fatal(got)
+	}
+	if got := ProjectRoute("box", "/srv/my app"); got != "#/projects/box/%2Fsrv%2Fmy%20app" || !ValidFragment(got) {
+		t.Fatal(got)
+	}
+}
