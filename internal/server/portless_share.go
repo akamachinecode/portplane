@@ -167,10 +167,10 @@ func (p *portlessAPI) tailscaleRequirements(t portless.TailscaleState, funnel bo
 			up.Fix = "Open the Tailscale app."
 		}
 	case t.BackendState == "NeedsLogin" || t.BackendState == "NoState":
-		up.Problem = "You aren't signed in to Tailscale on this computer."
+		up.Problem = "You aren't signed in to Tailscale on this machine."
 		up.Fix, up.Command = "Sign in from the Tailscale app, or in a terminal.", upCmd
 	case t.BackendState == "NeedsMachineAuth":
-		up.Problem = "Your tailnet's admin hasn't approved this computer yet."
+		up.Problem = "Your tailnet's admin hasn't approved this machine yet."
 		up.Fix, up.URL = "Ask them to approve it in the admin console.", "https://login.tailscale.com/admin/machines"
 	case t.BackendState == "Stopped":
 		up.Problem = "Tailscale is turned off."
@@ -214,10 +214,10 @@ func (p *portlessAPI) tailscaleRequirements(t portless.TailscaleState, funnel bo
 		reqs = append(reqs, op)
 	}
 	if funnel {
-		f := Requirement{ID: "tailscale-funnel", OK: t.Funnel, Label: "Your tailnet allows Funnel on this computer"}
+		f := Requirement{ID: "tailscale-funnel", OK: t.Funnel, Label: "Your tailnet allows Funnel on this machine"}
 		if !t.Funnel {
-			f.Problem = "Your tailnet's policy doesn't let this computer use Funnel, which is what makes a Tailscale address public."
-			f.Fix = "An admin of your tailnet turns Funnel on for this computer. The page explains how and can do it for you."
+			f.Problem = "Your tailnet's policy doesn't let this machine use Funnel, which is what makes a Tailscale address public."
+			f.Fix = "An admin of your tailnet turns Funnel on for this machine. The page explains how and can do it for you."
 			f.URL = portless.TailscaleFunnelPage(t.NodeID)
 		}
 		reqs = append(reqs, f)
@@ -227,7 +227,7 @@ func (p *portlessAPI) tailscaleRequirements(t portless.TailscaleState, funnel bo
 
 func (p *portlessAPI) providers(t shareTools) []ShareProvider {
 	goos := p.d.GOOS
-	tsWhere := "https://<this computer>.<your tailnet>.ts.net"
+	tsWhere := "https://<this machine>.<your tailnet>.ts.net"
 	if t.tailscale.DNSName != "" {
 		tsWhere = "https://" + t.tailscale.DNSName
 	}
@@ -552,7 +552,7 @@ func (p *portlessAPI) planShare(ctx context.Context, sc *shareCtx, kind string, 
 			}
 		}
 		if len(pv.Missing) > 0 {
-			pv.Problem = "This computer isn't ready to share with " + label + " yet. Fix what's missing first."
+			pv.Problem = "This machine isn't ready to share with " + label + " yet. Fix what's missing first."
 			return pv, nil
 		}
 		other := map[string]string{portless.ShareTailscale: portless.ShareFunnel, portless.ShareFunnel: portless.ShareTailscale}[kind]

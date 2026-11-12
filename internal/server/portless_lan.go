@@ -81,9 +81,9 @@ func (p *portlessAPI) lanRequirements(ctx context.Context, m portless.MDNS, addr
 			reqs = append(reqs, Requirement{ID: "avahi-daemon", OK: true, Label: "The Avahi service is running"})
 		}
 	}
-	network := Requirement{ID: "lan-address", OK: len(addrs) > 0, Label: "This computer is on a network"}
+	network := Requirement{ID: "lan-address", OK: len(addrs) > 0, Label: "This machine is on a network"}
 	if !network.OK {
-		network.Problem = "This computer has no address a phone could reach: it isn't on Wi-Fi or Ethernet."
+		network.Problem = "This machine has no address a phone could reach: it isn't on Wi-Fi or Ethernet."
 		network.Fix = "Connect to the same Wi-Fi as your phone, then check again."
 	}
 	return append(reqs, network)

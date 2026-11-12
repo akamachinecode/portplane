@@ -161,7 +161,7 @@ func PortlessHandlers(d PortlessDeps) map[string]http.HandlerFunc {
 	return routes
 }
 
-var errNoPortless = errors.New("portless isn't installed on this computer: install it from Settings → Tools or the welcome screen")
+var errNoPortless = errors.New("portless isn't installed on this machine: install it from Settings → Tools or the welcome screen")
 
 func (p *portlessAPI) needPortless(w http.ResponseWriter) bool {
 	if p.d.Client == nil || !p.d.Client.Available() {
