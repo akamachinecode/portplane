@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createMockApi, mockSnapshot, type Scenario } from "./mock";
-import type { Snapshot } from "./types";
+import type { Job } from "./jobs";
+import type { Preferences, Snapshot } from "./types";
 
 describe("mockSnapshot", () => {
   it.each<Scenario>(["default", "degraded", "readonly", "empty", "nofolders"])("is self-consistent (%s)", (scenario) => {
@@ -128,5 +129,77 @@ describe("mock machines", () => {
     const get = api.autostart();
     await vi.advanceTimersByTimeAsync(200);
     expect(await get).toEqual({ enabled: true });
+  });
+});
+
+describe("mock jobs and preferences", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("runs a demo job step by step and streams it", async () => {
+    const api = createMockApi();
+    const states: string[] = [];
+    let last: Job | null = null;
+    const stop = api.subscribe({
+      onSnapshot: () => {},
+      onStatus: () => {},
+      onJob: (j) => {
+        last = j;
+        states.push(j.state);
+      },
+    });
+    const id = api.startDemoJob();
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(last!.id).toBe(id);
+    expect(last!.state).toBe("succeeded");
+    expect(last!.steps.every((s) => s.state === "succeeded")).toBe(true);
+    expect(last!.output.length).toBeGreaterThan(3);
+    expect(states[0]).toBe("running");
+    const list = api.jobs();
+    await vi.advanceTimersByTimeAsync(200);
+    expect((await list).map((j) => j.id)).toEqual([id]);
+    stop();
+  });
+
+  it("fails a job at its step, and cancels one", async () => {
+    const api = createMockApi();
+    const failing = api.startDemoJob(true);
+    await vi.advanceTimersByTimeAsync(10_000);
+    const failed = api.job(failing);
+    await vi.advanceTimersByTimeAsync(100);
+    const f = await failed;
+    expect(f.state).toBe("failed");
+    expect(f.error).toMatch(/checksum/);
+    expect(f.steps.map((s) => s.state)).toEqual(["succeeded", "failed", "skipped", "skipped"]);
+
+    const running = api.startDemoJob();
+    await vi.advanceTimersByTimeAsync(300);
+    const cancel = api.cancelJob(running);
+    await vi.advanceTimersByTimeAsync(200);
+    await cancel;
+    const got = api.job(running);
+    await vi.advanceTimersByTimeAsync(100);
+    expect((await got).state).toBe("cancelled");
+  });
+
+  it("keeps preferences in memory and refuses invalid ones", async () => {
+    const api = createMockApi();
+    const first = api.preferences();
+    await vi.advanceTimersByTimeAsync(200);
+    const p = await first;
+    expect(p.theme).toBe("system");
+    const saved = api.savePreferences({ ...p, theme: "dark" });
+    await vi.advanceTimersByTimeAsync(200);
+    expect((await saved).theme).toBe("dark");
+    const again = api.preferences();
+    await vi.advanceTimersByTimeAsync(200);
+    expect((await again).theme).toBe("dark");
+    const bad = api.savePreferences({ ...p, density: "huge" as Preferences["density"] }).catch((e: Error) => e.message);
+    await vi.advanceTimersByTimeAsync(200);
+    expect(await bad).toMatch(/density/);
   });
 });

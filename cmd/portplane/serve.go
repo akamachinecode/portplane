@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"syscall"
 	"time"
@@ -23,6 +24,7 @@ import (
 	"github.com/akamachinecode/portplane/internal/desktop"
 	"github.com/akamachinecode/portplane/internal/envpath"
 	"github.com/akamachinecode/portplane/internal/hub"
+	"github.com/akamachinecode/portplane/internal/jobs"
 	"github.com/akamachinecode/portplane/internal/model"
 	"github.com/akamachinecode/portplane/internal/portless"
 	"github.com/akamachinecode/portplane/internal/remote"
@@ -77,7 +79,19 @@ func cmdServe(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "portplane: reading %s: %v\n", store.Path(), err)
 		return 1
 	}
-	local := agent.NewLocal(agent.Options{Folders: st.Folders})
+	dk := dekit.NewCLI()
+	pl := portless.New()
+	local := agent.NewLocal(agent.Options{Folders: st.Folders, Dekit: dk, Portless: pl})
+	jobManager := jobs.NewManager()
+	// Folders changed from a terminal (`portplane folders add`) show up
+	// without a restart.
+	go store.Watch(ctx, 2*time.Second, func(s settings.Settings) {
+		if !slices.Equal(s.Folders, local.Folders()) {
+			if err := local.SetFolders(ctx, s.Folders); err != nil {
+				fmt.Fprintln(stderr, "portplane: folders changed on disk:", err)
+			}
+		}
+	})
 	h := hub.New()
 	h.Add("local", local, model.Machine{ID: "local", Local: true})
 	defer h.Close()
@@ -89,7 +103,6 @@ func cmdServe(args []string, stdout, stderr io.Writer) int {
 	}
 	rawURL := "http://127.0.0.1:" + strconv.Itoa(port)
 	publicURL := ""
-	pl := portless.New()
 	if !*noAlias && pl.Available() {
 		actx, cancel := context.WithTimeout(ctx, 15*time.Second)
 		if err := pl.Alias(actx, aliasName, port); err != nil {
@@ -168,6 +181,7 @@ func cmdServe(args []string, stdout, stderr io.Writer) int {
 			return p, nil
 		},
 		CanPick:   func() bool { return window.CanPick() || desktop.CanPickFolder() },
+		Jobs:      jobManager,
 		Port:      port,
 		PublicURL: publicURL,
 		Dev:       *dev,
@@ -185,7 +199,6 @@ func cmdServe(args []string, stdout, stderr io.Writer) int {
 			return err
 		},
 	}
-	dk := dekit.NewCLI()
 	srv.Extra = server.SetupHandlers(server.SetupDeps{
 		Folders: local.Folders,
 		Facts: func(c context.Context) setup.Facts {
@@ -216,6 +229,13 @@ func cmdServe(args []string, stdout, stderr io.Writer) int {
 	for pattern, handler := range server.AutostartHandlers(autostart.Enabled, setAutostart) {
 		srv.Extra[pattern] = handler
 	}
+	for pattern, handler := range server.PreferencesHandlers(store) {
+		srv.Extra[pattern] = handler
+	}
+	areaHandlers(deps{
+		ctx: ctx, local: local, hub: h, jobs: jobManager, store: store,
+		dekit: dk, portless: pl, publicURL: publicURL, rawURL: rawURL,
+	}, srv.Extra)
 	httpSrv := &http.Server{
 		Handler:           srv.Handler(),
 		ReadHeaderTimeout: 10 * time.Second,

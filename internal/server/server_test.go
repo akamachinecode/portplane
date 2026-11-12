@@ -7,13 +7,16 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"strings"
 	"testing"
 	"testing/fstest"
 	"time"
 
 	"github.com/akamachinecode/portplane/internal/hub"
+	"github.com/akamachinecode/portplane/internal/jobs"
 	"github.com/akamachinecode/portplane/internal/model"
+	"github.com/akamachinecode/portplane/internal/settings"
 )
 
 type fakeAgent struct {
@@ -257,4 +260,61 @@ func TestListenRefusesNonLoopback(t *testing.T) {
 		t.Fatal(err)
 	}
 	_ = ln.Close()
+}
+
+func TestJobsAndPreferences(t *testing.T) {
+	store := settings.Open(filepath.Join(t.TempDir(), "settings.json"))
+	m := jobs.NewManager()
+	s := &Server{Hub: hub.New(), UI: fstest.MapFS{}, Token: "t", Port: 4799, Jobs: m, Extra: PreferencesHandlers(store)}
+	h := s.Handler()
+	do := func(method, path, body string) *httptest.ResponseRecorder {
+		var r *http.Request
+		if body == "" {
+			r = httptest.NewRequest(method, path, nil)
+		} else {
+			r = httptest.NewRequest(method, path, strings.NewReader(body))
+			r.Header.Set("Content-Type", "application/json")
+		}
+		r.Host = "127.0.0.1:4799"
+		r.Header.Set("X-Portplane-Token", "t")
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, r)
+		return w
+	}
+	release := make(chan struct{})
+	j := m.Start(jobs.Spec{Title: "demo"}, func(ctx context.Context, r *jobs.Run) error {
+		select {
+		case <-release:
+			return nil
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	})
+	if w := do("GET", "/api/jobs", ""); w.Code != 200 || !strings.Contains(w.Body.String(), j.ID) {
+		t.Fatalf("list: %d %s", w.Code, w.Body)
+	}
+	if w := do("GET", "/api/jobs/"+j.ID, ""); w.Code != 200 {
+		t.Fatalf("get: %d", w.Code)
+	}
+	if w := do("POST", "/api/jobs/"+j.ID+"/cancel", "{}"); w.Code != 202 {
+		t.Fatalf("cancel: %d", w.Code)
+	}
+	if w := do("GET", "/api/jobs/nope", ""); w.Code != 404 {
+		t.Fatalf("unknown: %d", w.Code)
+	}
+	close(release)
+
+	if w := do("GET", "/api/preferences", ""); w.Code != 200 || !strings.Contains(w.Body.String(), `"theme":"system"`) {
+		t.Fatalf("prefs: %d %s", w.Code, w.Body)
+	}
+	if w := do("PUT", "/api/preferences", `{"theme":"neon"}`); w.Code != 400 {
+		t.Fatalf("bad theme: %d", w.Code)
+	}
+	if w := do("PUT", "/api/preferences", `{"theme":"dark","density":"compact"}`); w.Code != 200 || !strings.Contains(w.Body.String(), `"updateCheck":"manual"`) {
+		t.Fatalf("save: %d %s", w.Code, w.Body)
+	}
+	st, _ := store.Load()
+	if st.Prefs().Theme != "dark" {
+		t.Fatalf("not saved: %+v", st.Prefs())
+	}
 }

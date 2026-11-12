@@ -1,0 +1,112 @@
+import type { Density, Preferences, Theme } from "../api/types";
+
+// Preferences (GET/PUT /api/preferences) and how theme and density reach the
+// page: <html data-theme="light|dark"> (none for "system") and
+// <html data-density="comfortable|compact">. styles.css does the rest.
+
+export const THEMES: readonly Theme[] = ["system", "light", "dark"];
+export const DENSITIES: readonly Density[] = ["comfortable", "compact"];
+const UPDATE_CHECKS = ["manual", "auto"] as const;
+
+export const DEFAULT_PREFERENCES: Preferences = {
+  theme: "system",
+  density: "comfortable",
+  favorites: [],
+  notifications: { failures: true, recoveries: false, jobs: true },
+  updateCheck: "manual",
+  onboarding: { completed: false, skipped: false, done: [] },
+};
+
+const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
+const oneOf = <T extends string>(values: readonly T[], v: unknown, fallback: T): T => (values.includes(v as T) ? (v as T) : fallback);
+const bool = (v: unknown, fallback: boolean) => (typeof v === "boolean" ? v : fallback);
+const strings = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
+
+/**
+ * Preferences as the UI uses them, whatever the server sent: fields an older
+ * or newer binary leaves out, or fills with values this UI does not know,
+ * fall back to the defaults.
+ */
+export function normalizePreferences(raw: unknown): Preferences {
+  const d = DEFAULT_PREFERENCES;
+  const p = isObject(raw) ? raw : {};
+  const n = isObject(p.notifications) ? p.notifications : {};
+  const o = isObject(p.onboarding) ? p.onboarding : {};
+  return {
+    theme: oneOf(THEMES, p.theme, d.theme),
+    density: oneOf(DENSITIES, p.density, d.density),
+    favorites: strings(p.favorites),
+    notifications: {
+      failures: bool(n.failures, d.notifications.failures),
+      recoveries: bool(n.recoveries, d.notifications.recoveries),
+      jobs: bool(n.jobs, d.notifications.jobs),
+    },
+    updateCheck: oneOf(UPDATE_CHECKS, p.updateCheck, d.updateCheck),
+    onboarding: {
+      completed: bool(o.completed, false),
+      skipped: bool(o.skipped, false),
+      ...(typeof o.step === "string" && o.step !== "" ? { step: o.step } : {}),
+      done: strings(o.done),
+    },
+  };
+}
+
+/** Why the server would refuse these preferences (400), or null. The mock uses it. */
+export function preferencesProblem(p: Preferences): string | null {
+  if (!THEMES.includes(p.theme)) return `theme must be one of ${THEMES.join(", ")}`;
+  if (!DENSITIES.includes(p.density)) return `density must be one of ${DENSITIES.join(", ")}`;
+  if (!UPDATE_CHECKS.includes(p.updateCheck)) return `updateCheck must be one of ${UPDATE_CHECKS.join(", ")}`;
+  return null;
+}
+
+/** The value of data-theme on <html>: null removes it, so the system's choice applies. */
+export function themeAttribute(theme: Theme): "light" | "dark" | null {
+  return theme === "system" ? null : theme;
+}
+
+/** The part of an element applyAppearance touches, so tests can pass a fake. */
+export interface AttributeTarget {
+  setAttribute(name: string, value: string): void;
+  removeAttribute(name: string): void;
+}
+
+export interface Appearance {
+  theme: Theme;
+  density: Density;
+}
+
+/** Puts theme and density on the root element. */
+export function applyAppearance(el: AttributeTarget, a: Appearance): void {
+  const theme = themeAttribute(a.theme);
+  if (theme) el.setAttribute("data-theme", theme);
+  else el.removeAttribute("data-theme");
+  el.setAttribute("data-density", a.density);
+}
+
+// The last appearance is also kept in this browser, so the next start paints
+// in the right theme before the preferences arrive.
+const APPEARANCE_KEY = "portplane.appearance";
+
+export function cacheAppearance(storage: Pick<Storage, "setItem"> | undefined, a: Appearance): void {
+  try {
+    storage?.setItem(APPEARANCE_KEY, JSON.stringify({ theme: a.theme, density: a.density }));
+  } catch {
+    // storage blocked: the page starts in the system theme
+  }
+}
+
+export function cachedAppearance(storage: Pick<Storage, "getItem"> | undefined): Appearance | null {
+  try {
+    const raw = storage?.getItem(APPEARANCE_KEY);
+    if (!raw) return null;
+    const p = normalizePreferences(JSON.parse(raw));
+    return { theme: p.theme, density: p.density };
+  } catch {
+    return null;
+  }
+}
+
+/** First run: show the guided setup until it is completed or skipped (plan §3.1). */
+export function needsOnboarding(p: Preferences): boolean {
+  return !p.onboarding.completed && !p.onboarding.skipped;
+}

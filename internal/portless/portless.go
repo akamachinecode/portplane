@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/akamachinecode/portplane/internal/envpath"
 )
 
 // Route is one active portless route.
@@ -54,18 +56,27 @@ func (p Proxy) URL(hostname string) string {
 
 // Client reads portless state and calls its CLI.
 type Client struct {
-	Bin      string // empty when portless is not installed
+	// Bin is portless's path. Empty: it is looked up on PATH, again every
+	// few seconds, so one installed while Portplane runs is found.
+	Bin      string
 	StateDir string
 }
 
-// New finds portless on PATH and its state directory.
+// New returns a client that finds portless on PATH, and its state directory.
 func New() *Client {
-	bin, _ := exec.LookPath("portless")
-	return &Client{Bin: bin, StateDir: StateDir()}
+	return &Client{StateDir: StateDir()}
+}
+
+// Path is portless's path now, or "" when it is not installed.
+func (c *Client) Path() string {
+	if c.Bin != "" {
+		return c.Bin
+	}
+	return envpath.Lookup("portless")
 }
 
 // Available reports whether the portless CLI was found.
-func (c *Client) Available() bool { return c.Bin != "" }
+func (c *Client) Available() bool { return c.Path() != "" }
 
 // StateDir is PORTLESS_STATE_DIR, else ~/.portless.
 func StateDir() string {
@@ -146,13 +157,47 @@ func (c *Client) RemoveAlias(ctx context.Context, name string) error {
 	return err
 }
 
+// runLong runs a portless command that may take a while (proxy start,
+// service status) and returns its output, colours removed, also when it
+// fails.
+func (c *Client) runLong(ctx context.Context, args ...string) (string, error) {
+	bin := c.Path()
+	if bin == "" {
+		return "", fmt.Errorf("portless is not installed")
+	}
+	ctx, cancel := context.WithTimeout(ctx, 60*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, bin, args...)
+	cmd.Env = append(os.Environ(), "NO_COLOR=1", "FORCE_COLOR=0")
+	if c.StateDir != "" && c.StateDir != StateDir() {
+		cmd.Env = append(cmd.Env, "PORTLESS_STATE_DIR="+c.StateDir)
+	}
+	cmd.WaitDelay = 2 * time.Second
+	var out bytes.Buffer
+	cmd.Stdout, cmd.Stderr = &out, &out
+	err := cmd.Run()
+	text := stripANSI(out.String())
+	if err != nil {
+		msg := strings.TrimSpace(text)
+		if msg == "" {
+			msg = err.Error()
+		}
+		if i := strings.LastIndex(msg, "Error:"); i >= 0 {
+			msg = strings.TrimSpace(msg[i+len("Error:"):])
+		}
+		return text, fmt.Errorf("portless %s: %s", strings.Join(args, " "), msg)
+	}
+	return text, nil
+}
+
 func (c *Client) run(ctx context.Context, args ...string) (string, error) {
-	if c.Bin == "" {
+	bin := c.Path()
+	if bin == "" {
 		return "", fmt.Errorf("portless is not installed")
 	}
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, c.Bin, args...)
+	cmd := exec.CommandContext(ctx, bin, args...)
 	var out, errb bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &out, &errb
 	if err := cmd.Run(); err != nil {

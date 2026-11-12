@@ -180,10 +180,13 @@ func (l *Local) machine() model.Machine {
 	}
 }
 
-// tools is refreshed once a minute: versions rarely change.
+// tools is refreshed once a minute, since versions rarely change, and at
+// once when a tool appears or goes away (installed from the UI, say).
 func (l *Local) tools(ctx context.Context) model.Tools {
+	dekitThere, portlessThere := l.dekit.Available(), l.portless.Available()
 	l.mu.Lock()
-	if time.Since(l.toolsAt) < time.Minute && !l.toolsAt.IsZero() {
+	same := (l.toolsVal.Dekit != "") == dekitThere && (l.toolsVal.Portless != "") == portlessThere
+	if same && time.Since(l.toolsAt) < time.Minute && !l.toolsAt.IsZero() {
 		t := l.toolsVal
 		l.mu.Unlock()
 		t.ProxyRunning, t.ProxyHTTPS, t.ProxyPort = l.proxyFacts()
@@ -191,13 +194,13 @@ func (l *Local) tools(ctx context.Context) model.Tools {
 	}
 	l.mu.Unlock()
 	var t model.Tools
-	if l.dekit.Available() {
+	if dekitThere {
 		t.Dekit, _ = l.dekit.Version(ctx)
 		if t.Dekit == "" {
 			t.Dekit = "unknown"
 		}
 	}
-	if l.portless.Available() {
+	if portlessThere {
 		t.Portless, _ = l.portless.Version(ctx)
 		if t.Portless == "" {
 			t.Portless = "unknown"
@@ -208,6 +211,15 @@ func (l *Local) tools(ctx context.Context) model.Tools {
 	l.mu.Unlock()
 	t.ProxyRunning, t.ProxyHTTPS, t.ProxyPort = l.proxyFacts()
 	return t
+}
+
+// RefreshTools forgets the tool versions and collects again soon, such as
+// after an install or an upgrade.
+func (l *Local) RefreshTools() {
+	l.mu.Lock()
+	l.toolsAt = time.Time{}
+	l.mu.Unlock()
+	l.refreshSoon()
 }
 
 func (l *Local) proxyFacts() (bool, bool, int) {

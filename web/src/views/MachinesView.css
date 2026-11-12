@@ -1,0 +1,84 @@
+.mcards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr));
+  align-items: start;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mcard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+}
+
+.mcard-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.mcard-icon {
+  color: var(--text-3);
+}
+
+.mcard-name {
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+
+.mcard-meta {
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+
+.mcard-error {
+  padding: var(--space-2) 10px;
+  border-radius: var(--radius-sm);
+  background: var(--err-soft);
+  color: var(--err);
+  font: 12px/1.45 var(--mono);
+  overflow-wrap: anywhere;
+}
+
+.mcard-error.is-warn {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.mcard-facts {
+  display: grid;
+  gap: var(--space-1);
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-sm);
+}
+
+.mcard-facts > div {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: var(--space-2);
+}
+
+.mcard-facts dt {
+  color: var(--text-3);
+}
+
+.mcard-facts dd {
+  min-width: 0;
+  margin: 0;
+}
+
+.mcard-folders {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-wrap: anywhere;
+}

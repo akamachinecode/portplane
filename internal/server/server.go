@@ -24,6 +24,7 @@ import (
 	"github.com/akamachinecode/portplane/internal/buildinfo"
 	"github.com/akamachinecode/portplane/internal/desktop"
 	"github.com/akamachinecode/portplane/internal/hub"
+	"github.com/akamachinecode/portplane/internal/jobs"
 	"github.com/akamachinecode/portplane/internal/model"
 )
 
@@ -57,6 +58,9 @@ type Server struct {
 	// running one through POST /api/window), with the second start's XDG
 	// activation token when it has one. Nil: the route answers 404.
 	ShowWindow func(activationToken string)
+	// Jobs are the long operations the UI follows (installs, the proxy
+	// service). Nil: the job routes answer 404 and the stream sends none.
+	Jobs *jobs.Manager
 	// Extra handlers registered by later milestones (setup, machines).
 	Extra map[string]http.HandlerFunc
 }
@@ -97,6 +101,9 @@ func (s *Server) Handler() http.Handler {
 	api.HandleFunc("PUT /api/settings", s.putSettings)
 	api.HandleFunc("POST /api/folders/pick", s.pickFolder)
 	api.HandleFunc("POST /api/window", s.showWindow)
+	api.HandleFunc("GET /api/jobs", s.listJobs)
+	api.HandleFunc("GET /api/jobs/{id}", s.getJob)
+	api.HandleFunc("POST /api/jobs/{id}/cancel", s.cancelJob)
 	for pattern, h := range s.Extra {
 		api.HandleFunc(pattern, h)
 	}
@@ -223,27 +230,41 @@ func (s *Server) events(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	ctx := r.Context()
 	updates := s.Hub.Subscribe(ctx)
+	var jobUpdates <-chan jobs.Job
+	if s.Jobs != nil {
+		jobUpdates = s.Jobs.Subscribe(ctx)
+	}
 	ping := time.NewTicker(20 * time.Second)
 	defer ping.Stop()
+	send := func(event string, v any) bool {
+		b, err := json.Marshal(v)
+		if err != nil {
+			return false
+		}
+		if _, err := io.WriteString(w, "event: "+event+"\ndata: "); err != nil {
+			return false
+		}
+		if _, err := w.Write(b); err != nil {
+			return false
+		}
+		if _, err := io.WriteString(w, "\n\n"); err != nil {
+			return false
+		}
+		flusher.Flush()
+		return true
+	}
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case snap := <-updates:
-			b, err := json.Marshal(snap)
-			if err != nil {
+			if !send("snapshot", snap) {
 				return
 			}
-			if _, err := io.WriteString(w, "event: snapshot\ndata: "); err != nil {
+		case j := <-jobUpdates:
+			if !send("job", j) {
 				return
 			}
-			if _, err := w.Write(b); err != nil {
-				return
-			}
-			if _, err := io.WriteString(w, "\n\n"); err != nil {
-				return
-			}
-			flusher.Flush()
 		case <-ping.C:
 			if _, err := io.WriteString(w, ": ping\n\n"); err != nil {
 				return
@@ -336,6 +357,37 @@ func (s *Server) open(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Server) listJobs(w http.ResponseWriter, _ *http.Request) {
+	if s.Jobs == nil {
+		writeJSON(w, http.StatusOK, []jobs.Job{})
+		return
+	}
+	writeJSON(w, http.StatusOK, s.Jobs.List())
+}
+
+func (s *Server) getJob(w http.ResponseWriter, r *http.Request) {
+	if s.Jobs != nil {
+		if j, ok := s.Jobs.Get(r.PathValue("id")); ok {
+			writeJSON(w, http.StatusOK, j)
+			return
+		}
+	}
+	writeError(w, http.StatusNotFound, jobs.ErrNotFound)
+}
+
+func (s *Server) cancelJob(w http.ResponseWriter, r *http.Request) {
+	if s.Jobs == nil || s.Jobs.Cancel(r.PathValue("id")) != nil {
+		writeError(w, http.StatusNotFound, jobs.ErrNotFound)
+		return
+	}
+	writeJSON(w, http.StatusAccepted, struct{}{})
+}
+
+// StartJob answers a request that starts a job: 202 with the job.
+func StartJob(w http.ResponseWriter, j jobs.Job) {
+	writeJSON(w, http.StatusAccepted, j)
 }
 
 // WindowRequest is POST /api/window. Token is an XDG activation token, so

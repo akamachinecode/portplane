@@ -1,11 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Api } from "./client";
 import { isUnauthorized } from "./errors";
+import type { Job } from "./jobs";
 import type { Snapshot } from "./types";
 
 // The binary pushes the whole Snapshot as `event: snapshot` on connect and on
-// every change (ADR-0008: the token travels as ?token= since EventSource
-// cannot set headers).
+// every change, and the whole Job as `event: job` each time a job changes
+// (ADR-0008: the token travels as ?token= since EventSource cannot set
+// headers).
 
 export type ConnectionStatus =
   | "connecting" // first connection, nothing received yet
@@ -16,6 +18,8 @@ export type ConnectionStatus =
 export interface FeedHandlers {
   onSnapshot(snapshot: Snapshot): void;
   onStatus(status: ConnectionStatus): void;
+  /** A job started, moved on or ended (see jobs.ts). */
+  onJob?(job: Job): void;
 }
 
 /** The part of EventSource the feed uses, so tests can pass a fake. */
@@ -23,7 +27,7 @@ export interface EventSourceLike {
   readonly readyState: number;
   onopen: ((ev: Event) => unknown) | null;
   onerror: ((ev: Event) => unknown) | null;
-  addEventListener(type: "snapshot", listener: (ev: MessageEvent<string>) => void): void;
+  addEventListener(type: "snapshot" | "job", listener: (ev: MessageEvent<string>) => void): void;
   close(): void;
 }
 
@@ -73,6 +77,20 @@ export function connectFeed(opts: FeedOptions): () => void {
       eventsSinceOpen++;
       setStatus("live");
       opts.onSnapshot(snapshot);
+    });
+
+    src.addEventListener("job", (ev) => {
+      if (disposed || src !== source) return;
+      let job: Job;
+      try {
+        job = JSON.parse(ev.data) as Job;
+      } catch {
+        return;
+      }
+      if (!job || typeof job.id !== "string") return;
+      // Not a snapshot: the fallback fetch after a reconnect still applies.
+      setStatus("live");
+      opts.onJob?.(job);
     });
 
     src.onopen = () => {
@@ -143,10 +161,15 @@ export function connectFeed(opts: FeedOptions): () => void {
   };
 }
 
-/** The live snapshot and the state of the connection that feeds it. */
-export function useSnapshot(api: Api): { snapshot: Snapshot | null; status: ConnectionStatus } {
+/**
+ * The live snapshot and the state of the connection that feeds it. Job
+ * events from the same stream go to onJob (one stream per page).
+ */
+export function useSnapshot(api: Api, onJob?: (job: Job) => void): { snapshot: Snapshot | null; status: ConnectionStatus } {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [status, setStatus] = useState<ConnectionStatus>("connecting");
-  useEffect(() => api.subscribe({ onSnapshot: setSnapshot, onStatus: setStatus }), [api]);
+  const jobRef = useRef(onJob);
+  jobRef.current = onJob;
+  useEffect(() => api.subscribe({ onSnapshot: setSnapshot, onStatus: setStatus, onJob: (job) => jobRef.current?.(job) }), [api]);
   return { snapshot, status };
 }

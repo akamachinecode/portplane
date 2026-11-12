@@ -1,6 +1,6 @@
 # ADR-0014: Setup understands JavaScript workspaces in v1 and guides installs without running them
 
-- **Status:** Accepted
+- **Status:** Accepted. Installing dependencies (P5) is superseded by [ADR-0019](0019-install-tools.md) for installs and [ADR-0020](0020-privileged-steps.md) for privileged steps. The scanner scope and the generated tasks stand.
 - **Date:** 2026-11-11
 - **Resolves:** P3 and P5 in [open-questions.md](../open-questions.md)
 

@@ -25,15 +25,22 @@ Accepted ADRs are not rewritten. A decision that changes gets a new ADR that sup
 | [0006](0006-adapters.md) | Read dekit and portless through adapters, and parse dekit config ourselves | Accepted |
 | [0007](0007-portless-state.md) | Read portless routes from its state directory, behind the router adapter | Accepted |
 | [0008](0008-local-api-security.md) | Protect the loopback API with a Host allowlist and a per-run token | Accepted |
-| [0009](0009-generated-config-location.md) | Write generated tasks to a `.portplane/tasks.yaml` fragment loaded from `dekit.yaml` | Accepted |
+| [0009](0009-generated-config-location.md) | Write generated tasks to a `.portplane/tasks.yaml` fragment loaded from `dekit.yaml` | Accepted; amended by 0022 (editing hand-written config) |
 | [0010](0010-cross-platform-commands.md) | Generate shell-free commands, with a `portplane port-exec` wrapper for tools that ignore `PORT` | Accepted |
-| [0011](0011-failures-not-logs.md) | Show the last lines of a failed app, never a log view | Accepted |
+| [0011](0011-failures-not-logs.md) | Show the last lines of a failed app, never a log view | Accepted; "never a log view" superseded by 0021 |
 | [0012](0012-tooling-and-releases.md) | mise, release-please, goreleaser and cosign; no OS code signing for v1 | Accepted |
 | [0013](0013-windows-support-level.md) | Windows is beta until someone uses it daily | Accepted |
-| [0014](0014-setup-scope.md) | Setup understands JavaScript workspaces in v1 and guides installs without running them | Accepted |
+| [0014](0014-setup-scope.md) | Setup understands JavaScript workspaces in v1 and guides installs without running them | Accepted; installing dependencies (P5) superseded by 0019 and 0020 |
 | [0015](0015-remote-transport.md) | Reach other machines with the system ssh and an uploaded agent speaking over stdio | Accepted |
 | [0016](0016-remote-urls.md) | Open remote apps at `https://<app>.<machine>.localhost` through an HTTP proxy per app | Accepted |
 | [0017](0017-native-window-macos.md) | Show the UI in a native window on macOS; keep the browser window elsewhere | Accepted; the browser window on Linux and Windows superseded by 0018 |
 | [0018](0018-native-window-linux-windows.md) | Show the UI in a native window on Linux (GTK 4 and WebKitGTK in a second binary) and Windows (WebView2) | Accepted |
+| [0019](0019-install-tools.md) | Install dekit and portless from their official sources, and a private Node 24 when there is none, without privileges | Accepted |
+| [0020](0020-privileged-steps.md) | Run privileged portless steps only on a click, through the system's password dialog, as argv | Accepted |
+| [0021](0021-task-output.md) | Show a task's output on demand, in an Output panel | Accepted |
+| [0022](0022-edit-dekit-config.md) | Edit dekit config from the UI, keeping the user's file as they wrote it | Accepted |
+| [0023](0023-portless-cli.md) | Act on portless through its CLI, read its state files, and parse its text with versioned fixtures | Accepted |
+| [0024](0024-app-shell.md) | Turn the UI into an app shell with a sidebar, a hash router and background jobs | Accepted |
+| [0025](0025-network-use.md) | Use the network only for downloads the user starts and update checks the user asks for | Accepted |
 
 Pending decisions are tracked in [../open-questions.md](../open-questions.md).

@@ -1,6 +1,6 @@
 # ADR-0011: Show the last lines of a failed app, never a log view
 
-- **Status:** Accepted
+- **Status:** Accepted. Its "never a log view" part, that running apps show no output, is superseded by [ADR-0021](0021-task-output.md). The failure excerpt stands.
 - **Date:** 2026-11-11
 - **Resolves:** P4 in [open-questions.md](../open-questions.md)
 

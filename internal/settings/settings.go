@@ -21,8 +21,9 @@ type Machine struct {
 
 // Settings is the whole file.
 type Settings struct {
-	Folders  []string  `json:"folders"`
-	Machines []Machine `json:"machines,omitempty"`
+	Folders     []string     `json:"folders"`
+	Machines    []Machine    `json:"machines,omitempty"`
+	Preferences *Preferences `json:"preferences,omitempty"`
 }
 
 // Store reads and writes the settings file.

@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"github.com/akamachinecode/portplane/internal/buildinfo"
+	"github.com/akamachinecode/portplane/internal/privileged"
 )
 
 const usage = `Portplane: every dev server, on every machine, in one window.
@@ -59,6 +60,8 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return cmdAutostart(args[1:], stdout, stderr)
 	case "port-exec":
 		return cmdPortExec(args[1:], stderr)
+	case privileged.HelperCommand: // started as administrator by Portplane itself (ADR-0020)
+		return privileged.RunHelper(args[1:], stderr)
 	case "version", "--version", "-v":
 		return cmdVersion(args[1:], stdout, stderr)
 	case "help", "-h", "--help":

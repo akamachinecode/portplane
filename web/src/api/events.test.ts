@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "./errors";
 import { connectFeed, RETRY_DELAYS, type ConnectionStatus, type EventSourceLike } from "./events";
+import type { Job } from "./jobs";
 import type { Snapshot } from "./types";
 
 class FakeSource implements EventSourceLike {
@@ -9,9 +10,10 @@ class FakeSource implements EventSourceLike {
   onerror: ((ev: Event) => unknown) | null = null;
   closed = false;
   private listeners: Array<(ev: MessageEvent<string>) => void> = [];
+  private jobListeners: Array<(ev: MessageEvent<string>) => void> = [];
   constructor(readonly url: string) {}
-  addEventListener(_type: "snapshot", listener: (ev: MessageEvent<string>) => void) {
-    this.listeners.push(listener);
+  addEventListener(type: "snapshot" | "job", listener: (ev: MessageEvent<string>) => void) {
+    (type === "job" ? this.jobListeners : this.listeners).push(listener);
   }
   close() {
     this.closed = true;
@@ -25,6 +27,9 @@ class FakeSource implements EventSourceLike {
   send(snapshot: Snapshot) {
     for (const l of this.listeners) l({ data: JSON.stringify(snapshot) } as MessageEvent<string>);
   }
+  sendJob(data: string) {
+    for (const l of this.jobListeners) l({ data } as MessageEvent<string>);
+  }
   drop(closed: boolean) {
     this.readyState = closed ? 2 : 0;
     this.onerror?.({} as Event);
@@ -37,19 +42,21 @@ function setup(fetchSnapshot: () => Promise<Snapshot> = () => Promise.resolve(sn
   const sources: FakeSource[] = [];
   const snapshots: number[] = [];
   const statuses: ConnectionStatus[] = [];
+  const jobs: Job[] = [];
   const fetchSpy = vi.fn(fetchSnapshot);
   const stop = connectFeed({
     url: "/api/events?token=t",
     fetchSnapshot: fetchSpy,
     onSnapshot: (s) => snapshots.push(s.version),
     onStatus: (s) => statuses.push(s),
+    onJob: (j) => jobs.push(j),
     createSource: (url) => {
       const s = new FakeSource(url);
       sources.push(s);
       return s;
     },
   });
-  return { sources, snapshots, statuses, fetchSpy, stop, last: () => sources[sources.length - 1] };
+  return { sources, snapshots, statuses, jobs, fetchSpy, stop, last: () => sources[sources.length - 1] };
 }
 
 beforeEach(() => {
@@ -148,5 +155,52 @@ describe("connectFeed", () => {
     f.last().open();
     (f.last() as unknown as { listeners: Array<(e: MessageEvent<string>) => void> }).listeners[0]({ data: "{nope" } as MessageEvent<string>);
     expect(f.snapshots).toEqual([]);
+  });
+
+  it("delivers job events", () => {
+    const f = setup();
+    f.last().open();
+    const job: Job = {
+      id: "job-1",
+      kind: "install",
+      title: "Install dekit",
+      state: "running",
+      steps: [{ name: "Download", state: "running" }],
+      output: ["Fetching…"],
+      startedAt: "2026-11-12T10:00:00Z",
+    };
+    f.last().sendJob(JSON.stringify(job));
+    f.last().sendJob(JSON.stringify({ ...job, state: "succeeded", endedAt: "2026-11-12T10:00:05Z" }));
+    expect(f.jobs.map((j) => j.state)).toEqual(["running", "succeeded"]);
+    expect(f.jobs[0]).toEqual(job);
+    expect(f.snapshots).toEqual([]);
+  });
+
+  it("ignores malformed job events and counts a job as a sign of life", () => {
+    const f = setup();
+    f.last().sendJob("{nope");
+    f.last().sendJob(JSON.stringify({ title: "no id" }));
+    expect(f.jobs).toEqual([]);
+    expect(f.statuses).toEqual(["connecting"]);
+    f.last().sendJob(JSON.stringify({ id: "j", kind: "x", title: "x", state: "running", steps: [], output: [], startedAt: "2026-11-12T10:00:00Z" }));
+    expect(f.statuses).toEqual(["connecting", "live"]);
+  });
+
+  it("still fills the gap after a reconnect when only job events came in", async () => {
+    const f = setup(() => Promise.resolve(snap(4)));
+    f.last().open();
+    f.last().drop(false);
+    f.last().open();
+    f.last().sendJob(JSON.stringify({ id: "j", kind: "x", title: "x", state: "running", steps: [], output: [], startedAt: "2026-11-12T10:00:00Z" }));
+    await vi.runAllTimersAsync();
+    expect(f.snapshots).toEqual([4]);
+  });
+
+  it("stops delivering job events once closed", () => {
+    const f = setup();
+    f.last().open();
+    f.stop();
+    f.sources[0].sendJob(JSON.stringify({ id: "j", kind: "x", title: "x", state: "running", steps: [], output: [], startedAt: "2026-11-12T10:00:00Z" }));
+    expect(f.jobs).toEqual([]);
   });
 });
