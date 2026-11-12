@@ -58,33 +58,23 @@ export function NoApps({ ms }: { ms: MachineSnapshot }) {
       </h3>
       <p className="panel-text">
         Portplane reads <code>dekit.yaml</code> files in {ms.folders.length === 1 ? "this folder" : "these folders"}, and{" "}
-        {ms.folders.length === 1 ? "it has none" : "none of them has one"}
-        {local ? ". Setup can find your apps and write one for you." : "."}
+        {ms.folders.length === 1 ? "it has none" : "none of them has one"}. Setup can find your apps and write one for you{local ? "" : `, on ${ms.machine.name}`}.
       </p>
       <ul className="panel-folders">
         {ms.folders.map((f) => (
           <li key={f} className="panel-folder">
             <span className="mono">{f}</span>
-            {local && (
-              <button type="button" className="btn btn-sm btn-primary" onClick={() => openSetup(f)}>
-                <Icon name="wand" size={14} />
-                Set up this folder
-              </button>
-            )}
+            <button type="button" className="btn btn-sm btn-primary" onClick={() => openSetup(f, ms.machine.id)}>
+              <Icon name="wand" size={14} />
+              Set up this folder
+            </button>
           </li>
         ))}
       </ul>
-      {local ? (
-        <p className="panel-text">
-          You see every change before anything is written, and the result is plain dekit config you can keep using without
-          Portplane.
-        </p>
-      ) : (
-        <p className="panel-text">
-          Add a <code>dekit.yaml</code> to a project on that machine, or watch other folders there. Setting up other machines from
-          here comes in a later version.
-        </p>
-      )}
+      <p className="panel-text">
+        You see every change before anything is written, and the result is plain dekit config you can keep using without
+        Portplane.
+      </p>
       <button type="button" className="btn" onClick={local ? openSettings : () => openEditMachine(ms.machine.id)}>
         <Icon name="folder" size={14} />
         Edit folders

@@ -7,12 +7,12 @@ import "../projects/ProjectEditor.css";
 
 /** The task's settings as a form (plan §4.4), saved with a diff and a reload review. */
 export function ConfigTab({ ms, app }: DetailTabProps) {
-  const local = ms.machine.local;
-  const { load, reload } = useProjectConfig(local && ms.tools.dekit ? app.runner : null);
-  if (!local) {
+  const reachable = ms.machine.local || ms.machine.status === "online";
+  const { load, reload } = useProjectConfig(reachable && ms.tools.dekit ? app.runner : null);
+  if (!reachable) {
     return (
-      <EmptyState icon="machine" title="Only on this computer for now">
-        Editing a task on {ms.machine.name} comes later. Edit its <code>dekit.yaml</code> there; Portplane picks up the change.
+      <EmptyState icon="machine" title={`${ms.machine.name} is offline`}>
+        Its config shows here again once Portplane reaches it over SSH.
       </EmptyState>
     );
   }

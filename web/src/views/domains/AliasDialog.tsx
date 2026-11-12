@@ -6,8 +6,8 @@ import { Field, Switch } from "../../components/Controls";
 import { Dialog } from "../../components/Dialog";
 import { Spinner } from "../../components/Icon";
 import { hostnameFor, nameProblem, proxyUrl } from "../../lib/portless";
-import { useShell } from "../../shell/ShellContext";
-import { routesResource, usePortlessStatus, valueOf } from "./store";
+import { useMachineResources, usePortlessStatus, valueOf } from "./store";
+import { machineLabel, useScopedMachine } from "../../components/MachineScope";
 
 export interface AliasDraft {
   name?: string;
@@ -22,7 +22,8 @@ export interface AliasDraft {
  */
 export function AliasDialog({ draft, routes, onClose }: { draft: AliasDraft; routes: RouteView[]; onClose(): void }) {
   const { api, toast } = useApp();
-  const { snapshot } = useShell();
+  const machine = useScopedMachine();
+  const routesRes = useMachineResources().routes;
   const status = valueOf(usePortlessStatus().state);
   const tld = status?.proxy.tlds[0] ?? "localhost";
   const [name, setName] = useState(draft.name ?? "");
@@ -33,7 +34,7 @@ export function AliasDialog({ draft, routes, onClose }: { draft: AliasDraft; rou
   const [touched, setTouched] = useState(false);
   const ids = { name: useId(), port: useId() };
 
-  const ports = useMemo(() => snapshot?.machines.find((m) => m.machine.local)?.otherPorts ?? [], [snapshot]);
+  const ports = useMemo(() => machine?.otherPorts ?? [], [machine]);
   const host = hostnameFor(name, tld);
   const problem = nameProblem(name, tld) ?? (host === "portplane.localhost" ? "portplane.localhost is Portplane's own address." : null);
   const portProblem = Number.isInteger(port) && port >= 1 && port <= 65535 ? null : "Pick a port between 1 and 65535.";
@@ -48,7 +49,7 @@ export function AliasDialog({ draft, routes, onClose }: { draft: AliasDraft; rou
     try {
       const req = { name: name.trim().toLowerCase(), port, force, from: draft.from };
       const next = draft.from ? await api.portlessReplaceAlias(req) : await api.portlessAddAlias(req);
-      routesResource.put(next);
+      routesRes.put(next);
       toast.info(`${host} now points to port ${port}`);
       onClose();
     } catch (err) {
@@ -104,7 +105,7 @@ export function AliasDialog({ draft, routes, onClose }: { draft: AliasDraft; rou
             <span className="name-affix">.{tld}</span>
           </div>
         </Field>
-        <Field label="Port" htmlFor={ids.port} error={touched ? portProblem : null} hint={ports.length ? "Or pick one of the ports listening now:" : "The port the server listens on, on this computer."}>
+        <Field label="Port" htmlFor={ids.port} error={touched ? portProblem : null} hint={ports.length ? "Or pick one of the ports listening now:" : `The port the server listens on, on ${machineLabel(machine)}.`}>
           <input id={ids.port} className="input mono port-input" type="number" min={1} max={65535} value={Number.isFinite(port) ? port : ""} placeholder="5432" onChange={(e) => setPort(e.target.valueAsNumber)} />
         </Field>
         {ports.length > 0 && (

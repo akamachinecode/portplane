@@ -22,7 +22,7 @@ export function UrlTab({ ms, app }: DetailTabProps) {
   const [error, setError] = useState<string | null>(null);
   const [renaming, setRenaming] = useState(false);
   const local = ms.machine.local;
-  const usable = local && !!ms.tools.portless;
+  const usable = (local || ms.machine.status === "online") && !!ms.tools.portless;
 
   const load = () => {
     if (!usable) return;
@@ -32,24 +32,20 @@ export function UrlTab({ ms, app }: DetailTabProps) {
   useEffect(load, [ctx.api, ms.machine.id, app.id, app.hostname, usable]);
   useRefreshOnJobs(load);
 
-  if (!local) {
+  if (!local && ms.machine.status !== "online") {
     return (
-      <Placeholder icon="globe" title="Names on other machines">
-        <p>
-          {app.remoteUrl ? (
-            <>
-              This app opens here at <span className="mono">{app.remoteUrl}</span>, through Portplane's tunnel.{" "}
-            </>
-          ) : null}
-          Change its portless name on {ms.machine.name} itself for now; remote machines get this tab later.
-        </p>
+      <Placeholder icon="globe" title={`${ms.machine.name} is offline`}>
+        <p>Where this app's name lives shows here again once Portplane reaches {ms.machine.name} over SSH.</p>
       </Placeholder>
     );
   }
   if (!ms.tools.portless) {
     return (
-      <Placeholder icon="globe" title="portless isn't installed">
-        <p>portless gives this app a stable https://name.localhost address. Install it from Settings → Tools, then name the app here.</p>
+      <Placeholder icon="globe" title={local ? "portless isn't installed" : `portless isn't installed on ${ms.machine.name}`}>
+        <p>
+          portless gives this app a stable https://name.localhost address.{" "}
+          {local ? "Install it from Settings → Tools, then name the app here." : <>Install it from <a href={href({ view: "onboarding", machine: ms.machine.id, step: "install" })}>{ms.machine.name}'s setup</a>, then name the app here.</>}
+        </p>
       </Placeholder>
     );
   }
@@ -77,6 +73,12 @@ export function UrlTab({ ms, app }: DetailTabProps) {
             )}
           </dd>
         </div>
+        {!local && app.url && (
+          <div className="facts-row">
+            <dt>On {ms.machine.name}</dt>
+            <dd className="mono">{app.url.replace(/^https?:\/\//, "")}</dd>
+          </div>
+        )}
         {others.length > 0 && (
           <div className="facts-row">
             <dt>Also at</dt>
@@ -99,7 +101,7 @@ export function UrlTab({ ms, app }: DetailTabProps) {
             {info.source === "config" && info.dir && (
               <>
                 {" · "}
-                <a href={href({ view: "domains", section: "config" })}>edit portless.json</a>
+                <a href={href({ view: "domains", section: "config", machine: ms.machine.id })}>edit portless.json</a>
               </>
             )}
           </dd>

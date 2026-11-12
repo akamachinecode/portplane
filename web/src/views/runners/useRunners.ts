@@ -3,7 +3,7 @@ import type { RunnersResponse } from "../../api/dekit";
 import { errorText } from "../../api/errors";
 import { useJobs } from "../../api/jobs";
 import { useApp } from "../../components/AppContext";
-import { useShell } from "../../shell/ShellContext";
+import { useMachineScope } from "../../components/MachineScope";
 
 export type Load<T> = { status: "loading" } | { status: "error"; message: string } | { status: "ok"; value: T; refreshing: boolean };
 
@@ -13,7 +13,7 @@ export type Load<T> = { status: "loading" } | { status: "error"; message: string
  */
 export function useRunners(): { load: Load<RunnersResponse>; reload(): void } {
   const { api } = useApp();
-  const { snapshot } = useShell();
+  const { id: machine, ms: local } = useMachineScope();
   const { jobs } = useJobs();
   const [load, setLoad] = useState<Load<RunnersResponse>>({ status: "loading" });
   const seq = useRef(0);
@@ -25,10 +25,9 @@ export function useRunners(): { load: Load<RunnersResponse>; reload(): void } {
       (err: unknown) => n === seq.current && setLoad({ status: "error", message: errorText(err) }),
     );
   }, [api]);
-  const local = snapshot?.machines.find((m) => m.machine.local);
   const runnersKey = local ? local.runners.map((r) => `${r.root}:${r.up}`).join("|") + `|${local.tools.dekit ?? ""}` : "";
   const doneKey = jobs
-    .filter((j) => j.kind.startsWith("dekit") && j.state !== "running")
+    .filter((j) => j.kind.startsWith("dekit") && j.state !== "running" && (j.machine ?? "local") === machine)
     .map((j) => j.id)
     .join(",");
   useEffect(() => {
@@ -37,19 +36,21 @@ export function useRunners(): { load: Load<RunnersResponse>; reload(): void } {
   return { load, reload };
 }
 
-// The job each runner's last action started, kept across navigation.
+// The job each runner's last action started, per machine, kept across
+// navigation.
 const runnerJobs = new Map<string, string>();
 const listeners = new Set<() => void>();
 let version = 0;
 
-export function setRunnerJob(root: string, id: string | null): void {
-  if (id) runnerJobs.set(root, id);
-  else runnerJobs.delete(root);
+export function setRunnerJob(machine: string, root: string, id: string | null): void {
+  const key = `${machine}|${root}`;
+  if (id) runnerJobs.set(key, id);
+  else runnerJobs.delete(key);
   version++;
   for (const l of listeners) l();
 }
 
-export function useRunnerJob(root: string): string | undefined {
+export function useRunnerJob(machine: string, root: string): string | undefined {
   useSyncExternalStore(
     (l) => {
       listeners.add(l);
@@ -57,5 +58,5 @@ export function useRunnerJob(root: string): string | undefined {
     },
     () => version,
   );
-  return runnerJobs.get(root);
+  return runnerJobs.get(`${machine}|${root}`);
 }

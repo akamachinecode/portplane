@@ -1,12 +1,12 @@
 import { useEffect, useState, type ReactNode } from "react";
 import type { Reload } from "../../api/dekit";
 import { useApp } from "../../components/AppContext";
+import { useScopedMachine } from "../../components/MachineScope";
 import { Banner } from "../../components/Banner";
 import { Dialog } from "../../components/Dialog";
 import { Icon } from "../../components/Icon";
 import { ErrorState, LoadingState } from "../../components/States";
 import { appRoute, navigate } from "../../lib/router";
-import { useShell } from "../../shell/ShellContext";
 import { DekitHelpHost } from "../runners/DekitHelp";
 import { AddAppDialog } from "./AddAppDialog";
 import { openProjectDialog, useProjectDialog } from "./dialogs";
@@ -38,14 +38,13 @@ export function ProjectEditor({ runner, up, apps, os }: { runner: string; up: bo
   const { load, reload } = useProjectConfig(runner);
   const { plan, refresh } = useReloadPlan(runner, up);
   const dialog = useProjectDialog();
-  const { snapshot } = useShell();
   const { toast } = useApp();
   const [tab, setTab] = useState<EditorTab>(apps ? "apps" : "tasks");
   const [selected, setSelected] = useState<string | null>(null);
   const [reviewing, setReviewing] = useState(false);
   const tabs: EditorTab[] = apps ? ["apps", "tasks", "settings", "yaml"] : ["tasks", "settings", "yaml"];
   const pending = plan?.reload && (plan.reload.plan.changes.length > 0 || !!plan.reload.plan.order) ? plan.reload : null;
-  const local = snapshot?.machines.find((m) => m.machine.local);
+  const local = useScopedMachine();
 
   // A palette command asked for a reload review of this runner.
   useEffect(() => {
@@ -137,7 +136,7 @@ export function ProjectEditor({ runner, up, apps, os }: { runner: string; up: bo
           onClose={() => openProjectDialog(null)}
           onStarted={(path) => {
             const app = local?.apps.find((a) => a.runner === runner && a.task === path);
-            if (app) navigate(appRoute("local", app.id));
+            if (app && local) navigate(appRoute(local.machine.id, app.id));
           }}
         />
       )}

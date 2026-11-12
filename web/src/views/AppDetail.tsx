@@ -11,6 +11,7 @@ import { EmptyState, LoadingState } from "../components/States";
 import { StateDot } from "../components/StateDot";
 import { appHref, isAlive } from "../lib/apps";
 import { stateLabel } from "../lib/format";
+import { MachineScope } from "../components/MachineScope";
 import { APP_TABS, appRoute, navigate, type AppRef, type AppTab } from "../lib/router";
 import { useShell } from "../shell/ShellContext";
 import { ConfigTab } from "./detail/ConfigTab";
@@ -161,14 +162,15 @@ export function AppDetail({ target }: { target: AppRef & { tab: AppTab } }) {
     );
   } else {
     const { Panel } = TABS[target.tab];
+    // The tabs act on the app's machine, wherever it is (ADR-0026).
     body = (
-      <>
+      <MachineScope machine={ms.machine.id}>
         <Header ms={ms} app={app} titleId={titleId} />
         <Tabs target={target} ids={ids} />
         <div className="detail-panel" role="tabpanel" id={ids(target.tab).panel} aria-labelledby={ids(target.tab).tab} tabIndex={0}>
           <Panel ms={ms} app={app} />
         </div>
-      </>
+      </MachineScope>
     );
   }
   return (

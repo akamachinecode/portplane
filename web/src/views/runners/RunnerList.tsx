@@ -12,6 +12,7 @@ import { useNow } from "../../hooks/useNow";
 import { RUNNER_STATE_LABEL, runnerTone, sinceText } from "../../lib/dekit/why";
 import { shortenPath } from "../../lib/format";
 import { href, navigate } from "../../lib/router";
+import { useMachineScope } from "../../components/MachineScope";
 import { setRunnerJob, useRunnerJob } from "./useRunners";
 
 /** What each runner action says before it runs (plan §4.1). */
@@ -38,20 +39,22 @@ const CONFIRM: Partial<Record<RunnerAction, { title: (name: string) => string; b
   },
 };
 
-function runnerName(r: RunnerInfo): string {
-  return r.kind === "host" ? "this computer's runner" : r.name;
+function runnerName(r: RunnerInfo, remote: string | null): string {
+  if (r.kind !== "host") return r.name;
+  return remote ? `${remote}'s own runner` : "this computer's runner";
 }
 
 /** The job a runner's last action started, inline under its row. */
 export function RunnerJob({ root }: { root: string }) {
-  const id = useRunnerJob(root);
+  const { id: machine } = useMachineScope();
+  const id = useRunnerJob(machine, root);
   const job = useJob(id);
   if (!id || !job) return null;
   return (
     <div className="runner-job">
       <JobCard job={job} lines={6} headingLevel={4} />
       {job.state !== "running" && (
-        <button type="button" className="btn btn-sm btn-ghost runner-job-dismiss" onClick={() => setRunnerJob(root, null)}>
+        <button type="button" className="btn btn-sm btn-ghost runner-job-dismiss" onClick={() => setRunnerJob(machine, root, null)}>
           Dismiss
         </button>
       )}
@@ -62,7 +65,9 @@ export function RunnerJob({ root }: { root: string }) {
 export function RunnerRow({ runner, home, live, onChanged }: { runner: RunnerInfo; home: string | undefined; live: boolean; onChanged(): void }) {
   const ctx = useApp();
   const now = useNow(true, 30_000);
-  const jobId = useRunnerJob(runner.root);
+  const scope = useMachineScope();
+  const remoteName = scope.remote ? (scope.ms?.machine.name ?? scope.id) : null;
+  const jobId = useRunnerJob(scope.id, runner.root);
   const job = useJob(jobId);
   const [asking, setAsking] = useState<RunnerAction | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -76,7 +81,7 @@ export function RunnerRow({ runner, home, live, onChanged }: { runner: RunnerInf
     setError(null);
     try {
       const j = await ctx.api.dekitRunnerAction(runner.root, action);
-      setRunnerJob(runner.root, j.id);
+      setRunnerJob(scope.id, runner.root, j.id);
       setAsking(null);
     } catch (err) {
       setError(errorText(err));
@@ -98,9 +103,9 @@ export function RunnerRow({ runner, home, live, onChanged }: { runner: RunnerInf
   }
   if (runner.state === "stale") items.push({ label: "Start again", icon: "play", onSelect: () => ask("up") });
   if (runner.configExists && (runner.watched || host)) {
-    items.push({ label: "Edit configuration", icon: "pencil", onSelect: () => navigate({ view: "projects", runner: { machine: "local", root: runner.root } }) });
+    items.push({ label: "Edit configuration", icon: "pencil", onSelect: () => navigate({ view: "projects", runner: { machine: scope.id, root: runner.root } }) });
   }
-  if (!host) items.push({ label: "Open folder", icon: "folder", onSelect: () => void ctx.pending.run(`reveal|${runner.root}`, null, () => ctx.api.reveal("local", runner.root)) });
+  if (!host && !scope.remote) items.push({ label: "Open folder", icon: "folder", onSelect: () => void ctx.pending.run(`reveal|${runner.root}`, null, () => ctx.api.reveal("local", runner.root)) });
 
   const since = sinceText(runner.since, now);
   const confirm = asking ? CONFIRM[asking] : undefined;
@@ -110,7 +115,7 @@ export function RunnerRow({ runner, home, live, onChanged }: { runner: RunnerInf
         <StateDot state={runnerTone(runner)} />
         <div className="dk-runner-text">
           <span className="dk-runner-name">
-            {runner.watched && !host ? <a href={href({ view: "projects", runner: { machine: "local", root: runner.root } })}>{runner.name}</a> : runner.name}
+            {runner.watched && !host ? <a href={href({ view: "projects", runner: { machine: scope.id, root: runner.root } })}>{runner.name}</a> : runner.name}
             {runner.restartRequired && (
               <span className="tag tag-warn" title="The project now selects another dekit binary: Restart or Upgrade switches to it.">
                 Needs restart
@@ -178,7 +183,7 @@ export function RunnerRow({ runner, home, live, onChanged }: { runner: RunnerInf
       {asking && confirm && (
         <ConfirmDialog
           open
-          title={confirm.title(runnerName(runner))}
+          title={confirm.title(runnerName(runner, remoteName))}
           confirmLabel={confirm.label}
           busy={busy}
           error={error}

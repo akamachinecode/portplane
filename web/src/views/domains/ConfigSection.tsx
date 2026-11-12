@@ -6,12 +6,12 @@ import { Field } from "../../components/Controls";
 import { FileDiff } from "../../components/FileDiff";
 import { Icon, Spinner } from "../../components/Icon";
 import { IconButton } from "../../components/IconButton";
+import { useMachineScope } from "../../components/MachineScope";
 import { Segmented } from "../../components/Segmented";
 import { EmptyState, ErrorState, LoadingState } from "../../components/States";
 import { inferHome, shortenPath } from "../../lib/format";
 import { checkConfigText, configText, extraKeys, nameProblem } from "../../lib/portless";
 import { appRoute, href } from "../../lib/router";
-import { useShell } from "../../shell/ShellContext";
 import { SettingsGroup } from "../settings/SettingsGroup";
 import { StatusGate } from "./ProxySection";
 
@@ -91,6 +91,7 @@ function Form({ config, onChange }: { config: ProjectConfig; onChange(next: Proj
 
 function Editor({ place, home }: { place: ConfigPlace; home: string | undefined }) {
   const { api, toast } = useApp();
+  const { id: machine } = useMachineScope();
   const [configs, setConfigs] = useState<ProjectConfigs | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [target, setTarget] = useState<ConfigTarget>("portless.json");
@@ -257,7 +258,7 @@ function Editor({ place, home }: { place: ConfigPlace; home: string | undefined 
           {place.apps.map((a, i) => (
             <span key={a.id}>
               {i > 0 && ", "}
-              <a href={href(appRoute("local", a.id, "url"))}>{a.label}</a>
+              <a href={href(appRoute(machine, a.id, "url"))}>{a.label}</a>
             </span>
           ))}
           . portless reads the config when an app starts.
@@ -269,7 +270,7 @@ function Editor({ place, home }: { place: ConfigPlace; home: string | undefined 
 
 function Places() {
   const { api } = useApp();
-  const { snapshot } = useShell();
+  const { ms } = useMachineScope();
   const [places, setPlaces] = useState<ConfigPlace[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -284,7 +285,7 @@ function Places() {
     );
   };
   useEffect(load, [api]);
-  const home = inferHome(snapshot?.machines.find((m) => m.machine.local)?.folders ?? []);
+  const home = inferHome(ms?.folders ?? []);
   if (error) return <ErrorState title="Couldn't look for portless config" message={error} onRetry={load} />;
   if (!places) return <LoadingState label="Looking for portless config…" />;
   if (!places.length) {

@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import type { DekitHelp, EditOp, ProjectConfig, TaskEntry, YamlValue } from "../../api/dekit";
 import { errorText } from "../../api/errors";
 import { useApp } from "../../components/AppContext";
+import { useMachineScope } from "../../components/MachineScope";
 import { Switch } from "../../components/Controls";
 import { Icon } from "../../components/Icon";
 import { Segmented } from "../../components/Segmented";
@@ -77,6 +78,7 @@ export interface TaskFormProps {
 
 /** The read-only notice for entries Portplane does not rewrite. */
 export function NotEditable({ runner, file, reason }: { runner: string; file: string; reason: string }) {
+  const { remote } = useMachineScope();
   const { api, toast } = useApp();
   return (
     <div className="form-readonly" role="note">
@@ -85,11 +87,15 @@ export function NotEditable({ runner, file, reason }: { runner: string; file: st
         <p>
           <strong>Read-only here:</strong> {reason}.
         </p>
-        <p className="muted">Change it in your editor, or as text in the YAML tab; Portplane picks up the change.</p>
-        <button type="button" className="btn btn-sm" onClick={() => api.dekitOpenFile(runner, file).catch((err: unknown) => toast.error(errorText(err)))}>
-          <Icon name="open" size={13} />
-          Open in your editor
-        </button>
+        <p className="muted">
+          {remote ? "Change it as text in the YAML tab, or over SSH; Portplane picks up the change." : "Change it in your editor, or as text in the YAML tab; Portplane picks up the change."}
+        </p>
+        {!remote && (
+          <button type="button" className="btn btn-sm" onClick={() => api.dekitOpenFile(runner, file).catch((err: unknown) => toast.error(errorText(err)))}>
+            <Icon name="open" size={13} />
+            Open in your editor
+          </button>
+        )}
       </div>
     </div>
   );

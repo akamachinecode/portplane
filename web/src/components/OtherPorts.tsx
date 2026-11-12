@@ -99,7 +99,7 @@ function PortRow({ port, ms, home }: { port: Port; ms: MachineSnapshot; home: st
             title={`Give port ${port.port} a stable .localhost address with a portless alias`}
             onClick={() => {
               requestIntent({ kind: "new-alias", port: port.port, name: suggestName(port.process) });
-              navigate({ view: "domains", section: "aliases" });
+              navigate({ view: "domains", section: "aliases", machine: ms.machine.id });
             }}
           >
             <Icon name="link" size={13} />

@@ -1,6 +1,7 @@
-import { useState, type ComponentType } from "react";
+import { useState, type ComponentType, type ReactNode } from "react";
 import type { PortlessAction } from "../api/portless";
 import type { IconName } from "../components/Icon";
+import { MachinePicker, MachineScope, RemoteStatusBanner, useMachineChoice, useMachineScope } from "../components/MachineScope";
 import { StateDot } from "../components/StateDot";
 import { SubNav } from "../components/SubNav";
 import { ViewHeader } from "../components/ViewHeader";
@@ -46,10 +47,24 @@ function ProxyPill() {
   );
 }
 
-/** portless: the proxy, the .localhost routes and what keeps them working (plan §5). */
+/**
+ * portless: the proxy, the .localhost routes and what keeps them working
+ * (plan §5), on this computer or a machine over SSH (ADR-0026).
+ */
 export function DomainsView() {
+  const { machine, options, choose } = useMachineChoice("domains");
+  return (
+    <MachineScope machine={machine}>
+      <DomainsBody key={machine} picker={<MachinePicker machine={machine} options={options} onChange={choose} />} />
+    </MachineScope>
+  );
+}
+
+function DomainsBody({ picker }: { picker: ReactNode }) {
   const { route } = useShell();
+  const scope = useMachineScope();
   const section = route.view === "domains" ? route.section : "proxy";
+  const inUrl = route.view === "domains" ? route.machine : undefined;
   const { Section } = SECTIONS[section];
   const status = valueOf(usePortlessStatus().state);
   const doctor = valueOf(usePortlessDoctor().state);
@@ -61,9 +76,29 @@ export function DomainsView() {
   const sections = DOMAIN_SECTIONS.filter((s) => s !== "hosts" || showHosts);
   return (
     <>
-      <ViewHeader title="Domains" description={<>The stable <code>.localhost</code> addresses portless gives your apps, and the proxy behind them.</>} actions={<ProxyPill />} />
+      <ViewHeader
+        title="Domains"
+        description={
+          scope.remote ? (
+            <>
+              The <code>.localhost</code> addresses portless gives the apps on {scope.ms?.machine.name ?? scope.id}, and the proxy behind them. You open them here through Portplane.
+            </>
+          ) : (
+            <>
+              The stable <code>.localhost</code> addresses portless gives your apps, and the proxy behind them.
+            </>
+          )
+        }
+        actions={
+          <>
+            {picker}
+            <ProxyPill />
+          </>
+        }
+      />
+      <RemoteStatusBanner />
       <div className="with-subnav">
-        <SubNav label="Domain sections" items={sections.map((s) => ({ route: { view: "domains", section: s }, label: DOMAIN_LABELS[s], icon: SECTIONS[s].icon, current: s === section }))} />
+        <SubNav label="Domain sections" items={sections.map((s) => ({ route: { view: "domains", section: s, machine: inUrl }, label: DOMAIN_LABELS[s], icon: SECTIONS[s].icon, current: s === section }))} />
         <div className="with-subnav-main">
           <Section />
         </div>

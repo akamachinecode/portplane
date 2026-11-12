@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { PortlessAction, PortlessStatus } from "../../api/portless";
 import { CommandLine } from "../../components/Controls";
 import { Icon } from "../../components/Icon";
+import { machineLabel, useScopedMachine } from "../../components/MachineScope";
 import { ORIGIN_LABELS } from "../../lib/portless";
 import { SettingRow, SettingsGroup } from "../settings/SettingsGroup";
 import { PlanDialog } from "./PlanDialog";
@@ -12,6 +13,7 @@ function quote(a: string): string {
 }
 
 function Maintenance({ status }: { status: PortlessStatus }) {
+  const ms = useScopedMachine();
   const [plan, setPlan] = useState<PortlessAction | null>(null);
   const install = status.install;
   return (
@@ -45,7 +47,10 @@ function Maintenance({ status }: { status: PortlessStatus }) {
           </p>
         )}
       </SettingsGroup>
-      <SettingsGroup title="Uninstall portless" description="Removes portless and everything it set up on this computer: the service, the trusted certificate, its files and its hosts entries. Your apps, dekit.yaml and portless.json stay; apps lose their .localhost addresses.">
+      <SettingsGroup
+        title="Uninstall portless"
+        description={`Removes portless and everything it set up on ${machineLabel(ms)}: the service, the trusted certificate, its files and its hosts entries. Your apps, dekit.yaml and portless.json stay; apps lose their .localhost addresses.`}
+      >
         <div className="sgroup-foot">
           <button type="button" className="btn btn-danger" onClick={() => setPlan("uninstall")}>
             <Icon name="trash" size={13} />

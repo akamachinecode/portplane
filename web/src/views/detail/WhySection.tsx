@@ -21,7 +21,8 @@ function useWhy(ms: MachineSnapshot, app: App) {
   const { api } = useApp();
   const [state, setState] = useState<{ why: Why | null; error: string | null; loading: boolean }>({ why: null, error: null, loading: true });
   const key = `${app.state}|${app.rawState ?? ""}|${app.detail ?? ""}|${app.pid ?? ""}`;
-  const can = ms.machine.local && !!ms.tools.dekit && !!ms.runners.find((r) => r.root === app.runner)?.up;
+  const reachable = ms.machine.local || ms.machine.status === "online";
+  const can = reachable && !!ms.tools.dekit && !!ms.runners.find((r) => r.root === app.runner)?.up;
   useEffect(() => {
     if (!can) {
       setState({ why: null, error: null, loading: false });
@@ -116,7 +117,7 @@ export function WhySection({ ms, app }: { ms: MachineSnapshot; app: App }) {
       </h3>
       {!can ? (
         <p className="muted">
-          {!ms.machine.local ? `Only on this computer for now.` : !ms.tools.dekit ? "dekit isn't installed." : "The runner isn't running: dekit explains a task once its runner is up."}
+          {!ms.machine.local && ms.machine.status !== "online" ? `${ms.machine.name} is offline.` : !ms.tools.dekit ? "dekit isn't installed." : "The runner isn't running: dekit explains a task once its runner is up."}
         </p>
       ) : loading && !why ? (
         <p className="muted why-loading">

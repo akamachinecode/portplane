@@ -36,6 +36,12 @@ function MachineCard({ ms }: { ms: MachineSnapshot }) {
           </a>
         ) : (
           <>
+            {m.status === "online" && (
+              <a className="btn btn-sm" href={href({ view: "onboarding", machine: m.id })} title={`Check ${m.name}, install dekit and portless there, and set up its folders`}>
+                <Icon name="wand" size={13} />
+                Set up
+              </a>
+            )}
             <button type="button" className="btn btn-sm" onClick={() => openEditMachine(m.id)}>
               <Icon name="pencil" size={13} />
               Edit

@@ -35,9 +35,9 @@ function MachineTools({ ms }: { ms: MachineSnapshot }) {
               why={tools.proxyRunning ? "Serves the .localhost URLs." : "Not running: the URLs won't load."}
             />
           )}
-          {machine.local && (missing || !tools.proxyRunning) && (
+          {(missing || !tools.proxyRunning) && (
             <div className="sgroup-foot">
-              <a className="btn" href={href({ view: "onboarding", step: missing ? "install" : "proxy" })}>
+              <a className="btn" href={href({ view: "onboarding", step: missing ? "install" : "proxy", machine: machine.local ? undefined : machine.id })}>
                 <Icon name="wand" size={14} />
                 {missing ? "Install what's missing" : "Set up the proxy"}
               </a>
@@ -49,7 +49,7 @@ function MachineTools({ ms }: { ms: MachineSnapshot }) {
   );
 }
 
-/** dekit and portless on each machine; the guided setup installs what's missing here. */
+/** dekit and portless on each machine; each machine's guided setup installs what's missing there (ADR-0026). */
 export function ToolsSection() {
   return <SnapshotGate>{(snapshot) => snapshot.machines.map((ms) => <MachineTools key={ms.machine.id} ms={ms} />)}</SnapshotGate>;
 }
