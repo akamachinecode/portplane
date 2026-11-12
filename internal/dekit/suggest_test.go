@@ -2,7 +2,9 @@ package dekit
 
 import (
 	"encoding/json"
+	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -101,9 +103,18 @@ func TestSuggestByLanguage(t *testing.T) {
 	}
 }
 
+// hostAbs turns a Unix-style absolute path into one the host sees as
+// absolute.
+func hostAbs(p string) string {
+	if runtime.GOOS == "windows" {
+		return `C:` + filepath.FromSlash(p)
+	}
+	return p
+}
+
 func TestNewAppOps(t *testing.T) {
-	app := NewApp{Path: "site", Folder: "/home/dev/code/blog/site", Cmd: []string{"php", "-S", "127.0.0.1:8000"}, Name: "blog", Port: 8000, Ready: &Ready{TCP: 8000}, Deps: []string{"install"}}
-	ops, err := app.InsertOps("/home/dev/code/blog/.portplane")
+	app := NewApp{Path: "site", Folder: hostAbs("/home/dev/code/blog/site"), Cmd: []string{"php", "-S", "127.0.0.1:8000"}, Name: "blog", Port: 8000, Ready: &Ready{TCP: 8000}, Deps: []string{"install"}}
+	ops, err := app.InsertOps(hostAbs("/home/dev/code/blog/.portplane"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,8 +127,8 @@ func TestNewAppOps(t *testing.T) {
 	if string(ops[1].Value) != `{"cwd":"../site","cmd":["php","-S","127.0.0.1:8000"],"deps":["install","site-url"],"ready":{"tcp":8000}}` {
 		t.Fatalf("app %s", ops[1].Value)
 	}
-	app = NewApp{Path: "web", Label: "Web", Folder: "/home/dev/code/shop/apps/web", Cmd: []string{"pnpm", "run", "dev"}, Name: "shop", Wrap: true, Autostart: true}
-	ops, err = app.InsertOps("/home/dev/code/shop")
+	app = NewApp{Path: "web", Label: "Web", Folder: hostAbs("/home/dev/code/shop/apps/web"), Cmd: []string{"pnpm", "run", "dev"}, Name: "shop", Wrap: true, Autostart: true}
+	ops, err = app.InsertOps(hostAbs("/home/dev/code/shop"))
 	if err != nil || len(ops) != 1 {
 		t.Fatal(err, ops)
 	}
@@ -128,9 +139,9 @@ func TestNewAppOps(t *testing.T) {
 	}
 	for _, bad := range []NewApp{
 		{Path: "x", Folder: "rel", Cmd: []string{"a"}},
-		{Path: "x", Folder: "/a", Cmd: []string{"a"}, Name: "Bad Name", Wrap: true},
-		{Path: "x", Folder: "/a", Cmd: []string{"a"}, Name: "ok"},
-		{Path: "x", Folder: "/a", Cmd: []string{"a"}, Job: true, Ready: &Ready{Log: "x"}},
+		{Path: "x", Folder: hostAbs("/a"), Cmd: []string{"a"}, Name: "Bad Name", Wrap: true},
+		{Path: "x", Folder: hostAbs("/a"), Cmd: []string{"a"}, Name: "ok"},
+		{Path: "x", Folder: hostAbs("/a"), Cmd: []string{"a"}, Job: true, Ready: &Ready{Log: "x"}},
 	} {
 		if err := bad.Validate(); err == nil {
 			t.Errorf("accepted %+v", bad)
