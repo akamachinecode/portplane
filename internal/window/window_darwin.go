@@ -277,24 +277,54 @@ import (
 // Supported reports whether Show opens a native window in this build.
 func Supported() bool { return true }
 
-var iconOnce sync.Once
+// NeedsTray is true: the window lives in the run loop the tray starts.
+func NeedsTray() bool { return true }
 
-// Show opens the window on url, or brings it to the front. It may be called
-// from any goroutine; the window appears once the tray's run loop runs.
-func Show(url string) {
+var (
+	iconOnce sync.Once
+	homeMu   sync.Mutex
+	home     string
+)
+
+// Start keeps the window's address and watches for Cmd-Q and the Quit
+// Apple event until ctx ends.
+func Start(ctx context.Context, o Options) {
+	homeMu.Lock()
+	home = o.URL
+	homeMu.Unlock()
+	if o.Quit != nil {
+		onQuit(ctx, o.Quit)
+	}
+}
+
+// Show opens the window, or brings it to the front. It may be called from
+// any goroutine; the window appears once the tray's run loop runs. The
+// activation token is a Linux matter and is ignored.
+func Show(string) error {
 	iconOnce.Do(func() {
 		png := icon.PNG(512, 2)
 		C.ppSetIcon(unsafe.Pointer(&png[0]), C.int(len(png)))
 	})
-	cs := C.CString(url)
+	homeMu.Lock()
+	cs := C.CString(home)
+	homeMu.Unlock()
 	defer C.free(unsafe.Pointer(cs))
 	C.ppShow(cs)
+	return nil
 }
 
-// OnQuit calls quit when the user chooses Quit Portplane in the window's
+// Close does nothing: the window goes away with the process.
+func Close() {}
+
+// CanPick is false: the folder picker on macOS is the AppleScript one.
+func CanPick() bool { return false }
+
+func pickFolder(context.Context) (string, error) { return "", ErrNoWindow }
+
+// onQuit calls quit when the user chooses Quit Portplane in the window's
 // menu (Cmd-Q) or the app gets a Quit Apple event (the Dock's Quit, logout).
 // It stops watching when ctx ends.
-func OnQuit(ctx context.Context, quit func()) {
+func onQuit(ctx context.Context, quit func()) {
 	C.ppRegisterQuit()
 	go func() {
 		t := time.NewTicker(250 * time.Millisecond)

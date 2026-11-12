@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -13,7 +14,6 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"syscall"
 	"time"
 
@@ -51,11 +51,12 @@ func cmdServe(args []string, stdout, stderr io.Writer) int {
 
 	detachOwnConsole()
 	envpath.Enrich()
+	activation := takeActivationToken()
 
 	// One Portplane per user: a second start opens the first one's window.
 	if inst, ok := runningInstance(); ok {
 		fmt.Fprintf(stdout, "Portplane is already running at %s\n", inst.URL)
-		if *open && !showRunning(inst) {
+		if *open && !showRunning(inst, activation) {
 			_ = desktop.OpenApp(inst.URL)
 		}
 		return 0
@@ -63,6 +64,8 @@ func cmdServe(args []string, stdout, stderr io.Writer) int {
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	ctx, quit := context.WithCancel(ctx)
+	defer quit()
 
 	store, err := openSettings()
 	if err != nil {
@@ -107,14 +110,36 @@ func cmdServe(args []string, stdout, stderr io.Writer) int {
 		url = publicURL
 	}
 	// The window: native on macOS (ADR-0017), where it lives in the tray's
-	// run loop; the browser elsewhere and without a tray (ADR-0004). The
-	// native window loads the loopback address, which needs neither the
+	// run loop, and on Linux (ADR-0018), where it is its own process; the
+	// browser elsewhere, and whenever the native one cannot open (ADR-0004).
+	// The native window loads the loopback address, which needs neither the
 	// portless CA nor .localhost name resolution.
-	native := window.Supported() && !*noTray && tray.Available()
-	showUI := func() {
-		if native {
-			window.Show(rawURL)
-			return
+	trayOn := !*noTray && tray.Available()
+	native := window.Supported() && (trayOn || !window.NeedsTray())
+	if native {
+		window.Start(ctx, window.Options{
+			URL:        rawURL,
+			BrowserURL: url,
+			StatePath:  filepath.Join(filepath.Dir(store.Path()), "window.json"),
+			Quit:       quit, // Quit Portplane in the window's menu
+			// Closing the window ends a Portplane that started with it,
+			// unless a tray icon is on screen to bring it back. Started
+			// without a window (at login), it keeps running as before.
+			Closed: func() {
+				if *open && (!trayOn || !tray.Visible()) {
+					quit()
+				}
+			},
+		})
+		defer window.Close()
+	}
+	showUI := func(activationToken string) {
+		if native && window.Supported() {
+			err := window.Show(activationToken)
+			if err == nil {
+				return
+			}
+			fmt.Fprintln(stderr, "portplane: the window did not open, using the browser:", err)
 		}
 		if err := desktop.OpenApp(url); err != nil {
 			fmt.Fprintln(stderr, "portplane: could not open a browser:", err)
@@ -126,9 +151,26 @@ func cmdServe(args []string, stdout, stderr io.Writer) int {
 		UI:         webui.FS(),
 		Token:      server.NewToken(),
 		ShowWindow: showUI,
-		Port:       port,
-		PublicURL:  publicURL,
-		Dev:        *dev,
+		// The folder picker opens over the window when it is open; the
+		// desktop's own (zenity, kdialog, AppleScript) otherwise.
+		PickFolder: func(c context.Context) (string, error) {
+			p, err := window.PickFolder(c)
+			switch {
+			case errors.Is(err, window.ErrNoWindow):
+				return desktop.PickFolder(c)
+			case errors.Is(err, context.Canceled): // Portplane is quitting
+				return "", desktop.ErrCancelled
+			case err != nil:
+				return "", err
+			case p == "":
+				return "", desktop.ErrCancelled
+			}
+			return p, nil
+		},
+		CanPick:   func() bool { return window.CanPick() || desktop.CanPickFolder() },
+		Port:      port,
+		PublicURL: publicURL,
+		Dev:       *dev,
 		GetFolders: func() []string {
 			return local.Folders()
 		},
@@ -193,14 +235,9 @@ func cmdServe(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintln(stdout, "  development mode: no token, any *.localhost host")
 	}
 	if *open {
-		showUI()
+		showUI(activation)
 	}
 
-	ctx, quit := context.WithCancel(ctx)
-	defer quit()
-	if native {
-		window.OnQuit(ctx, quit) // Cmd-Q in the window's menu
-	}
 	errc := make(chan error, 1)
 	go func() {
 		err := httpSrv.Serve(ln)
@@ -210,7 +247,7 @@ func cmdServe(args []string, stdout, stderr io.Writer) int {
 	// The tray needs the main goroutine (macOS); without one, just wait.
 	shown := !*noTray && tray.Run(ctx, tray.Options{
 		Updates:      h.Observe(ctx),
-		Open:         showUI,
+		Open:         func() { showUI("") },
 		Quit:         quit,
 		Autostart:    autostart.Enabled,
 		SetAutostart: setAutostart,
@@ -297,16 +334,19 @@ func runningInstance() (instance, bool) {
 	return i, resp.StatusCode == http.StatusOK && resp.Header.Get("Content-Security-Policy") != ""
 }
 
-// showRunning asks the running Portplane to bring up its own window (native
-// on macOS). It reports false when that one cannot, such as a version
-// without the route, so the caller opens the browser instead.
-func showRunning(i instance) bool {
+// showRunning asks the running Portplane to bring up its own window,
+// passing this start's activation token so Wayland lets it take focus. It
+// reports false when that one cannot, such as a version without the route,
+// so the caller opens the browser instead.
+func showRunning(i instance, activationToken string) bool {
 	if i.Token == "" {
 		return false
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	allowForeground(i.PID)
+	body, _ := json.Marshal(server.WindowRequest{Token: activationToken})
+	ctx, cancel := context.WithTimeout(context.Background(), 35*time.Second)
 	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "http://127.0.0.1:"+strconv.Itoa(i.Port)+"/api/window", strings.NewReader("{}"))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "http://127.0.0.1:"+strconv.Itoa(i.Port)+"/api/window", bytes.NewReader(body))
 	if err != nil {
 		return false
 	}
@@ -318,6 +358,19 @@ func showRunning(i instance) bool {
 	}
 	_ = resp.Body.Close()
 	return resp.StatusCode == http.StatusNoContent
+}
+
+// takeActivationToken returns the token the desktop gave this start
+// (XDG activation on Wayland, startup notification on X11) and removes it
+// from the environment, so nothing started later reuses it.
+func takeActivationToken() string {
+	t := os.Getenv("XDG_ACTIVATION_TOKEN")
+	if t == "" {
+		t = os.Getenv("DESKTOP_STARTUP_ID")
+	}
+	_ = os.Unsetenv("XDG_ACTIVATION_TOKEN")
+	_ = os.Unsetenv("DESKTOP_STARTUP_ID")
+	return t
 }
 
 func setAutostart(on bool) error {

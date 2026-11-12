@@ -54,8 +54,9 @@ type Server struct {
 	PickFolder func(context.Context) (string, error)
 	CanPick    func() bool
 	// ShowWindow brings up the Portplane window (a second start asks the
-	// running one through POST /api/window). Nil: the route answers 404.
-	ShowWindow func()
+	// running one through POST /api/window), with the second start's XDG
+	// activation token when it has one. Nil: the route answers 404.
+	ShowWindow func(activationToken string)
 	// Extra handlers registered by later milestones (setup, machines).
 	Extra map[string]http.HandlerFunc
 }
@@ -337,12 +338,23 @@ func (s *Server) open(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (s *Server) showWindow(w http.ResponseWriter, _ *http.Request) {
+// WindowRequest is POST /api/window. Token is an XDG activation token, so
+// Wayland lets the window take focus.
+type WindowRequest struct {
+	Token string `json:"token,omitempty"`
+}
+
+func (s *Server) showWindow(w http.ResponseWriter, r *http.Request) {
 	if s.ShowWindow == nil {
 		writeError(w, http.StatusNotFound, errors.New("no window to show"))
 		return
 	}
-	s.ShowWindow()
+	var req WindowRequest
+	if err := decode(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, err)
+		return
+	}
+	s.ShowWindow(req.Token)
 	w.WriteHeader(http.StatusNoContent)
 }
 

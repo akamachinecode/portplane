@@ -6,5 +6,7 @@ Comment=Every dev server, on every machine, in one window
 Exec=portplane
 Icon=portplane
 Terminal=false
+StartupNotify=true
+StartupWMClass=dev.portplane.app
 Categories=Development;
 Keywords=localhost;dev;server;dekit;portless;

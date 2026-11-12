@@ -86,6 +86,22 @@ jobs:
             GOOS=${target%/*} GOARCH=${target#*/} CGO_ENABLED=0 go build -o /dev/null ./cmd/portplane
             echo "::endgroup::"
           done
+          for arch in amd64 arm64; do
+            GOOS=linux GOARCH=$arch CGO_ENABLED=0 go build -o /dev/null ./cmd/portplane-window
+          done
+      - name: portplane stays static on Linux
+        # It is uploaded to remote machines as the agent (ADR-0015), which may
+        # have no desktop libraries; only portplane-window loads GTK (ADR-0018).
+        run: |
+          if GOOS=linux go list -deps ./cmd/portplane | grep -q ebitengine/purego; then
+            echo "::error::cmd/portplane imports purego on Linux; GTK code belongs in cmd/portplane-window"
+            exit 1
+          fi
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o portplane ./cmd/portplane
+          if file portplane | grep -q interpreter; then
+            echo "::error::the Linux portplane binary is dynamically linked"
+            exit 1
+          fi
 
   conventions:
     name: PR conventions

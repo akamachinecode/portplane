@@ -81,6 +81,17 @@ mv "$tmp/portplane" "$dir/portplane"
 chmod 755 "$dir/portplane"
 say "Installed $dir/portplane"
 
+# Linux: the Portplane window is a second binary next to the first. It needs
+# WebKitGTK 6.0; without it the UI opens in the browser.
+if [ "$os" = linux ] && tar -xzf "$tmp/$archive" -C "$tmp" portplane-window 2>/dev/null; then
+  mv "$tmp/portplane-window" "$dir/portplane-window"
+  chmod 755 "$dir/portplane-window"
+  say "Installed $dir/portplane-window"
+  if ! { ldconfig -p 2>/dev/null || /sbin/ldconfig -p 2>/dev/null; } | grep -q 'libwebkitgtk-6\.0\.so\.4'; then
+    say "For the Portplane window, install WebKitGTK 6.0 (Fedora: sudo dnf install webkitgtk6.0; Debian, Ubuntu: sudo apt install libwebkitgtk-6.0-4). Until then the UI opens in your browser."
+  fi
+fi
+
 case ":$PATH:" in
   *":$dir:"*) ;;
   *)

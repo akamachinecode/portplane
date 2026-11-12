@@ -196,14 +196,18 @@ func TestShowWindow(t *testing.T) {
 	if got := do(h, "POST", "/api/window", "127.0.0.1:4799", "secret", `{}`).Code; got != 404 {
 		t.Fatalf("no window: %d, want 404", got)
 	}
-	shown := 0
-	s.ShowWindow = func() { shown++ }
+	shown, activation := 0, ""
+	s.ShowWindow = func(token string) { shown++; activation = token }
 	h = s.Handler()
 	if got := do(h, "POST", "/api/window", "127.0.0.1:4799", "", `{}`).Code; got != 401 || shown != 0 {
 		t.Fatalf("no token: %d (shown %d), want 401", got, shown)
 	}
-	if got := do(h, "POST", "/api/window", "127.0.0.1:4799", "secret", `{}`).Code; got != 204 || shown != 1 {
-		t.Fatalf("right token: %d (shown %d), want 204", got, shown)
+	if got := do(h, "POST", "/api/window", "127.0.0.1:4799", "secret", `{}`).Code; got != 204 || shown != 1 || activation != "" {
+		t.Fatalf("right token: %d (shown %d, activation %q), want 204", got, shown, activation)
+	}
+	// A second start on Wayland passes its activation token along.
+	if got := do(h, "POST", "/api/window", "127.0.0.1:4799", "secret", `{"token":"abc_TIME123"}`).Code; got != 204 || shown != 2 || activation != "abc_TIME123" {
+		t.Fatalf("activation token: %d (shown %d, activation %q), want 204", got, shown, activation)
 	}
 }
 
