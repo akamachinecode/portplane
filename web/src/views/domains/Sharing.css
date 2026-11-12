@@ -112,6 +112,7 @@
 }
 
 .share-public-tag {
+  margin-left: var(--space-2);
   font-weight: 500;
 }
 
@@ -208,6 +209,13 @@
   font-size: var(--text-xs);
 }
 
+/* Under the way it's shared, so the table fits beside the sub-navigation. */
+.shares-table .share-public-tag {
+  display: block;
+  width: fit-content;
+  margin: var(--space-1) 0 0;
+}
+
 .share-url-cell {
   display: inline-flex;
   align-items: center;
@@ -218,8 +226,8 @@
 
 .share-reason {
   display: inline-block;
-  min-width: 200px;
-  max-width: 300px;
+  min-width: 140px;
+  max-width: 200px;
   font-size: 12px;
   text-align: left;
   white-space: normal;
