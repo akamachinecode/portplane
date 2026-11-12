@@ -85,4 +85,3 @@ func TestReadProjectWithoutFragment(t *testing.T) {
 		t.Fatalf("a flow-style file is edited as text only: %+v", pc.Files[0])
 	}
 }
-

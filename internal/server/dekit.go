@@ -538,6 +538,14 @@ func (a *dekitAPI) readProject(root string) (*dekit.ProjectConfig, error) {
 			return nil, err
 		}
 		pc.Root = dekit.HostRunner
+		// The host runner has no Portplane fragment: apps go in its dekit.yaml.
+		files := pc.Files[:0]
+		for _, f := range pc.Files {
+			if f.Role != "portplane" || f.Exists {
+				files = append(files, f)
+			}
+		}
+		pc.Files = files
 		return pc, nil
 	}
 	return dekit.ReadProject(root, "")
