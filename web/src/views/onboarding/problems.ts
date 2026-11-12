@@ -5,9 +5,8 @@ import { registerProblemSource, type Problem } from "../../shell/health";
 import { resumeStep, type StepId } from "./steps";
 
 // The guided setup's entries in the health list and the palette. On this
-// computer, a missing tool or a stopped proxy is fixed from the step that
-// does it (F3), and the proxy advice is the service install everywhere
-// (F2). These replace the snapshot source's problems with the same ids.
+// computer, a missing tool is fixed from the step that installs it (F3).
+// These replace the snapshot source's problems with the same ids.
 
 /** The command the proxy advice names, the same everywhere (F2). */
 export const PROXY_COMMAND = "sudo portless service install";
@@ -38,17 +37,9 @@ export function setupProblems(ms: MachineSnapshot): Problem[] {
       machine: where,
       fix: { label: "Install portless", run: toStep("install") },
     });
-  } else if (!tools.proxyRunning) {
-    out.push({
-      id: `proxy-down|${machine.id}`,
-      severity: "warning",
-      title: "The portless proxy isn't running",
-      detail: "Apps keep their .localhost names, but the URLs won't load until the proxy runs. Installing it as a service asks for your password once and starts it with your computer.",
-      code: PROXY_COMMAND,
-      machine: where,
-      fix: { label: "Set up the proxy", run: toStep("proxy") },
-    });
   }
+  // A stopped proxy is reported by the portless center's source
+  // (views/domains/problems.ts), which knows whether the service exists.
   return out;
 }
 

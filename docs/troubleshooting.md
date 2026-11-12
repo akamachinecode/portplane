@@ -1,20 +1,34 @@
 # Troubleshooting
 
-**`https://portplane.localhost` does not open.** The portless proxy is not running. Open **Settings → General → Run setup again** and set up the proxy: it shows the exact command, then asks for your password once through your system's dialog. By hand, run `sudo portless service install` once. Portplane also prints its direct `http://127.0.0.1:<port>` URL when it starts.
+**`https://portplane.localhost` does not open.** The portless proxy is not running. In **Domains → Proxy**, click **Start the proxy**, or **Install the service** so it starts with your computer (both show the exact command first and ask for your password through your system's dialog when needed). **Settings → General → Run setup again** walks you through it. By hand: `sudo portless service install` once, or `portless proxy start` for this session. Portplane also prints its direct `http://127.0.0.1:<port>` URL when it starts.
 
-**The password dialog does not open.** Portplane asks through `pkexec` on Linux, which needs a polkit agent in your desktop session (most desktops run one; minimal window managers may not). Without one, the proxy step shows the `sudo …` command to run in a terminal; then click **I ran it: check again**. You can also choose **Without a password (port 1355)**: the proxy runs as you and addresses carry `:1355`.
+**The password dialog does not open.** Portplane asks through `pkexec` on Linux, which needs a polkit agent in your desktop session (most desktops run one; minimal window managers may not). Without one, the step shows the `sudo …` command to run in a terminal; then click **I ran it: check again**. You can also choose **Without a password (port 1355)**: the proxy runs as you and addresses carry `:1355`.
 
-**The proxy service stopped working after a Node.js upgrade.** The service starts the proxy with the Node.js that installed it. A versioned path (Homebrew's `Cellar/node/<version>`, a version manager's folder) disappears on upgrade. The system check says so; install the service again from the proxy step, or run `sudo portless service install`.
+**The proxy stopped starting with the computer after an upgrade.** The service starts the proxy with the Node.js and portless that installed it. A versioned path (Homebrew's `Cellar/node/<version>`, a version manager's folder) disappears on upgrade. The system check and **Domains → Proxy** mark the missing path; click **Reinstall** (or run `sudo portless service install`).
 
 **An install failed.** The card shows the error and the installer's output. **Retry** runs it again; **Copy the command to do it by hand** copies the official command (`curl -fsSL https://dekit.run/install.sh | sh`, `npm install -g portless`). Portplane downloads only from `dekit.run`, GitHub, `nodejs.org` and the npm registry, and refuses a Node.js archive whose SHA-256 does not match `SHASUMS256.txt`.
 
 **dekit or portless work in Portplane but not in a terminal.** Portplane installs them in `~/.local/bin` and uses them by full path. If your shell does not have that folder on `PATH`, the install step offers to add one line to your shell profile (`~/.zshrc`, `~/.bashrc`, `~/.bash_profile` on macOS, `~/.profile`, or `~/.config/fish/conf.d/portplane.fish`); it shows the line first and never adds it twice. On Windows, dekit's installer adds the folder to your user `Path`.
+
+**Something is off with portless and you don't know what.** **Domains → Doctor** runs `portless doctor` and offers a fix next to each problem. The palette's **Run diagnostics** does the same.
+
+**Browsers warn about the certificate.** Your system doesn't trust portless's local certificate authority yet: **Domains → Certificates → Trust the certificate**. Firefox and, on some Linux setups, Chrome keep their own list: the guided setup's browser step adds the certificate there. On Linux, if Portplane says the trusted copy belongs to your user, click **Fix ownership**.
+
+**Names under `.test` (or another domain) don't load.** Only `.localhost` reaches your computer without help; other domains need portless's block in the hosts file: **Domains → Hosts file → Sync**.
+
+**An old address still shows up, or a port stays taken after an app crashed.** Its route is stale: **Domains → Routes → Clean stale routes** removes it and asks the leftover server to stop.
+
+**Change an app's URL.** Open the app, then its **URL** tab, and click **Change name**. Portplane edits the name where it lives (its task, `portless.json` or an alias), shows the change first, then reloads dekit and restarts the app.
 
 **"dekit isn't running for …".** Each dekit project has its own runner, which stops after a reboot until something starts it. Click **Start runner**, or run `dekit -C <folder> up`.
 
 **An app stays "starting".** Its process is alive but its port is not listening yet. If it never gets there, it usually ignores the `PORT` variable portless sets: run `portplane setup <folder>` to see the suggested command, or start the framework directly (`pnpm exec next dev`) instead of a script that pins `--port`.
 
 **An app shows as on, but its URL says "no app registered".** The app was started outside portless, or under a different name. Its row shows the internal port; open that, or wrap the command with `portless <name>` in `dekit.yaml`.
+
+**The Output tab shows only the last lines.** It shows the screen dekit keeps for the app (`dekit screen`), refreshed once a second while the tab is open, so lines that scrolled off the top are not there. **Open in a terminal** copies `dekit -C <folder> attach <app>`, where you can scroll back and type into the app. To keep everything an app prints, turn on its `log` setting in `dekit.yaml`.
+
+**The Output tab says "Not updating".** It keeps the last screen it got and asks again every few seconds; the message says why, such as a remote machine that went offline. **Try again** asks at once. It also stops refreshing while Portplane's window is hidden, and starts again when you come back.
 
 **A remote machine stays offline.** Check `ssh <host> true` works without a prompt: Portplane runs ssh with `BatchMode=yes`, so passwords and host-key questions fail. The error under the machine's name is ssh's own message.
 

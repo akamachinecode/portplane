@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { errorText } from "../api/errors";
 import type { App, Excerpt } from "../api/types";
 import { copyText } from "../lib/clipboard";
+import { appRoute, href } from "../lib/router";
 import { useApp } from "./AppContext";
 import { Icon, Spinner } from "./Icon";
 
@@ -68,8 +69,12 @@ export function ExcerptPanel({ id, machine, app }: { id: string; machine: string
       )}
       <div className="excerpt-foot">
         <span className="excerpt-hint">
-          Full output: <code>{load.excerpt.command}</code>
+          In a terminal: <code>{load.excerpt.command}</code>
         </span>
+        <a className="btn btn-sm" href={href(appRoute(machine, app.id, "output"))}>
+          <Icon name="terminal" size={14} />
+          Show full output
+        </a>
         {lines.length > 0 && (
           <button type="button" className="btn btn-sm" onClick={copy}>
             <Icon name="copy" size={14} />

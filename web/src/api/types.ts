@@ -111,6 +111,18 @@ export interface Excerpt {
   command: string; // the dekit command that shows the full screen
 }
 
+/** An app's whole terminal screen, for the Output panel (ADR-0021). */
+export interface TaskOutput {
+  /** Rows joined by "\n", with ANSI colour codes (SGR) and nothing else. */
+  screen: string;
+  /** The start was cut to keep the answer small. */
+  truncated?: boolean;
+  /** The project's runner isn't running, so there is no screen. */
+  runnerDown?: boolean;
+  /** Attaches a terminal to the task: dekit -C <root> attach <task>. */
+  command: string;
+}
+
 export interface Settings {
   folders: string[];
 }

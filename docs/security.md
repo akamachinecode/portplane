@@ -58,7 +58,10 @@ Portplane installs dekit, portless and, when you have no Node.js 24 or later, a 
 
 ## Privileged steps
 
-A few portless steps need admin rights ([ADR-0020](adr/0020-privileged-steps.md)): `service install` and `uninstall`, `trust`, `hosts sync` and `clean`, and `proxy start` and `stop` on a port below 1024.
+A few portless steps need admin rights ([ADR-0020](adr/0020-privileged-steps.md)): `service install` and `uninstall`, `trust`, `hosts sync` and `clean`, `clean` when you uninstall portless, and `proxy start` and `stop` on a port below 1024 or when the proxy runs as root. Two more, from the portless center (M5.2):
+
+- `chown root:root` on the system's copy of portless's certificate (Linux), offered only when that file belongs to you, since any program of yours could then replace it;
+- updating or removing portless with the npm that installed it, only when that npm's folder belongs to the administrator (a system-wide npm).
 
 - **Only on your click,** on a button that says it will ask for your password.
 - **The exact command first.** A confirmation shows the argv, one argument per line, and the environment that goes with it.
@@ -89,7 +92,9 @@ Portplane makes outgoing requests only to your SSH hosts and, when you start a d
 - Its settings: `<user config dir>/portplane/settings.json`.
 - While it runs: `<user cache dir>/portplane/instance.json` (port, URL and token), removed when it quits.
 - With your confirmation, after showing the diff: `<folder>/.portplane/tasks.yaml` and one `load:` line in `<folder>/dekit.yaml` ([ADR-0009](adr/0009-generated-config-location.md)), and the tasks you edit from the app in the file that declares them ([ADR-0022](adr/0022-edit-dekit-config.md)).
+- With your confirmation, after showing the diff: a project's `portless.json`, or the `"portless"` key of its `package.json` (the rest of the file stays byte for byte), when you edit it or rename an app whose name lives there.
 - On your click: the tools it installs ([Installing tools](#installing-tools)), the line in your shell profile if you accept it, and portless's CA in a browser profile's own certificate database (`certutil -A`, no password; the browser and profile come from Portplane's own list, never a path from the page).
+- On your click, in portless's state folder: the certificate authority moved to a `ca-backup-<time>` folder before **Regenerate** (nothing is deleted); a copy of `ca.pem` in your Downloads folder for **Export**.
 - With `autostart on`: a LaunchAgent, an XDG autostart file or a `Run` registry value.
 - portless aliases for itself and for open remote apps, removed when it quits.
 

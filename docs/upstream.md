@@ -24,6 +24,13 @@ Portplane never forks dekit or portless (vision, principle 1). When it needs som
 - **Why:** a GUI that shows a task's output can only poll `dekit screen --json`, which gives the current screen, without history and without a way to type into the task. dekit marks the RPC as "not public yet and may still change", so nothing outside dekit can build on it.
 - **Workaround:** Portplane's Output panel shows `dekit screen --json` once a second while it is open ([ADR-0021](adr/0021-task-output.md)). The interactive terminal waits for this.
 
+### Scrollback in `dekit screen --json`
+
+- **State:** draft, not filed yet.
+- **Ask:** an option such as `dekit screen --json --scrollback <lines>` that adds the task's scrollback (up to its `scrollback_len`) before the rows its terminal shows now.
+- **Why:** `dekit screen` prints only the rows of the task's terminal, so a GUI that polls it loses every line that scrolled off, although dekit keeps them for `dekit attach`. A read-only option gives history without the attach RPC, which stays the way to type into a task.
+- **Workaround:** Portplane's Output panel shows the current screen and offers `dekit attach` in a terminal for older lines ([ADR-0021](adr/0021-task-output.md)).
+
 ## portless
 
 ### `portless list --json`

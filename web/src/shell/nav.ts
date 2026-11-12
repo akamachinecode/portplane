@@ -24,9 +24,11 @@ export const DOMAIN_LABELS: Record<DomainSection, string> = {
   proxy: "Proxy",
   routes: "Routes",
   aliases: "Aliases",
+  config: "portless.json",
   certificates: "Certificates",
   hosts: "Hosts file",
   doctor: "Doctor",
+  maintenance: "Maintenance",
 };
 
 export const SETTINGS_LABELS: Record<SettingsSection, string> = {

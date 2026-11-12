@@ -175,14 +175,15 @@ The milestone is done when:
 
 ### M5.2: portless center
 
-- [ ] Proxy: state, start and stop, install, reinstall and uninstall the service, and its options (port, HTTPS, TLDs, wildcard, LAN, own certificate).
-- [ ] Routes: every route with its owner, type, age and state; prune stale routes; kill orphaned servers, after a confirmation that lists them.
-- [ ] Aliases: add, edit and remove; "Give this port a URL" from Other ports.
-- [ ] Rename any app's URL wherever its name lives: Portplane's fragment, `dekit.yaml`, `portless.json`, `package.json` or an alias.
-- [ ] `portless.json` editor.
-- [ ] Certificates: the CA's fingerprint, expiry and where it is trusted; trust, trust in browsers, export, regenerate.
-- [ ] `/etc/hosts`: state, sync and clean.
-- [ ] Diagnosis from `doctor`, with a fix for each failure; update and uninstall portless.
+- [x] Proxy: state, start and stop, install, reinstall and uninstall the service, and its options (port, HTTPS, TLDs, wildcard, LAN, own certificate).
+- [x] Routes: every route with its owner, type, age and state; prune stale routes; kill orphaned servers, after a confirmation that lists them.
+- [x] Aliases: add, edit and remove; "Give this port a URL" from Other ports.
+- [x] Rename any app's URL wherever its name lives: Portplane's fragment, `dekit.yaml`, `portless.json`, `package.json` or an alias.
+- [x] `portless.json` editor.
+- [x] Certificates: the CA's fingerprint, expiry and where it is trusted; trust, export, regenerate, and fixing the owner of the system's copy on Linux.
+- [ ] Certificates: trust in each browser, once M5.1's browser check is wired into the Certificates section (the API has the field).
+- [x] `/etc/hosts`: state, sync and clean.
+- [x] Diagnosis from `doctor`, with a fix for each failure; update and uninstall portless.
 
 **Done when:** every portless command has a place in the app, except sharing (`--tailscale`, `--funnel`, `--ngrok`, `--cloudflare`), `compose` and `mcp`.
 
@@ -199,8 +200,8 @@ The milestone is done when:
 
 ### M5.4: Output
 
-- [ ] Output panel, phase 1: the task's screen from `dekit screen --json` while the panel is open (ADR-0021).
-- [ ] Upstream request for a stable attach RPC ([upstream.md](upstream.md)).
+- [x] Output panel, phase 1: the task's screen from `dekit screen --json` while the panel is open, on local and remote machines, with colours, search, copy, pause and "Open in a terminal" (ADR-0021).
+- [x] Upstream requests for a stable attach RPC and for scrollback in `dekit screen --json`, written ([upstream.md](upstream.md)); not filed yet.
 - [ ] Phase 2, an interactive terminal, once dekit publishes it.
 
 **Done when:** the live output of any app is visible without a terminal.
@@ -222,7 +223,7 @@ The milestone is done when:
 - [ ] Sharing: Tailscale, Funnel, ngrok and Cloudflare.
 - [ ] Compose projects and their routes.
 - [ ] LAN mode, with the CA exported for phones.
-- [ ] Remote parity: the agent protocol carries setup, config and output.
+- [ ] Remote parity: the agent protocol carries setup and config (output came with M5.4).
 
 **Done when:** set for each extension when it is planned.
 

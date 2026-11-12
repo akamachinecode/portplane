@@ -165,14 +165,14 @@ describe("setupProblems", () => {
     updatedAt: "",
   });
 
-  it("offers the install and the proxy step on this computer, with one proxy command (F2, F3)", () => {
+  it("offers the installs on this computer (F3); the proxy is the portless center's", () => {
     const none = setupProblems(ms({ proxyRunning: false, proxyHttps: false }));
     expect(none.map((p) => [p.id, p.fix?.label])).toEqual([
       ["no-dekit|local", "Install dekit"],
       ["no-portless|local", "Install portless"],
     ]);
     const down = setupProblems(ms({ dekit: "0.10.3", portless: "0.16.0", proxyRunning: false, proxyHttps: false }));
-    expect(down.map((p) => [p.id, p.code, p.fix?.label])).toEqual([["proxy-down|local", "sudo portless service install", "Set up the proxy"]]);
+    expect(down).toEqual([]);
     expect(setupProblems(ms({ proxyRunning: false, proxyHttps: false }, false))).toEqual([]);
   });
 });
