@@ -3,6 +3,7 @@ import type { Api } from "../../api/client";
 import { errorText } from "../../api/errors";
 import { useJobs } from "../../api/jobs";
 import type { Certificates, DoctorReport, PortlessAction, PortlessStatus, RouteView } from "../../api/portless";
+import type { LanView, SharingOverview } from "../../api/sharing";
 import { useApp } from "../../components/AppContext";
 import { invalidateProblems } from "../../shell/health";
 
@@ -58,6 +59,10 @@ export const statusResource = resource<PortlessStatus>((api) => api.portlessStat
 export const doctorResource = resource<DoctorReport>((api) => api.portlessDoctor());
 export const routesResource = resource<RouteView[]>((api) => api.portlessRoutes());
 export const certificatesResource = resource<Certificates>((api) => api.portlessCertificates());
+/** The ways to share and everything shared now (M5.6); also feeds Health's public-share notice. */
+export const sharingResource = resource<SharingOverview>((api) => api.portlessSharing());
+/** LAN mode: what it needs, and every app's .local address (M5.6). */
+export const lanResource = resource<LanView>((api) => api.portlessLan());
 
 /** The latest value of a resource, whatever its state. */
 export function valueOf<T>(l: Load<T>): T | undefined {
@@ -82,20 +87,39 @@ export function usePortlessStatus() {
 /**
  * Loads portless's status and certificates once in the background (no
  * doctor run), so the Health view knows about a broken service or an
- * untrusted certificate from the first screen.
+ * untrusted certificate from the first screen. It also reads what's
+ * shared (local commands only: tailscale status, ngrok's config), and
+ * LAN mode's needs when the proxy runs in LAN mode, for the sharing
+ * problems (sharingProblems.ts).
  */
 export function usePrimePortless(enabled: boolean): void {
   const { api } = useApp();
+  const status = useSyncExternalStore(statusResource.subscribe, statusResource.get);
+  const lan = valueOf(status)?.proxy.lan === true;
   useEffect(() => {
     if (!enabled) return;
     if (statusResource.get().status === "idle") void statusResource.load(api);
     if (certificatesResource.get().status === "idle") void certificatesResource.load(api);
+    if (sharingResource.get().status === "idle") void sharingResource.load(api);
   }, [api, enabled]);
+  useEffect(() => {
+    if (enabled && lan && lanResource.get().status === "idle") void lanResource.load(api);
+  }, [api, enabled, lan]);
 }
 
 /** Every route of routes.json, loaded on first use. */
 export function useRoutes() {
   return useResource(routesResource, true);
+}
+
+/** The sharing overview, loaded on first use. */
+export function useSharing() {
+  return useResource(sharingResource, true);
+}
+
+/** LAN mode's view, loaded on first use. */
+export function useLan() {
+  return useResource(lanResource, true);
 }
 
 /** The doctor report; `autorun` runs doctor when none was loaded yet. */
@@ -125,6 +149,8 @@ export function useRefreshOnJobs(onDone?: () => void) {
     void statusResource.load(api);
     if (certificatesResource.get().status !== "idle") void certificatesResource.load(api);
     if (routesResource.get().status !== "idle") void routesResource.load(api);
+    if (sharingResource.get().status !== "idle") void sharingResource.load(api);
+    if (lanResource.get().status !== "idle") void lanResource.load(api);
     if (doctorResource.get().status !== "idle") void doctorResource.load(api);
     cb.current?.();
   }, [jobs, api]);
@@ -132,7 +158,12 @@ export function useRefreshOnJobs(onDone?: () => void) {
 
 // ---- intents ----
 
-export type Intent = { kind: "new-alias"; port?: number; name?: string } | { kind: "action"; action: PortlessAction } | { kind: "run-doctor" };
+export type Intent =
+  | { kind: "new-alias"; port?: number; name?: string }
+  | { kind: "action"; action: PortlessAction }
+  | { kind: "run-doctor" }
+  | { kind: "compose-start" }
+  | { kind: "lan-phone" };
 
 let intent: Intent | null = null;
 const intentListeners = new Set<() => void>();

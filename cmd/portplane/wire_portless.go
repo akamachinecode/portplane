@@ -14,7 +14,8 @@ import (
 	"github.com/akamachinecode/portplane/internal/server"
 )
 
-// portlessHandlers serves the portless center: proxy, routes, aliases, names, certificates, hosts, doctor (M5.2, ADR-0023).
+// portlessHandlers serves the portless center: proxy, routes, aliases, names, certificates, hosts, doctor (M5.2, ADR-0023),
+// and sharing, compose projects and LAN mode (M5.6).
 func portlessHandlers(d deps) map[string]http.HandlerFunc {
 	return server.PortlessHandlers(server.PortlessDeps{
 		Client: d.portless,
@@ -29,7 +30,11 @@ func portlessHandlers(d deps) map[string]http.HandlerFunc {
 		Restart: func(ctx context.Context, root, task string) error {
 			return d.dekit.Act(ctx, root, "restart", task)
 		},
-		Listeners: listeners,
+		Start: func(ctx context.Context, root, task string) error {
+			return d.dekit.Act(ctx, root, "start", task)
+		},
+		ComposeMemory: composeMemoryPath(d),
+		Listeners:     listeners,
 		Refresh: func() {
 			envpath.Refresh()
 			d.local.RefreshTools()
@@ -56,6 +61,15 @@ func listeners(ctx context.Context) []server.Listener {
 		out = append(out, v)
 	}
 	return out
+}
+
+// composeMemoryPath is where Portplane remembers the compose files it
+// started: next to its settings.
+func composeMemoryPath(d deps) string {
+	if d.store == nil || d.store.Path() == "" {
+		return ""
+	}
+	return filepath.Join(filepath.Dir(d.store.Path()), "compose-files.json")
 }
 
 // downloadsDir is where exported files go: ~/Downloads, else the home folder.

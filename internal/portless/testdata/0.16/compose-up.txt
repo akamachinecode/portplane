@@ -1,0 +1,16 @@
+
+portless compose shop
+
+-- db:5432 keeps host port 5432 (not HTTP)
+-- mail:8025 keeps host port 8025 (portless.enable=false)
+[+] Running 5/5
+ ✔ Network shop_default     Created
+ ✔ Container shop-db-1      Started
+ ✔ Container shop-api-1     Started
+ ✔ Container shop-web-1     Started
+ ✔ Container shop-worker-1  Started
+
+  -> https://backend.shop.localhost  (api:8080)
+  -> https://8080.backend.shop.localhost  (api:8080)
+  -> https://9229.backend.shop.localhost  (api:9229)
+  -> https://web.shop.localhost  (web:5173)

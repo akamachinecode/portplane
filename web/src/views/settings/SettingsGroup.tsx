@@ -1,4 +1,6 @@
 import { useId, type ReactNode } from "react";
+// The groups also show in Domains, which loads without the Settings view.
+import "../SettingsView.css";
 
 /** A titled block of settings inside a section. */
 export function SettingsGroup({ title, description, children }: { title: string; description?: ReactNode; children: ReactNode }) {

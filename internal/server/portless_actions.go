@@ -398,6 +398,10 @@ func (p *portlessAPI) action(r *http.Request, name string) (action, error) {
 			return err
 		}
 		a.steps = append(a.steps, s)
+	case "tailscale-operator":
+		if err := p.tailscaleOperatorAction(&a); err != nil {
+			return a, err
+		}
 	case "update":
 		if err := p.updateAction(&a, f); err != nil {
 			return a, err

@@ -1,0 +1,30 @@
+[
+  {
+    "hostname": "web.localhost",
+    "port": 4512,
+    "pid": 4100,
+    "registeredAt": 1762934400000,
+    "childPgid": 4101,
+    "childStartTime": "Wed Nov 12 09:00:00 2025",
+    "tailscaleUrl": "https://workstation.tail4c2a.ts.net",
+    "tailscaleHttpsPort": 443
+  },
+  {
+    "hostname": "api.localhost",
+    "port": 4513,
+    "pid": 4200,
+    "registeredAt": 1762934460000,
+    "tailscaleUrl": "https://workstation.tail4c2a.ts.net:8443",
+    "tailscaleHttpsPort": 8443,
+    "tailscaleFunnel": true,
+    "cloudflareUrl": "https://calm-river-orange-tree.trycloudflare.com",
+    "cloudflarePid": 51300
+  },
+  {
+    "hostname": "docs.localhost",
+    "port": 4519,
+    "pid": 4300,
+    "ngrokUrl": "https://3f2a-81-0-0-1.ngrok-free.app",
+    "ngrokPid": 51200
+  }
+]

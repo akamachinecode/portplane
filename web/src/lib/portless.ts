@@ -56,11 +56,28 @@ export function baseName(hostname: string, tlds: string[] = []): string {
   return best ? hostname.slice(0, -(best.length + 1)) : hostname;
 }
 
-/** The hostname a rename gives: `portless run` puts the worktree in front. */
-export function previewHostname(info: Pick<NameInfo, "runMode" | "prefix" | "tld">, name: string): string {
+/** The hostname a rename gives: `portless run` puts the worktree in front; a compose service gets <name>.<project>.<tld>. */
+export function previewHostname(info: Pick<NameInfo, "runMode" | "prefix" | "tld" | "suffix">, name: string): string {
   const n = name.trim().toLowerCase();
   if (!n) return "";
+  if (info.suffix) return `${withoutSuffix(n, info.suffix)}.${info.suffix}`;
   return hostnameFor(info.runMode && info.prefix ? `${info.prefix}.${n}` : n, info.tld);
+}
+
+function withoutSuffix(name: string, suffix: string | undefined): string {
+  return suffix && name.endsWith(`.${suffix}`) ? name.slice(0, -(suffix.length + 1)) : name;
+}
+
+/** Why a name can't be a compose service's portless.name: one part, no dots (as portless's toLabel keeps it). */
+export function composeNameProblem(raw: string): string | null {
+  const n = raw.trim();
+  if (n === "") return "Type a name.";
+  if (n.includes(".")) return "A compose service's name is one part, without dots: it goes in front of the project's name.";
+  if (n !== n.toLowerCase()) return "Use lowercase letters.";
+  if (/^-|-$/.test(n)) return "Start and end the name with a letter or a digit.";
+  if (n.length > MAX_LABEL) return `Use at most ${MAX_LABEL} characters.`;
+  if (!/^[a-z0-9-]+$/.test(n)) return "Use letters, digits and dashes only.";
+  return null;
 }
 
 /** The URL of a hostname behind a proxy on that port, as portless prints it. */
@@ -73,9 +90,10 @@ export function proxyUrl(hostname: string, proxy: { port: number; https: boolean
 
 /** What a name change checks as the user types: the rules, then clashes. */
 export function renameProblem(info: NameInfo, name: string): string | null {
-  const p = nameProblem(name.toLowerCase(), info.tld);
+  const typed = withoutSuffix(name.trim().toLowerCase(), info.suffix);
+  const p = info.source === "compose" ? composeNameProblem(typed) : nameProblem(name.toLowerCase(), info.tld);
   if (p && p !== "Use lowercase letters.") return p;
-  const n = name.trim().toLowerCase();
+  const n = typed;
   if (n === info.name && !info.inferred) return "That's the name it has now.";
   const host = previewHostname(info, n);
   if (info.taken.includes(host)) return `${host} is already used by another app or route.`;
@@ -120,12 +138,17 @@ export function tldWarning(tld: string): string | null {
   return null;
 }
 
-/** Why a top-level domain can't be used, or null. */
+/** Why a top-level domain can't be used, or null. Several parts work too (dev.example.com), as portless allows. */
 export function tldProblem(tld: string): string | null {
   const t = tld.trim().replace(/^\./, "");
   if (t === "") return "Type a domain, such as test.";
   if (t !== t.toLowerCase()) return "Use lowercase letters.";
-  if (!/^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/.test(t)) return "Use one word of letters, digits and dashes, such as test.";
+  if (t.length > MAX_HOSTNAME) return `Use at most ${MAX_HOSTNAME} characters.`;
+  for (const label of t.split(".")) {
+    if (label === "") return "Two dots in a row, or a dot at the end, aren't allowed.";
+    if (label.length > MAX_LABEL) return `"${label}" is longer than ${MAX_LABEL} characters, the limit for one part of a domain.`;
+    if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(label)) return "Use letters, digits and dashes, such as test or dev.example.com.";
+  }
   return null;
 }
 

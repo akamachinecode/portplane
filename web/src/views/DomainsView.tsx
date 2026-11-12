@@ -11,14 +11,17 @@ import { useShell } from "../shell/ShellContext";
 import { AliasesSection } from "./domains/AliasesSection";
 import { CertificatesSection } from "./domains/CertificatesSection";
 import "./domains/commands";
+import { ComposeSection } from "./domains/ComposeSection";
 import { ConfigSection } from "./domains/ConfigSection";
 import { DoctorSection } from "./domains/DoctorSection";
 import { HostsSection } from "./domains/HostsSection";
+import { LanSection } from "./domains/LanSection";
 import { MaintenanceSection } from "./domains/MaintenanceSection";
 import { PlanDialog } from "./domains/PlanDialog";
 import "./domains/problems";
 import { ProxySection } from "./domains/ProxySection";
 import { RoutesSection } from "./domains/RoutesSection";
+import { SharingSection } from "./domains/SharingSection";
 import { useIntent, usePortlessDoctor, usePortlessStatus, useRefreshOnJobs, valueOf } from "./domains/store";
 import "./DomainsView.css";
 
@@ -27,6 +30,9 @@ const SECTIONS: Record<DomainSection, { icon: IconName; Section: ComponentType }
   proxy: { icon: "shield", Section: ProxySection },
   routes: { icon: "link", Section: RoutesSection },
   aliases: { icon: "plug", Section: AliasesSection },
+  sharing: { icon: "share", Section: SharingSection },
+  compose: { icon: "box", Section: ComposeSection },
+  lan: { icon: "wifi", Section: LanSection },
   config: { icon: "file", Section: ConfigSection },
   certificates: { icon: "check", Section: CertificatesSection },
   hosts: { icon: "terminal", Section: HostsSection },
