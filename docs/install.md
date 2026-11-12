@@ -57,6 +57,12 @@ sha256sum --check --ignore-missing checksums.txt
 - **[dekit](https://dekit.run)** runs your dev servers.
 - **[portless](https://github.com/vercel-labs/portless)** (Node.js 24+) gives them `https://<name>.localhost` URLs. Its proxy is installed once as a service, so it starts with your computer and its certificate is trusted. Portplane's guided setup does it for you, or click **Install the service** in **Domains → Proxy**. **Domains → Maintenance** updates or removes portless later, with the tool that installed it.
 
+Optional, for the extras in **Domains** (each section says what's missing and how to get it):
+
+- **[Tailscale](https://tailscale.com/download)** to share an app with your tailnet, or publicly with Funnel; **[ngrok](https://ngrok.com/download)** (with a free account) or **[cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/)** to share one publicly.
+- **[Docker](https://docs.docker.com/get-started/get-docker/)** with Compose, for compose projects started through portless.
+- **Avahi** on Linux (`avahi-tools` or `avahi-utils`) for LAN mode, which opens your apps from phones on the same Wi-Fi; macOS has what it needs.
+
 You don't have to install them first: the guided setup does it (below). Without dekit and portless, Portplane still lists the ports open on your machine.
 
 Once dekit is installed, **Runners → Update…** updates it: with dekit's own updater when it came from the install script, or with Homebrew, npm or pip when it came from one of them, and then switches the running projects to the new version.
