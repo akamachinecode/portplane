@@ -665,7 +665,7 @@ func (p *portlessAPI) shareApply(w http.ResponseWriter, r *http.Request) {
 		defer p.d.Refresh()
 		for _, f := range pv.Files {
 			run.Step("Write " + filepath.Base(f.Path))
-			if err := portless.WriteEdit(portless.ConfigEdit(f)); err != nil {
+			if err := portless.WriteEdit(configEdit(f)); err != nil {
 				return err
 			}
 			run.Logf("Wrote %s", f.Path)
