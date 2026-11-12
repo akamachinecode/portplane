@@ -1,5 +1,5 @@
-import { useApp } from "../../components/AppContext";
 import { Icon } from "../../components/Icon";
+import { href } from "../../lib/router";
 import { StateDot } from "../../components/StateDot";
 import { SnapshotGate } from "../../shell/SnapshotGate";
 import type { MachineSnapshot } from "../../api/types";
@@ -17,7 +17,6 @@ function ToolRow({ name, version, why }: { name: string; version: string | undef
 }
 
 function MachineTools({ ms }: { ms: MachineSnapshot }) {
-  const { openSetup } = useApp();
   const { tools, machine } = ms;
   const known = machine.local || machine.status === "online";
   const missing = !tools.dekit || !tools.portless;
@@ -36,12 +35,12 @@ function MachineTools({ ms }: { ms: MachineSnapshot }) {
               why={tools.proxyRunning ? "Serves the .localhost URLs." : "Not running: the URLs won't load."}
             />
           )}
-          {machine.local && missing && ms.folders[0] && (
+          {machine.local && (missing || !tools.proxyRunning) && (
             <div className="sgroup-foot">
-              <button type="button" className="btn" onClick={() => openSetup(ms.folders[0])}>
+              <a className="btn" href={href({ view: "onboarding", step: missing ? "install" : "proxy" })}>
                 <Icon name="wand" size={14} />
-                See how to install
-              </button>
+                {missing ? "Install what's missing" : "Set up the proxy"}
+              </a>
             </div>
           )}
         </>
@@ -50,7 +49,7 @@ function MachineTools({ ms }: { ms: MachineSnapshot }) {
   );
 }
 
-/** dekit and portless on each machine (installing and updating them comes in M5.1). */
+/** dekit and portless on each machine; the guided setup installs what's missing here. */
 export function ToolsSection() {
   return <SnapshotGate>{(snapshot) => snapshot.machines.map((ms) => <MachineTools key={ms.machine.id} ms={ms} />)}</SnapshotGate>;
 }
