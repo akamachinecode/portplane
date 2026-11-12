@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -204,17 +205,17 @@ func ParseComposeModel(b []byte) (ComposeProject, error) {
 			}
 			s.Ports = append(s.Ports, cp)
 		}
-		if svc.Build != nil && filepath.IsAbs(svc.Build.Context) {
+		if svc.Build != nil && composeAbs(svc.Build.Context) {
 			dirs[svc.Build.Context] = true
 		}
 		for _, v := range svc.Volumes {
-			if v.Type == "bind" && filepath.IsAbs(v.Source) {
+			if v.Type == "bind" && composeAbs(v.Source) {
 				dirs[v.Source] = true
 			}
 		}
 		for _, e := range svc.EnvFile {
-			if filepath.IsAbs(e.Path) {
-				dirs[filepath.Dir(e.Path)] = true
+			if composeAbs(e.Path) {
+				dirs[composeDir(e.Path)] = true
 			}
 		}
 		p.Services = append(p.Services, s)
@@ -613,4 +614,19 @@ func mapValue(m *yaml.Node, key string) *yaml.Node {
 		}
 	}
 	return nil
+}
+
+// composeAbs reports whether a path from Docker's compose model is
+// absolute: Unix-style as Docker writes it on Linux and macOS, or the
+// host's own (Windows).
+func composeAbs(p string) bool {
+	return strings.HasPrefix(p, "/") || filepath.IsAbs(p)
+}
+
+// composeDir is the folder of a path from Docker's compose model.
+func composeDir(p string) string {
+	if strings.HasPrefix(p, "/") {
+		return path.Dir(p)
+	}
+	return filepath.Dir(p)
 }
