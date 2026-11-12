@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { NameInfo, ProxyOptions } from "../api/portless";
 import type { ComposeProject, ShareInfo, ShareProvider, ShareView } from "../api/sharing";
 import { composeNameProblem, previewHostname, renameProblem } from "./portless";
-import { applyAction, composeFileFrom, composeHostnames, composeSummary, lanOptions, readiness, replacedBy, shareState, sortShares } from "./sharing";
+import { applyAction, composeFileFrom, composeHostnames, composeSummary, lanAddressProblem, lanChoice, lanOptions, readiness, replacedBy, shareState, sortShares } from "./sharing";
 
 const provider = (kind: ShareProvider["kind"], ok: boolean): ShareProvider => ({
   kind,
@@ -76,6 +76,26 @@ describe("LAN options", () => {
     const off = lanOptions(on, false);
     expect(off).toMatchObject({ lan: false, tlds: ["localhost"] });
     expect(off).not.toHaveProperty("lanIp");
+  });
+
+  it("reads which address LAN mode publishes", () => {
+    const addresses = [{ ip: "192.168.1.20", interface: "wlan0", default: true }];
+    expect(lanChoice({ options: { ...base, lan: true }, addresses })).toEqual({ mode: "follow" });
+    expect(lanChoice({ options: { ...base, lan: true, lanIp: "192.168.1.20" }, addresses })).toEqual({ mode: "pin", ip: "192.168.1.20" });
+    expect(lanChoice({ options: { ...base, lan: true, lanIp: "10.8.0.2" }, addresses })).toEqual({ mode: "custom", ip: "10.8.0.2" });
+  });
+
+  it("accepts only an IPv4 address other devices can reach", () => {
+    expect(lanAddressProblem(" 192.168.1.20 ")).toBeNull();
+    expect(lanAddressProblem("10.0.0.5")).toBeNull();
+    expect(lanAddressProblem("")).toMatch(/Type the address/);
+    expect(lanAddressProblem("192.168.1")).toMatch(/IPv4/);
+    expect(lanAddressProblem("192.168.1.256")).toMatch(/IPv4/);
+    expect(lanAddressProblem("192.168.01.2")).toMatch(/IPv4/);
+    expect(lanAddressProblem("fe80::1")).toMatch(/IPv4/);
+    expect(lanAddressProblem("127.0.0.1")).toMatch(/this computer only/);
+    expect(lanAddressProblem("169.254.10.2")).toMatch(/link-local/);
+    expect(lanAddressProblem("239.1.1.1")).toMatch(/isn't an address/);
   });
 
   it("applies through the service when there is one", () => {

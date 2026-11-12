@@ -266,6 +266,30 @@ const PATHS = {
       <path d="M4.5 6.5h15M4.5 12h15M4.5 17.5h15" />
     </>
   ),
+  share: (
+    <>
+      <circle cx="17.5" cy="6" r="2.25" />
+      <circle cx="6.5" cy="12" r="2.25" />
+      <circle cx="17.5" cy="18" r="2.25" />
+      <path d="M8.5 10.9l7-3.8M8.5 13.1l7 3.8" />
+    </>
+  ),
+  wifi: (
+    <>
+      <path d="M3.5 9.5a12 12 0 0 1 17 0" />
+      <path d="M6.5 12.75a7.75 7.75 0 0 1 11 0" />
+      <path d="M9.5 16a3.5 3.5 0 0 1 5 0" />
+      <circle cx="12" cy="19" r="0.75" fill="currentColor" />
+    </>
+  ),
+  qr: (
+    <>
+      <rect x="4" y="4" width="6" height="6" rx="1" />
+      <rect x="14" y="4" width="6" height="6" rx="1" />
+      <rect x="4" y="14" width="6" height="6" rx="1" />
+      <path d="M14 14h2v2h-2zM18 14h2M14 18v2M17 17h3v3h-3z" />
+    </>
+  ),
   rowsCompact: (
     <>
       <path d="M4.5 5.5h15M4.5 9.5h15M4.5 13.5h15M4.5 17.5h15" />

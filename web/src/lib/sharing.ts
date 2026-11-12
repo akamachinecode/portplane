@@ -1,5 +1,5 @@
 import type { PortlessAction, ProxyOptions } from "../api/portless";
-import type { ComposeProject, ComposeState, Requirement, ShareInfo, ShareKind, ShareProvider, ShareView } from "../api/sharing";
+import type { ComposeProject, ComposeState, LanView, Requirement, ShareInfo, ShareKind, ShareProvider, ShareView } from "../api/sharing";
 import { cleanTlds } from "./portless";
 
 // The rules of sharing, compose projects and LAN mode, kept here so they
@@ -100,6 +100,31 @@ export function lanOptions(current: ProxyOptions, on: boolean, ip?: string): Pro
   const out: ProxyOptions = { ...current, lan: false, tlds };
   delete out.lanIp;
   return out;
+}
+
+/** Which address LAN mode publishes: followed as the network changes, pinned to one of this computer's, or typed in. */
+export type LanChoice = { mode: "follow" } | { mode: "pin"; ip: string } | { mode: "custom"; ip: string };
+
+/** The choice the proxy's options make now. */
+export function lanChoice(view: Pick<LanView, "options" | "addresses">): LanChoice {
+  const ip = view.options.lanIp?.trim();
+  if (!ip) return { mode: "follow" };
+  return view.addresses.some((a) => a.ip === ip) ? { mode: "pin", ip } : { mode: "custom", ip };
+}
+
+/** Why a typed address can't be pinned, or null. portless takes an IPv4 address here. */
+export function lanAddressProblem(raw: string): string | null {
+  const ip = raw.trim();
+  if (!ip) return "Type the address, such as 192.168.1.20.";
+  const parts = ip.split(".");
+  if (parts.length !== 4 || parts.some((p) => !/^\d{1,3}$/.test(p) || Number(p) > 255 || (p.length > 1 && p.startsWith("0")))) {
+    return "Type an IPv4 address: four numbers from 0 to 255 with dots, such as 192.168.1.20.";
+  }
+  const [a, b] = parts.map(Number);
+  if (a === 127) return "That address is this computer only; a phone can't reach it.";
+  if (a === 0 || a >= 224) return "That isn't an address a device on your network can have.";
+  if (a === 169 && b === 254) return "That's a link-local address, which changes and doesn't reach other devices reliably.";
+  return null;
 }
 
 /** The proxy action that applies new options: the service keeps them, else a restart or a start. */
