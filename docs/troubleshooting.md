@@ -20,4 +20,14 @@
 
 **Portplane cannot find dekit or portless when started at login.** Login items get a minimal PATH. Portplane adds your login shell's PATH and the usual install folders (`~/.local/bin`, Homebrew, mise shims); if your tools live elsewhere, add that folder to the PATH your login shell sets.
 
+**No system notifications.** Turn them on in Settings → General → Notifications and click **Send a test notification**: it says why when your desktop has no notification service. On Linux they go through the desktop's notification server over D-Bus (GNOME, KDE, dunst, mako); clicking one opens the app in Portplane. On macOS they come from AppleScript, so clicking one does not open Portplane, and macOS may ask once to allow notifications from Script Editor. On Windows they appear as Windows PowerShell's; clicking one opens the app in your browser. Only failures notify until you turn more on.
+
+**The tray has no pinned apps.** Pin an app with the star on its row (or press `f` on it) in the Apps view; the tray lists up to twelve, each with start, stop, restart and its details.
+
+**Something is wrong and you want help.** Health → **Export diagnostics** (also in Settings → Advanced) saves a zip with the versions, `portless doctor`, the proxy service's status, your runners and what Portplane shows. Secrets, environment values and your home folder are left out, and nothing is sent: attach it to an issue if you choose to.
+
+**"Check for updates" says it couldn't check.** It needs to reach `github.com` (Portplane and dekit) and `registry.npmjs.org` (portless) over HTTPS; behind a proxy or offline, it fails and changes nothing. It only reads: update dekit and portless from Settings → Tools, and Portplane the way you installed it.
+
+**Keyboard shortcuts.** Press `?` anywhere for the list. Single keys never fire while you type in a field.
+
 **Start from a clean state.** Quit Portplane, remove `<user config dir>/portplane/settings.json`, start it again.

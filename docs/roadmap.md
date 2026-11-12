@@ -150,7 +150,7 @@ The milestone is done when:
 - [ ] See folders added with `portplane folders add` without a restart.
 - [ ] One piece of advice for the proxy everywhere (the banner and Setup disagree today).
 - [ ] A way into Setup from the main view when dekit is missing; a first run that checks the tools and starts the scan.
-- [ ] Quick start and stop in the tray; the Folders button opens a dialog named Folders.
+- [ ] Quick start and stop in the tray; the Folders button opens a dialog named Folders. (Tray: done in M5.5, pinned apps with start and stop.)
 - [ ] New checks: CA trust in the system and in browsers, port 443, git and the package manager.
 - [ ] Jobs: long operations streamed as `event: job` on the existing event stream (ADR-0024).
 - [ ] The app shell: sidebar, hash router and command palette, with today's views inside (ADR-0024).
@@ -206,13 +206,13 @@ The milestone is done when:
 
 ### M5.5: Polish
 
-- [ ] Health view in place of the scattered banners, with a fix for each problem; export a diagnosis without secrets.
-- [ ] System notifications (on by default for failures only); favourites in the tray.
-- [ ] Dense table mode, favourites, filters and keyboard shortcuts.
-- [ ] Theme (system, light, dark) and density (comfortable, compact).
-- [ ] Check for updates (ADR-0025).
-- [ ] Accessibility: AA contrast checked with a tool, full keyboard navigation, ARIA on tables and panels.
-- [ ] Performance: first paint under 300 ms in the native window; virtual lists past 200 rows.
+- [x] Health view in place of the scattered banners, with a fix for each problem; export a diagnosis without secrets.
+- [x] System notifications (on by default for failures only); favourites in the tray.
+- [x] Dense table mode, favourites, filters, multi-select with bulk actions, and keyboard shortcuts.
+- [x] Theme (system, light, dark) and density (comfortable, compact); the native window's title bar follows the theme.
+- [x] Check for updates (ADR-0025).
+- [x] Accessibility: AA contrast checked with a tool (axe-core, both themes), full keyboard navigation, ARIA on tables and panels, app states announced to screen readers.
+- [x] Performance: first paint under 300 ms (about 30–50 ms measured in Chromium against a real `portplane serve`); views load on first use; lists past 200 rows render only what is on screen.
 
 **Done when:** criterion 5 holds and the accessibility review passes.
 
