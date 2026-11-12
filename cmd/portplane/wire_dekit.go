@@ -12,13 +12,19 @@ import (
 
 // dekitHandlers serves the dekit center: runners, why, config editing, reload review, spawn, add an app, dekit itself (M5.3, ADR-0022). Output (M5.4) adds its own routes.
 func dekitHandlers(d deps) map[string]http.HandlerFunc {
+	open := openFile
+	if d.headless {
+		open = func(string) error {
+			return errors.New("this machine has no desktop to open the file on: edit it here in Portplane, or over SSH")
+		}
+	}
 	return server.DekitHandlers(server.DekitDeps{
 		CLI:          d.dekit,
 		Jobs:         d.jobs,
 		Folders:      d.local.Folders,
 		Refresh:      d.local.RefreshTools, // also collects again soon
 		RefreshTools: d.local.RefreshTools,
-		OpenFile:     openFile,
+		OpenFile:     open,
 	})
 }
 

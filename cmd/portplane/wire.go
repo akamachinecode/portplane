@@ -25,6 +25,9 @@ type deps struct {
 	publicURL string
 	// rawURL is the loopback address of the UI.
 	rawURL string
+	// headless is true in a remote machine's agent (ADR-0026): no window,
+	// no desktop, nobody to answer a password dialog.
+	headless bool
 }
 
 // areas add their routes from their own files (wire_*.go), so work on one
@@ -36,5 +39,9 @@ func areaHandlers(d deps, into map[string]http.HandlerFunc) {
 		for pattern, h := range area(d) {
 			into[pattern] = h
 		}
+	}
+	// Last: /api/m/{machine}/… serves the routes above for any machine.
+	for pattern, h := range machineRoutes(d, into) {
+		into[pattern] = h
 	}
 }
