@@ -85,6 +85,8 @@ portplane autostart on                         # optional: start at login
 
 `portplane setup <folder>` finds the apps in a folder and proposes their dekit tasks.
 
+Pin the apps you use most with the star on their row: they come first in the Apps view and get start and stop in the tray. Settings → General has the theme, notifications (failures only, at first) and **Check for updates**, which only goes online when you click it, or once a day if you turn that on.
+
 ## Uninstall
 
 Run `portplane autostart off` first if you turned it on, then remove the binary (or the app) and Portplane's own folders:
@@ -94,5 +96,7 @@ Run `portplane autostart off` first if you turned it on, then remove the binary 
 | macOS | `~/Library/Application Support/portplane` | `~/Library/Caches/portplane` |
 | Linux | `~/.config/portplane` | `~/.cache/portplane` |
 | Windows | `%AppData%\portplane` | `%LocalAppData%\portplane` |
+
+The cache folder also holds the last update check (`updates.json`).
 
 On Windows, the installer also added `%LocalAppData%\Programs\Portplane` to your user PATH. On machines you added over SSH, Portplane only wrote `~/.cache/portplane` (on macOS and Linux alike).

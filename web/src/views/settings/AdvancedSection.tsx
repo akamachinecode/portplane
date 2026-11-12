@@ -1,8 +1,9 @@
 import { useApp } from "../../components/AppContext";
 import { osLabel } from "../../lib/machines";
+import { DIAGNOSTICS_DESCRIPTION, ExportDiagnosticsButton } from "../health/ExportDiagnostics";
 import { SettingRow, SettingsGroup } from "./SettingsGroup";
 
-/** About this build; paths, debugging and diagnostics come later (plan §6.2). */
+/** About this build, and the diagnostic report (plan §6.2). */
 export function AdvancedSection() {
   const { info } = useApp();
   return (
@@ -25,7 +26,9 @@ export function AdvancedSection() {
         )}
       </SettingsGroup>
       <SettingsGroup title="Diagnostics">
-        <p className="muted">Exporting a diagnostic report (versions, state, no secrets) comes in a later version.</p>
+        <SettingRow label="Diagnostic report" description={DIAGNOSTICS_DESCRIPTION}>
+          <ExportDiagnosticsButton />
+        </SettingRow>
       </SettingsGroup>
     </>
   );

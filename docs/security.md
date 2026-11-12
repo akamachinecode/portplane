@@ -96,6 +96,8 @@ Portplane makes outgoing requests only to your SSH hosts and, when you start a d
 - On your click: the tools it installs ([Installing tools](#installing-tools)), the line in your shell profile if you accept it, and portless's CA in a browser profile's own certificate database (`certutil -A`, no password; the browser and profile come from Portplane's own list, never a path from the page).
 - On your click, in portless's state folder: the certificate authority moved to a `ca-backup-<time>` folder before **Regenerate** (nothing is deleted); a copy of `ca.pem` in your Downloads folder for **Export**.
 - With `autostart on`: a LaunchAgent, an XDG autostart file or a `Run` registry value.
+- After an update check: its result, `<user cache dir>/portplane/updates.json`.
+- On your click, where you choose: the diagnostic report, a zip from which environment values, secret-looking keys and tokens, URL credentials, private keys, the API token and your home folder's path are removed. It is never sent anywhere.
 - portless aliases for itself and for open remote apps, removed when it quits.
 
 ## What Portplane never does
@@ -104,4 +106,4 @@ Portplane makes outgoing requests only to your SSH hosts and, when you start a d
 - Ask for, see or store your password.
 - Download from a host not listed under [Network](#network), run a download whose checksum does not match, or pipe a download into a shell.
 - Make a request you did not start, unless you turned on automatic update checks.
-- Send data about you or your projects anywhere: no accounts, no telemetry.
+- Send data about you or your projects anywhere: no accounts, no telemetry. System notifications stay on this computer, and their text travels to the notification service as arguments or environment, never inside a script.

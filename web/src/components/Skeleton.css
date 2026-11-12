@@ -1,0 +1,75 @@
+/* Loading placeholders (plan §6.6). */
+
+.skeleton-line {
+  display: block;
+  height: 10px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, var(--surface-2) 0%, color-mix(in srgb, var(--surface-2) 40%, var(--surface)) 50%, var(--surface-2) 100%);
+  background-size: 200% 100%;
+  animation: skeleton-shine 1.4s ease-in-out infinite;
+}
+
+.skeleton-heading {
+  width: 180px;
+  height: 14px;
+  margin: var(--space-1) 0 var(--space-4);
+}
+
+.skeleton-card {
+  overflow: hidden;
+}
+
+.skeleton-card-head {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--space-4);
+}
+
+.skeleton-title {
+  width: 120px;
+  height: 12px;
+}
+
+.skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--row-h);
+  padding: var(--space-2) var(--space-4);
+  border-top: 1px solid var(--border);
+}
+
+.skeleton-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--surface-2);
+}
+
+.skeleton-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.skeleton-sub {
+  height: 8px;
+}
+
+@keyframes skeleton-shine {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-line {
+    animation: none;
+  }
+}

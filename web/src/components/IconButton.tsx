@@ -1,4 +1,5 @@
 import type { MouseEvent } from "react";
+import { withShortcut } from "../lib/shortcuts";
 import { Icon, Spinner, type IconName } from "./Icon";
 
 interface Props {
@@ -11,17 +12,20 @@ interface Props {
   busy?: boolean;
   disabled?: boolean;
   tone?: "go" | "halt";
+  /** A single-key shortcut that does the same in a list: shown in the tooltip. */
+  shortcut?: string;
 }
 
 /** A square ghost button with an accessible name and a tooltip. */
-export function IconButton({ icon, label, onClick, pending, busy, disabled, tone }: Props) {
+export function IconButton({ icon, label, onClick, pending, busy, disabled, tone, shortcut }: Props) {
   const inert = pending || busy;
   return (
     <button
       type="button"
       className={tone ? `icon-btn tone-${tone}` : "icon-btn"}
       aria-label={label}
-      title={label}
+      title={shortcut ? withShortcut(label, shortcut) : label}
+      aria-keyshortcuts={shortcut?.toUpperCase()}
       disabled={disabled}
       aria-disabled={inert || undefined}
       aria-busy={pending || undefined}

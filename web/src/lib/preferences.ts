@@ -1,4 +1,4 @@
-import type { Density, Preferences, Theme } from "../api/types";
+import type { AppsLayout, Density, Preferences, Theme } from "../api/types";
 
 // Preferences (GET/PUT /api/preferences) and how theme and density reach the
 // page: <html data-theme="light|dark"> (none for "system") and
@@ -7,14 +7,17 @@ import type { Density, Preferences, Theme } from "../api/types";
 export const THEMES: readonly Theme[] = ["system", "light", "dark"];
 export const DENSITIES: readonly Density[] = ["comfortable", "compact"];
 const UPDATE_CHECKS = ["manual", "auto"] as const;
+export const APPS_LAYOUTS: readonly AppsLayout[] = ["cards", "table"];
 
 export const DEFAULT_PREFERENCES: Preferences = {
   theme: "system",
   density: "comfortable",
   favorites: [],
-  notifications: { failures: true, recoveries: false, jobs: true },
+  // Only failures notify until the user turns more on (plan §6.5).
+  notifications: { failures: true, recoveries: false, jobs: false, config: false },
   updateCheck: "manual",
   onboarding: { completed: false, skipped: false, done: [] },
+  appsLayout: "cards",
 };
 
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -42,6 +45,7 @@ export function normalizePreferences(raw: unknown): Preferences {
       failures: bool(n.failures, d.notifications.failures),
       recoveries: bool(n.recoveries, d.notifications.recoveries),
       jobs: bool(n.jobs, d.notifications.jobs),
+      config: bool(n.config, d.notifications.config),
     },
     updateCheck: oneOf(UPDATE_CHECKS, p.updateCheck, d.updateCheck),
     onboarding: {
@@ -51,6 +55,7 @@ export function normalizePreferences(raw: unknown): Preferences {
       done: strings(o.done),
       ...(isObject(o.choices) ? { choices: stringMap(o.choices) } : {}),
     },
+    appsLayout: oneOf(APPS_LAYOUTS, p.appsLayout, d.appsLayout),
   };
 }
 
@@ -59,6 +64,7 @@ export function preferencesProblem(p: Preferences): string | null {
   if (!THEMES.includes(p.theme)) return `theme must be one of ${THEMES.join(", ")}`;
   if (!DENSITIES.includes(p.density)) return `density must be one of ${DENSITIES.join(", ")}`;
   if (!UPDATE_CHECKS.includes(p.updateCheck)) return `updateCheck must be one of ${UPDATE_CHECKS.join(", ")}`;
+  if (!APPS_LAYOUTS.includes(p.appsLayout)) return `appsLayout must be one of ${APPS_LAYOUTS.join(", ")}`;
   return null;
 }
 

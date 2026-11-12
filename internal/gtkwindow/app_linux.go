@@ -42,6 +42,7 @@ func Main(args []string, stderr io.Writer) int {
 	fs.StringVar(&o.browserURL, "browser-url", "", "the address Open in Browser opens (default: --url)")
 	fs.StringVar(&o.statePath, "state", "", "file that keeps the window size")
 	fs.StringVar(&o.token, "activation-token", "", "XDG activation token for the first present")
+	fs.StringVar(&o.theme, "theme", window.ThemeSystem, "system, light or dark: the title bar and the page's system colours")
 	ipc := fs.Bool("ipc", false, "talk to Portplane over file descriptors 3 and 4")
 	if err := fs.Parse(args); err != nil {
 		return 2
@@ -65,7 +66,7 @@ func Main(args []string, stderr io.Writer) int {
 		return window.ExitUnavailable
 	}
 
-	a := &app{opts: o, state: loadState(o.statePath), inbox: make(chan window.Message, 16)}
+	a := &app{opts: o, state: loadState(o.statePath), inbox: make(chan window.Message, 16), theme: window.NormalizeTheme(o.theme)}
 	if *ipc {
 		// Not inherited by the web processes WebKit starts.
 		unix.CloseOnExec(ipcIn)
@@ -78,8 +79,8 @@ func Main(args []string, stderr io.Writer) int {
 }
 
 type options struct {
-	url, browserURL, statePath, token string
-	home                              *url.URL
+	url, browserURL, statePath, token, theme string
+	home                                     *url.URL
 }
 
 type app struct {
@@ -89,6 +90,8 @@ type app struct {
 	gapp, win, view, css uintptr
 	actions              []func()
 	picks                map[uintptr]int // folder dialogs waiting for an answer, by dialog
+	saves                map[uintptr]int // save dialogs waiting for an answer, by dialog
+	theme                string          // window.ThemeSystem, ThemeLight or ThemeDark
 
 	inbox chan window.Message
 	outMu sync.Mutex
@@ -105,7 +108,7 @@ var (
 	cbActivate, cbAction, cbTitle, cbPolicy uintptr
 	cbCreate, cbContextMenu, cbTerminated   uintptr
 	cbCloseRequest, cbIdle, cbPicked        uintptr
-	cbStyle                                 uintptr
+	cbStyle, cbSaved                        uintptr
 )
 
 func makeCallbacks() {
@@ -136,6 +139,7 @@ func makeCallbacks() {
 		return 0 // G_SOURCE_REMOVE
 	})
 	cbPicked = purego.NewCallback(func(dialog, result, _ uintptr) { current.picked(dialog, result) })
+	cbSaved = purego.NewCallback(func(dialog, result, _ uintptr) { current.saved(dialog, result) })
 	cbStyle = purego.NewCallback(func(_, _, _ uintptr) { current.applyStyle() })
 }
 
@@ -163,6 +167,7 @@ func (a *app) run() int {
 	if adw_init != nil {
 		adw_init()
 	}
+	a.applyScheme()
 	gtk_window_set_default_icon_name("portplane")
 	a.loadCSS()
 	// Not unique: Portplane already keeps one window per user, and it
@@ -195,9 +200,43 @@ func (a *app) loadCSS() {
 	}
 }
 
+// dark reports whether the window shows its dark style: the theme the user
+// chose in Portplane, else the desktop's.
+func (a *app) dark() bool {
+	switch a.theme {
+	case window.ThemeDark:
+		return true
+	case window.ThemeLight:
+		return false
+	}
+	return adw_style_manager_get_dark != nil && adw_style_manager_get_dark(adw_style_manager_get_default())
+}
+
+// applyScheme tells libadwaita which style to use, so the title bar and the
+// page's prefers-color-scheme follow the theme chosen in Portplane.
+func (a *app) applyScheme() {
+	if adw_style_manager_set_color_scheme == nil {
+		return
+	}
+	scheme := int32(adwColorSchemeDefault)
+	switch a.theme {
+	case window.ThemeLight:
+		scheme = adwColorSchemeForceLight
+	case window.ThemeDark:
+		scheme = adwColorSchemeForceDark
+	}
+	adw_style_manager_set_color_scheme(adw_style_manager_get_default(), scheme)
+}
+
+func (a *app) setTheme(theme string) {
+	a.theme = window.NormalizeTheme(theme)
+	a.applyScheme()
+	a.applyStyle()
+}
+
 func (a *app) applyStyle() {
 	bg := pageLight
-	if adw_style_manager_get_dark != nil && adw_style_manager_get_dark(adw_style_manager_get_default()) {
+	if a.dark() {
 		bg = pageDark
 	}
 	css := fmt.Sprintf("headerbar.portplane { background: rgb(%d,%d,%d); box-shadow: none; }",
@@ -439,6 +478,58 @@ func (a *app) picked(dialog, result uintptr) {
 	a.send(msg)
 }
 
+// save shows the save dialog over the window for a file named name; the
+// answer goes back as OpSaved with the same id.
+func (a *app) save(id int, name string) {
+	if gtk_file_dialog_save == nil || a.win == 0 {
+		a.send(window.Message{Op: window.OpSaved, ID: id, Error: window.ErrPickerUnsupported})
+		return
+	}
+	a.present("")
+	d := gtk_file_dialog_new()
+	gtk_file_dialog_set_title(d, "Save the diagnostic report")
+	gtk_file_dialog_set_accept_label(d, "Save")
+	gtk_file_dialog_set_modal(d, true)
+	if name != "" {
+		gtk_file_dialog_set_initial_name(d, name)
+	}
+	if a.saves == nil {
+		a.saves = map[uintptr]int{}
+	}
+	a.saves[d] = id
+	gtk_file_dialog_save(d, a.win, 0, cbSaved, 0)
+}
+
+func (a *app) saved(dialog, result uintptr) {
+	id := a.saves[dialog]
+	delete(a.saves, dialog)
+	var gerr uintptr
+	file := gtk_file_dialog_save_finish(dialog, result, &gerr)
+	g_object_unref(dialog)
+	msg := window.Message{Op: window.OpSaved, ID: id}
+	if file == 0 {
+		if gerr != 0 {
+			g_error_free(gerr) // cancelled
+		}
+	} else {
+		if p := g_file_get_path(file); p != 0 {
+			msg.Path = goString(p)
+			g_free(p)
+		}
+		g_object_unref(file)
+	}
+	a.send(msg)
+}
+
+// navigate shows the UI at a route ("#/health"): within the loaded page
+// only the fragment changes, so the page keeps its state.
+func (a *app) navigate(fragment string) {
+	if a.view == 0 || !window.ValidFragment(fragment) {
+		return
+	}
+	webkit_web_view_load_uri(a.view, window.RouteURL(a.opts.home.String(), fragment))
+}
+
 // read forwards Portplane's messages to the GTK thread. When Portplane goes
 // away, the window closes.
 func (a *app) read(r io.Reader) {
@@ -465,6 +556,12 @@ func (a *app) drain() {
 				}
 			case window.OpPick:
 				a.pick(m.ID)
+			case window.OpSave:
+				a.save(m.ID, m.Path)
+			case window.OpTheme:
+				a.setTheme(m.Theme)
+			case window.OpNavigate:
+				a.navigate(m.Path)
 			case window.OpClose:
 				a.close()
 			}

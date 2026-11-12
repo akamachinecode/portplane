@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { errorText } from "../../api/errors";
-import type { Density, Preferences, Theme } from "../../api/types";
+import type { Density, Theme } from "../../api/types";
 import { useApp } from "../../components/AppContext";
 import { Switch } from "../../components/Controls";
 import { Icon } from "../../components/Icon";
@@ -8,7 +8,9 @@ import { Segmented } from "../../components/Segmented";
 import { ErrorState, LoadingState } from "../../components/States";
 import { href } from "../../lib/router";
 import { useShell } from "../../shell/ShellContext";
+import { NotificationsGroup } from "./NotificationsGroup";
 import { SettingRow, SettingsGroup } from "./SettingsGroup";
+import { UpdatesGroup } from "./UpdatesGroup";
 
 type AutostartState = { status: "loading" } | { status: "error"; message: string } | { status: "ok"; enabled: boolean; busy: boolean };
 
@@ -68,11 +70,6 @@ const DENSITY_OPTIONS = [
   { value: "compact" as Density, label: "Compact", icon: "rowsCompact" as const },
 ];
 
-const UPDATE_OPTIONS = [
-  { value: "manual" as Preferences["updateCheck"], label: "When I ask" },
-  { value: "auto" as Preferences["updateCheck"], label: "Automatically" },
-];
-
 function Appearance() {
   const { preferences, updatePreferences, reloadPreferences } = useShell();
   if (preferences.status === "loading") return <LoadingState label="Loading your preferences…" />;
@@ -88,14 +85,8 @@ function Appearance() {
           <Segmented label="Density" value={p.density} options={DENSITY_OPTIONS} onChange={(density) => void updatePreferences((x) => ({ ...x, density }))} />
         </SettingRow>
       </SettingsGroup>
-      <SettingsGroup title="Updates">
-        <SettingRow
-          label="Check for new versions"
-          description="Of Portplane, dekit and portless. Portplane only goes online for this when you ask, unless you choose automatically."
-        >
-          <Segmented label="Check for new versions" value={p.updateCheck} options={UPDATE_OPTIONS} onChange={(updateCheck) => void updatePreferences((x) => ({ ...x, updateCheck }))} />
-        </SettingRow>
-      </SettingsGroup>
+      <NotificationsGroup prefs={p} />
+      <UpdatesGroup prefs={p} />
     </>
   );
 }

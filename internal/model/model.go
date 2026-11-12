@@ -74,6 +74,7 @@ type App struct {
 	Dir       string   `json:"dir,omitempty"`
 	Command   []string `json:"command,omitempty"`
 	Deps      []string `json:"deps,omitempty"`
+	Tags      []string `json:"tags,omitempty"` // dekit tags, "autostart" included when dekit up starts it
 	State     State    `json:"state"`
 	RawState  string   `json:"rawState,omitempty"` // dekit's own state word
 	Detail    string   `json:"detail,omitempty"`   // e.g. "exit code 1", "waiting for install"

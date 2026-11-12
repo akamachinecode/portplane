@@ -28,9 +28,10 @@ import (
 // view, and a destroyed one would leave its browser processes behind.
 
 var (
-	mu   sync.Mutex
-	opts Options
-	cur  *win
+	mu    sync.Mutex
+	opts  Options
+	cur   *win
+	theme string // ThemeLight or ThemeDark override the system's; "" or ThemeSystem follow it
 
 	runtimeOnce sync.Once
 	hasRuntime  bool
@@ -113,6 +114,43 @@ func Close() {
 func CanPick() bool { return false }
 
 func pickFolder(context.Context) (string, error) { return "", ErrNoWindow }
+
+// saveFile: the save dialog on Windows is the PowerShell one.
+func saveFile(context.Context, string) (string, error) { return "", ErrNoWindow }
+
+func setTheme(t string) {
+	mu.Lock()
+	theme = t
+	w := cur
+	var view webview2.WebView
+	if w != nil {
+		view = w.view
+	}
+	mu.Unlock()
+	if view != nil {
+		view.Dispatch(func() { applyTheme(w.hwnd) })
+	}
+}
+
+// navigate loads the route: within the loaded page only the fragment
+// changes, so the page keeps its state.
+func navigate(fragment string) {
+	mu.Lock()
+	w := cur
+	var view webview2.WebView
+	if w != nil {
+		view = w.view
+	}
+	home := opts.URL
+	mu.Unlock()
+	if view == nil {
+		return
+	}
+	view.Dispatch(func() {
+		view.Navigate(RouteURL(home, fragment))
+		w.shown = true
+	})
+}
 
 var (
 	user32                           = windows.NewLazySystemDLL("user32.dll")
@@ -310,18 +348,28 @@ func setIcon(hwnd uintptr) {
 	}
 }
 
-// applyTheme gives the title bar the dark look when Windows uses dark mode
-// for apps; the page follows the same setting on its own.
+// applyTheme gives the title bar the dark look when the theme chosen in
+// Portplane is dark, or, with the system theme, when Windows uses dark mode
+// for apps; the page follows the same choice on its own.
 func applyTheme(hwnd uintptr) {
 	if procDwmSetWindowAttribute.Find() != nil {
 		return
 	}
+	mu.Lock()
+	t := theme
+	mu.Unlock()
 	var dark uint32
-	if k, err := registry.OpenKey(registry.CURRENT_USER, `Software\Microsoft\Windows\CurrentVersion\Themes\Personalize`, registry.QUERY_VALUE); err == nil {
-		if v, _, err := k.GetIntegerValue("AppsUseLightTheme"); err == nil && v == 0 {
-			dark = 1
+	switch t {
+	case ThemeDark:
+		dark = 1
+	case ThemeLight:
+	default:
+		if k, err := registry.OpenKey(registry.CURRENT_USER, `Software\Microsoft\Windows\CurrentVersion\Themes\Personalize`, registry.QUERY_VALUE); err == nil {
+			if v, _, err := k.GetIntegerValue("AppsUseLightTheme"); err == nil && v == 0 {
+				dark = 1
+			}
+			_ = k.Close()
 		}
-		_ = k.Close()
 	}
 	_, _, _ = procDwmSetWindowAttribute.Call(hwnd, dwmwaUseImmersiveDarkMode, uintptr(unsafe.Pointer(&dark)), 4)
 }

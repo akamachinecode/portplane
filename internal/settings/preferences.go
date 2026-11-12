@@ -8,19 +8,23 @@ import (
 // Preferences are how the user likes Portplane: look, favourites,
 // notifications, update checks and where the first-run setup stands.
 type Preferences struct {
-	Theme         string        `json:"theme"`   // system, light or dark
-	Density       string        `json:"density"` // comfortable or compact
-	Favorites     []string      `json:"favorites"`
+	Theme         string        `json:"theme"`     // system, light or dark
+	Density       string        `json:"density"`   // comfortable or compact
+	Favorites     []string      `json:"favorites"` // "<machine>|<appId>"
 	Notifications Notifications `json:"notifications"`
 	UpdateCheck   string        `json:"updateCheck"` // manual or auto (ADR-0025)
 	Onboarding    Onboarding    `json:"onboarding"`
+	// AppsLayout is how the Apps view lists apps: cards or table.
+	AppsLayout string `json:"appsLayout"`
 }
 
-// Notifications says which system notifications to show.
+// Notifications says which system notifications to show. Only failures
+// are on by default (plan §6.5).
 type Notifications struct {
-	Failures   bool `json:"failures"`   // an app crashed
+	Failures   bool `json:"failures"`   // an app crashed, or a job failed
 	Recoveries bool `json:"recoveries"` // a failed app is back
-	Jobs       bool `json:"jobs"`       // an install or another long job ended
+	Jobs       bool `json:"jobs"`       // an install or another long job finished
+	Config     bool `json:"config"`     // a dekit.yaml changed and needs a reload
 }
 
 // Onboarding records the first-run setup, so it resumes where it was left.
@@ -40,9 +44,10 @@ func DefaultPreferences() Preferences {
 		Theme:         "system",
 		Density:       "comfortable",
 		Favorites:     []string{},
-		Notifications: Notifications{Failures: true, Recoveries: false, Jobs: true},
+		Notifications: Notifications{Failures: true},
 		UpdateCheck:   "manual",
 		Onboarding:    Onboarding{Done: []string{}},
+		AppsLayout:    "cards",
 	}
 }
 
@@ -64,6 +69,9 @@ func (p *Preferences) Normalize() {
 	if p.Onboarding.Done == nil {
 		p.Onboarding.Done = []string{}
 	}
+	if p.AppsLayout == "" {
+		p.AppsLayout = d.AppsLayout
+	}
 }
 
 // Validate rejects values the UI does not know.
@@ -83,6 +91,9 @@ func (p Preferences) Validate() error {
 		return err
 	}
 	if err := oneOf("updateCheck", p.UpdateCheck, "manual", "auto"); err != nil {
+		return err
+	}
+	if err := oneOf("appsLayout", p.AppsLayout, "cards", "table"); err != nil {
 		return err
 	}
 	if len(p.Favorites) > 500 {

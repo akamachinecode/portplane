@@ -18,6 +18,7 @@ import { documentTitle, summarize } from "./lib/summary";
 import { collectProblems, useProblemSourcesVersion } from "./shell/health";
 import { Shell } from "./shell/Shell";
 import { ShellContext, type ShellData } from "./shell/ShellContext";
+import { useWindowTheme } from "./shell/windowTheme";
 
 type MachineDialog = { kind: "add" } | { kind: "edit"; id: string } | { kind: "remove"; id: string; name: string } | null;
 
@@ -52,6 +53,7 @@ export function App({ api }: { api: Api }) {
     applyAppearance(document.documentElement, { theme, density });
     cacheAppearance(safeLocalStorage(), { theme, density });
   }, [theme, density]);
+  useWindowTheme(api, theme);
 
   const summary = useMemo(() => (snapshot ? summarize(snapshot) : null), [snapshot]);
   useEffect(() => {

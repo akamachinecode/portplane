@@ -1,0 +1,685 @@
+/* The Apps view's toolbar, filters, table, pinned apps and selection
+   (plan §6.2). Tokens from styles.css only. */
+
+.apps {
+  --table-row-h: 40px;
+  position: relative;
+}
+
+:root[data-density="compact"] .apps {
+  --table-row-h: 32px;
+}
+
+/* ---------- health line ---------- */
+
+.health-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 36px;
+  margin-bottom: var(--space-3);
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--text-sm);
+  text-decoration: none;
+  transition: border-color var(--dur-fast) var(--ease), background-color var(--dur-fast) var(--ease);
+}
+
+.health-line:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-2);
+}
+
+.health-line-error {
+  border-color: color-mix(in srgb, var(--err) 35%, var(--border));
+}
+
+.health-line-warn {
+  border-color: color-mix(in srgb, var(--warn-dot) 40%, var(--border));
+}
+
+.health-line-icon {
+  color: var(--text-3);
+}
+
+.health-line-error .health-line-icon {
+  color: var(--err);
+}
+
+.health-line-warn .health-line-icon {
+  color: var(--warn);
+}
+
+.health-line-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-2);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.health-line-text strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.health-line-go {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--accent-text);
+  font-weight: 500;
+}
+
+/* ---------- toolbar ---------- */
+
+.apps-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.apps-search {
+  position: relative;
+  display: flex;
+  flex: 1 1 240px;
+  align-items: center;
+  max-width: 360px;
+}
+
+.apps-search-icon {
+  position: absolute;
+  left: 9px;
+  color: var(--text-3);
+  pointer-events: none;
+}
+
+.apps-search-input.input {
+  width: 100%;
+  height: var(--control-h);
+  padding-left: 30px;
+  padding-right: 30px;
+}
+
+.apps-search-input::-webkit-search-cancel-button {
+  margin-right: 18px;
+}
+
+.apps-search-kbd {
+  position: absolute;
+  right: 7px;
+  pointer-events: none;
+}
+
+.apps-search-input:focus ~ .apps-search-kbd,
+.apps-search-input:not(:placeholder-shown) ~ .apps-search-kbd {
+  display: none;
+}
+
+.apps-filters,
+.apps-view-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.apps-clear {
+  color: var(--text-2);
+}
+
+/* ---------- toolbar menus ---------- */
+
+.popmenu {
+  position: relative;
+}
+
+.popmenu-trigger {
+  gap: 6px;
+}
+
+.popmenu-trigger.is-active {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.popmenu-chevron {
+  color: var(--text-3);
+}
+
+.popmenu-badge {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 18px;
+  text-align: center;
+}
+
+.popmenu-panel {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  z-index: 25;
+  width: max-content;
+  min-width: 200px;
+  max-width: min(320px, calc(100vw - 32px));
+  max-height: min(420px, 70vh);
+  overflow-y: auto;
+  padding: var(--space-1);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-pop);
+  animation: popmenu-in var(--dur-fast) var(--ease-out);
+}
+
+.popmenu-start {
+  left: 0;
+}
+
+.popmenu-end {
+  right: 0;
+}
+
+@keyframes popmenu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.popmenu-group + .popmenu-group {
+  margin-top: var(--space-1);
+  padding-top: var(--space-1);
+  border-top: 1px solid var(--border);
+}
+
+.popmenu-title {
+  padding: var(--space-1) var(--space-2) 2px;
+  color: var(--text-3);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.popmenu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 30px;
+  padding: var(--space-1) var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.popmenu-item:hover,
+.popmenu-item:focus-visible {
+  outline: none;
+  background: var(--surface-2);
+}
+
+.popmenu-item[aria-disabled="true"] {
+  color: var(--text-3);
+  cursor: default;
+}
+
+.popmenu-label {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.popmenu-desc {
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+
+.popmenu-count {
+  flex: none;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.popmenu-box {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 4px;
+}
+
+.popmenu-box.is-on {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
+.popmenu-tick {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 16px;
+  color: var(--accent-text);
+}
+
+.popmenu-empty {
+  padding: var(--space-2);
+  color: var(--text-3);
+  font-size: var(--text-sm);
+}
+
+.popmenu-foot {
+  margin-top: var(--space-1);
+  padding-top: var(--space-1);
+  border-top: 1px solid var(--border);
+}
+
+/* ---------- rows: selection, pins, cursor ---------- */
+
+.row-main.has-check {
+  grid-template-columns: 16px 8px minmax(0, 1fr) auto;
+  padding-left: var(--space-2);
+}
+
+.row-check {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity var(--dur-fast) var(--ease);
+}
+
+.row:hover .row-check,
+.row-check:focus-visible,
+.row.is-selected .row-check,
+.apps:has(.row.is-selected) .row-check {
+  opacity: 1;
+}
+
+.row.is-selected {
+  background: color-mix(in srgb, var(--accent-soft) 70%, transparent);
+}
+
+.row.is-cursor {
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.row-pin {
+  color: var(--text-3);
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease);
+}
+
+.row:hover .row-pin,
+.row:focus-within .row-pin,
+.row-pin.is-pinned {
+  opacity: 1;
+}
+
+.row-pin.is-pinned {
+  color: var(--warn-dot);
+}
+
+@media (hover: none) {
+  .row-pin,
+  .row-check {
+    opacity: 1;
+  }
+}
+
+.row-where {
+  min-width: 0;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+
+.row-where::before {
+  content: "·";
+  margin-right: 6px;
+}
+
+/* ---------- pinned ---------- */
+
+.pinned {
+  margin-bottom: var(--space-8);
+}
+
+.pinned-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: var(--space-3);
+}
+
+.pinned-title .icon {
+  color: var(--warn-dot);
+}
+
+.pinned-card .row:first-child {
+  border-top: 0;
+}
+
+/* ---------- table ---------- */
+
+.apps-table-wrap {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+.apps-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  font-size: var(--text-sm);
+}
+
+.col-check {
+  width: 36px;
+}
+
+.col-project {
+  width: 22%;
+}
+
+.col-machine {
+  width: 12%;
+}
+
+.col-addr {
+  width: 30%;
+}
+
+.col-actions {
+  width: 136px;
+}
+
+.apps-table thead th {
+  position: sticky;
+  top: var(--topbar-h);
+  z-index: 2;
+  height: 32px;
+  padding: 0 var(--space-2);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-align: left;
+}
+
+.apps-table thead th:first-child {
+  border-top-left-radius: var(--radius);
+}
+
+.apps-table thead th:last-child {
+  border-top-right-radius: var(--radius);
+}
+
+.th-sort {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.th-sort:hover {
+  color: var(--text);
+}
+
+.apps-table td {
+  height: var(--table-row-h);
+  padding: 0 var(--space-2);
+  border-top: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.apps-table tbody tr:first-child td,
+.apps-table tbody tr.table-pad + tr td {
+  border-top: 0;
+}
+
+.apps-table tr.row {
+  border-top: 0;
+}
+
+.apps-table .cell-check {
+  padding-right: 0;
+  text-align: center;
+}
+
+.apps-table .cell-check .row-check {
+  display: block;
+  margin: 0 auto;
+}
+
+.cell-name-inner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.apps-table .row-body,
+.apps-table .row-line {
+  min-width: 0;
+  overflow: hidden;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.apps-table .row-detail {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cell-clip {
+  display: block;
+  overflow: hidden;
+  color: var(--text-2);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.apps-table .row-addr {
+  margin: 0;
+}
+
+.apps-table .cell-actions .row-actions {
+  justify-content: flex-end;
+}
+
+.apps-table .icon-btn {
+  width: 28px;
+  height: 28px;
+}
+
+:root[data-density="compact"] .apps-table .icon-btn {
+  width: 26px;
+  height: 26px;
+}
+
+.table-group th {
+  height: var(--table-row-h);
+  padding: 0 var(--space-3);
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface-2) 60%, var(--surface));
+  font-weight: 600;
+  text-align: left;
+}
+
+.apps-table tbody tr.table-group:first-child th {
+  border-top: 0;
+}
+
+.table-group-title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.table-pad td {
+  padding: 0;
+  border: 0;
+}
+
+/* ---------- selection bar ---------- */
+
+/* Toasts sit above the bar while it shows. */
+body:has(.selection-bar) .toasts {
+  bottom: calc(76px + var(--tabbar-h, 0px));
+}
+
+.selection-bar {
+  position: sticky;
+  bottom: calc(var(--space-4) + var(--tabbar-h, 0px));
+  z-index: 8;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  width: fit-content;
+  max-width: 100%;
+  margin: var(--space-4) auto 0;
+  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-3);
+  animation: selection-in var(--dur) var(--ease-out);
+}
+
+@keyframes selection-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.selection-count {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.selection-sep {
+  width: 1px;
+  height: 20px;
+  margin: 0 var(--space-2);
+  background: var(--border);
+}
+
+.selection-btn {
+  gap: 6px;
+}
+
+.selection-btn.tone-go .icon {
+  color: var(--on);
+}
+
+.selection-btn.tone-halt .icon {
+  color: var(--err);
+}
+
+.selection-btn[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.selection-n {
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- machines: one quiet line instead of a banner ---------- */
+
+.machine-note {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  color: var(--text-2);
+  font-size: var(--text-sm);
+}
+
+/* ---------- narrow windows ---------- */
+
+@media (max-width: 760px) {
+  .apps-search {
+    flex-basis: 100%;
+    max-width: none;
+  }
+
+  .apps-view-controls {
+    width: 100%;
+  }
+
+  .apps-view-controls .segmented {
+    margin-left: auto;
+  }
+
+  .apps-table {
+    table-layout: auto;
+  }
+
+  .apps-table col {
+    width: auto;
+  }
+
+  .apps-table .cell-project,
+  .apps-table thead th:nth-child(3) {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .apps-table .row-detail,
+  .apps-table .row-pin:not(.is-pinned) {
+    display: none;
+  }
+
+  .apps-table .row-actions {
+    gap: 0;
+  }
+
+  .apps-table td {
+    padding: 0 var(--space-1);
+  }
+
+  .apps-table .cell-addr,
+  .apps-table thead th:nth-last-child(2) {
+    display: none;
+  }
+
+  .health-line-go {
+    display: none;
+  }
+}

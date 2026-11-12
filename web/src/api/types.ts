@@ -24,6 +24,8 @@ export interface App {
   dir?: string;
   command?: string[];
   deps?: string[];
+  /** dekit tags ("autostart" included when `dekit up` starts it). */
+  tags?: string[];
   state: State;
   rawState?: string;
   detail?: string;
@@ -311,6 +313,7 @@ export interface Autostart {
 
 export type Theme = "system" | "light" | "dark";
 export type Density = "comfortable" | "compact";
+export type AppsLayout = "cards" | "table";
 
 export interface OnboardingProgress {
   completed: boolean;
@@ -326,7 +329,10 @@ export interface Preferences {
   theme: Theme;
   density: Density;
   favorites: string[]; // "<machine>|<appId>"
-  notifications: { failures: boolean; recoveries: boolean; jobs: boolean };
+  /** System notifications: an app crashed or a job failed; an app recovered; a job finished; a dekit.yaml changed. */
+  notifications: { failures: boolean; recoveries: boolean; jobs: boolean; config: boolean };
   updateCheck: "manual" | "auto";
   onboarding: OnboardingProgress;
+  /** How the Apps view lists apps. */
+  appsLayout: AppsLayout;
 }

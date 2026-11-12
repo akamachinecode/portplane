@@ -4,6 +4,7 @@ import type { FeedHandlers } from "./events";
 import type { MockContext } from "./mockContext";
 import { createMockDekit } from "./mockDekit";
 import { createMockJobs, demoJob } from "./mockJobs";
+import { createMockPolish } from "./mockPolish";
 import { createMockOutput } from "./mockOutput";
 import { createMockPortless } from "./mockPortless";
 import { createMockSetup } from "./mockSetup";
@@ -38,8 +39,9 @@ import type {
 //   node20     first run with Node.js 20 (too old for portless)
 //   nopassword first run where no password dialog can open (the proxy
 //              service fails with the command to run by hand)
+//   many       300 apps in 25 projects (long lists, windowing)
 
-export type Scenario = "default" | "degraded" | "readonly" | "empty" | "nofolders" | "fresh" | "node20" | "nopassword";
+export type Scenario = "default" | "degraded" | "readonly" | "empty" | "nofolders" | "fresh" | "node20" | "nopassword" | "many";
 
 /** Scenarios that start on the guided setup, with no folders. */
 export const FIRST_RUN: readonly Scenario[] = ["nofolders", "fresh", "node20", "nopassword"];
@@ -60,16 +62,46 @@ function app(p: Partial<App> & Pick<App, "task" | "label" | "project" | "state" 
 export function mockApps(): App[] {
   return [
     app({ task: "my-monorepo/install", label: "install", kind: "job", project: "my-monorepo", dir: `${ROOT}/my-monorepo`, command: ["pnpm", "install"], state: "done", rawState: "exited", order: 0 }),
-    app({ task: "my-monorepo/web", label: "web", project: "my-monorepo", dir: `${ROOT}/my-monorepo/apps/web`, command: ["portless", "my-monorepo", "pnpm", "run", "dev"], deps: ["my-monorepo/install"], state: "on", rawState: "running", url: "https://my-monorepo.localhost", hostname: "my-monorepo.localhost", port: 4514, ports: [4514], pid: 41201, order: 1 }),
-    app({ task: "my-monorepo/api", label: "api", project: "my-monorepo", dir: `${ROOT}/my-monorepo/apps/api`, command: ["portless", "api.my-monorepo", "pnpm", "run", "dev"], deps: ["my-monorepo/install"], state: "on", rawState: "running", url: "https://api.my-monorepo.localhost", hostname: "api.my-monorepo.localhost", port: 4515, ports: [4515, 9229], pid: 41202, order: 2 }),
-    app({ task: "my-monorepo/admin", label: "admin", project: "my-monorepo", dir: `${ROOT}/my-monorepo/apps/admin`, command: ["portless", "admin.my-monorepo", "pnpm", "run", "dev"], deps: ["my-monorepo/install"], state: "failed", rawState: "exited", detail: "exit code 3", hostname: "admin.my-monorepo.localhost", order: 3 }),
-    app({ task: "my-monorepo/docs", label: "docs", project: "my-monorepo", dir: `${ROOT}/my-monorepo/apps/docs`, state: "starting", rawState: "running", detail: "waiting for port", hostname: "docs.my-monorepo.localhost", pid: 41260, order: 4 }),
+    app({ task: "my-monorepo/web", label: "web", project: "my-monorepo", dir: `${ROOT}/my-monorepo/apps/web`, command: ["portless", "my-monorepo", "pnpm", "run", "dev"], deps: ["my-monorepo/install"], tags: ["frontend", "autostart"], state: "on", rawState: "running", url: "https://my-monorepo.localhost", hostname: "my-monorepo.localhost", port: 4514, ports: [4514], pid: 41201, order: 1 }),
+    app({ task: "my-monorepo/api", label: "api", project: "my-monorepo", dir: `${ROOT}/my-monorepo/apps/api`, command: ["portless", "api.my-monorepo", "pnpm", "run", "dev"], deps: ["my-monorepo/install"], tags: ["backend", "autostart"], state: "on", rawState: "running", url: "https://api.my-monorepo.localhost", hostname: "api.my-monorepo.localhost", port: 4515, ports: [4515, 9229], pid: 41202, order: 2 }),
+    app({ task: "my-monorepo/admin", label: "admin", project: "my-monorepo", dir: `${ROOT}/my-monorepo/apps/admin`, command: ["portless", "admin.my-monorepo", "pnpm", "run", "dev"], deps: ["my-monorepo/install"], tags: ["frontend"], state: "failed", rawState: "exited", detail: "exit code 3", hostname: "admin.my-monorepo.localhost", order: 3 }),
+    app({ task: "my-monorepo/docs", label: "docs", project: "my-monorepo", dir: `${ROOT}/my-monorepo/apps/docs`, tags: ["docs"], state: "starting", rawState: "running", detail: "waiting for port", hostname: "docs.my-monorepo.localhost", pid: 41260, order: 4 }),
     app({ task: "my-monorepo-checkout/install", label: "install", kind: "job", project: "my-monorepo", worktree: "checkout", dir: `${ROOT}/my-monorepo-checkout`, state: "starting", rawState: "running", detail: "running", pid: 41310, order: 5 }),
-    app({ task: "my-monorepo-checkout/web", label: "web", project: "my-monorepo", worktree: "checkout", dir: `${ROOT}/my-monorepo-checkout/apps/web`, deps: ["my-monorepo-checkout/install"], state: "starting", rawState: "waiting", detail: "waiting for install", hostname: "checkout.my-monorepo.localhost", order: 6 }),
-    app({ task: "my-monorepo-checkout/api", label: "api", project: "my-monorepo", worktree: "checkout", dir: `${ROOT}/my-monorepo-checkout/apps/api`, state: "off", rawState: "stopped", hostname: "api.checkout.my-monorepo.localhost", order: 7 }),
-    app({ task: "blog/site", label: "site", project: "blog", dir: `${ROOT}/blog`, state: "off", rawState: "stopped", hostname: "blog.localhost", order: 8 }),
-    app({ task: "blog/studio", label: "studio", project: "blog", dir: `${ROOT}/blog/studio`, state: "off", rawState: "stopped", hostname: "studio.blog.localhost", order: 9 }),
+    app({ task: "my-monorepo-checkout/web", label: "web", project: "my-monorepo", worktree: "checkout", dir: `${ROOT}/my-monorepo-checkout/apps/web`, deps: ["my-monorepo-checkout/install"], tags: ["frontend"], state: "starting", rawState: "waiting", detail: "waiting for install", hostname: "checkout.my-monorepo.localhost", order: 6 }),
+    app({ task: "my-monorepo-checkout/api", label: "api", project: "my-monorepo", worktree: "checkout", dir: `${ROOT}/my-monorepo-checkout/apps/api`, tags: ["backend"], state: "off", rawState: "stopped", hostname: "api.checkout.my-monorepo.localhost", order: 7 }),
+    app({ task: "blog/site", label: "site", project: "blog", dir: `${ROOT}/blog`, tags: ["frontend"], state: "off", rawState: "stopped", hostname: "blog.localhost", order: 8 }),
+    app({ task: "blog/studio", label: "studio", project: "blog", dir: `${ROOT}/blog/studio`, tags: ["cms"], state: "off", rawState: "stopped", hostname: "studio.blog.localhost", order: 9 }),
   ];
+}
+
+/** 25 projects of 12 apps each, in every state: for long lists. */
+export function mockManyApps(): App[] {
+  const names = ["web", "api", "admin", "docs", "worker", "auth", "billing", "search", "mail", "cron", "gateway", "storybook"];
+  const states: Array<App["state"]> = ["on", "on", "off", "on", "off", "starting", "on", "off", "failed", "on", "off", "on"];
+  const out: App[] = [];
+  for (let p = 0; p < 25; p++) {
+    const project = `service-${String(p + 1).padStart(2, "0")}`;
+    names.forEach((name, i) => {
+      const state = states[(i + p) % states.length];
+      const host = `${name}.${project}.localhost`;
+      out.push(
+        app({
+          task: `${project}/${name}`,
+          label: name,
+          project,
+          dir: `${ROOT}/${project}/apps/${name}`,
+          tags: [i % 3 === 0 ? "frontend" : "backend", ...(i < 2 ? ["autostart"] : [])],
+          state,
+          rawState: state === "on" ? "running" : state === "failed" ? "exited" : "stopped",
+          hostname: host,
+          ...(state === "on" ? { url: `https://${host}`, port: 4000 + out.length, ports: [4000 + out.length], pid: 30000 + out.length } : {}),
+          ...(state === "failed" ? { detail: "exit code 1" } : {}),
+          order: out.length,
+        }),
+      );
+    });
+  }
+  return out;
 }
 
 export function mockOtherPorts(): Port[] {
@@ -169,7 +201,7 @@ export const MOCK_CANDIDATES: MachineCandidate[] = [
 
 export function mockSnapshot(scenario: Scenario = "default"): Snapshot {
   const first = FIRST_RUN.includes(scenario);
-  const apps = scenario === "empty" || scenario === "readonly" || first ? [] : mockApps();
+  const apps = scenario === "empty" || scenario === "readonly" || first ? [] : scenario === "many" ? mockManyApps() : mockApps();
   const ms: MachineSnapshot = {
     machine: { id: "local", name: "This computer", local: true, hostname: "workstation", os: "linux", arch: "amd64", status: "online" },
     tools: { dekit: "0.10.3", portless: "0.16.0", proxyRunning: true, proxyHttps: true, proxyPort: 443 },
@@ -317,6 +349,7 @@ export function createMockApi(scenario: Scenario = "default"): Api & MockControl
     ...createMockPortless(ctx),
     ...createMockDekit(ctx),
     ...tools,
+    ...createMockPolish(ctx),
     info: () => delay<Info>({ version: "0.0.0-mock", os: "linux", arch: "amd64", url: "https://portplane.localhost", picker: true }),
     snapshot: () => delay(snapshot),
     async act(target, verb: Verb) {

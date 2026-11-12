@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -396,6 +397,7 @@ func (l *Local) describe(t *task, all []*task, routeByPID, routeByPort map[int]p
 		a.Dir = t.cfg.Dir
 		a.Command = t.cfg.Cmd
 		a.Deps = t.cfg.Deps
+		a.Tags = appTags(t.cfg)
 		cmd = t.cfg.Cmd
 	}
 	if a.Label == "" {
@@ -622,4 +624,18 @@ func (l *Local) isProxyPort(port int, p portless.Proxy) bool {
 		return false
 	}
 	return port == p.Port || (p.HTTPS && port == 80 && p.Port == 443)
+}
+
+// appTags are a task's tags as dekit sees them: the configured ones, plus
+// autostart, which the runner gives the tasks `dekit up` starts.
+func appTags(t *dekit.Task) []string {
+	if len(t.Tags) == 0 && !t.Autostart {
+		return nil
+	}
+	tags := make([]string, 0, len(t.Tags)+1)
+	tags = append(tags, t.Tags...)
+	if t.Autostart && !slices.Contains(tags, "autostart") {
+		tags = append(tags, "autostart")
+	}
+	return tags
 }

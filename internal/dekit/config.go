@@ -30,6 +30,7 @@ type Task struct {
 	ReadyTCP  string            // ready.tcp, as written
 	ReadyHTTP string            // ready.http, as written
 	Autostart bool              // started by `dekit up`
+	Tags      []string          // tags: for +tag targets; without the runner's own (autostart, dynamic)
 	Env       map[string]string // string values from the task's env (and defaults when it has none)
 	File      string            // the file that declares the task
 	Key       string            // the task's key in File, for editing it (EditBlock path ["tasks", Key])
@@ -205,6 +206,13 @@ func (l *loader) task(full string, n *yaml.Node, declDir, mount, file string) Ta
 	}
 	if v := mapGet(n, "script"); v != nil && !isJS(v) {
 		t.Script = v.Value
+	}
+	if v := mapGet(n, "tags"); v != nil && v.Kind == yaml.SequenceNode {
+		for _, tag := range v.Content {
+			if tag.Kind == yaml.ScalarNode && !isJS(tag) && tag.Value != "" {
+				t.Tags = append(t.Tags, tag.Value)
+			}
+		}
 	}
 	if v := mapGet(n, "cmd"); v != nil && !isJS(v) {
 		t.Cmd = argv(v)

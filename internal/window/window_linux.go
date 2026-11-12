@@ -26,7 +26,8 @@ var (
 	opts        Options
 	cur         *helper // the open window, nil when closed
 	nextPick    int
-	unavailable bool // the helper said it cannot show a window here
+	unavailable bool   // the helper said it cannot show a window here
+	theme       string // ThemeSystem, ThemeLight or ThemeDark; "" is the system's
 )
 
 // lookPath finds portplane-window; a variable so tests can swap it.
@@ -66,7 +67,7 @@ func Show(token string) error {
 		mu.Unlock()
 		return errors.New(HelperName + " not found")
 	}
-	h, err := spawn(path, opts, token)
+	h, err := spawn(path, opts, token, theme)
 	if err != nil {
 		mu.Unlock()
 		return err
@@ -118,6 +119,16 @@ func CanPick() bool {
 }
 
 func pickFolder(ctx context.Context) (string, error) {
+	return ask(ctx, Message{Op: OpPick})
+}
+
+func saveFile(ctx context.Context, name string) (string, error) {
+	return ask(ctx, Message{Op: OpSave, Path: name})
+}
+
+// ask shows a file dialog over the window and waits for its answer (the
+// picks map holds folder pickers and save dialogs alike, by id).
+func ask(ctx context.Context, m Message) (string, error) {
 	mu.Lock()
 	h := cur
 	if h == nil {
@@ -137,7 +148,8 @@ func pickFolder(ctx context.Context) (string, error) {
 		h.mu.Unlock()
 	}()
 
-	h.send(Message{Op: OpPick, ID: id})
+	m.ID = id
+	h.send(m)
 	select {
 	case m := <-ch:
 		if m.Error == ErrPickerUnsupported {
@@ -151,6 +163,25 @@ func pickFolder(ctx context.Context) (string, error) {
 		return "", nil // the window closed: as if cancelled
 	case <-ctx.Done():
 		return "", ctx.Err()
+	}
+}
+
+func setTheme(t string) {
+	mu.Lock()
+	theme = t
+	h := cur
+	mu.Unlock()
+	if h != nil {
+		h.send(Message{Op: OpTheme, Theme: t})
+	}
+}
+
+func navigate(fragment string) {
+	mu.Lock()
+	h := cur
+	mu.Unlock()
+	if h != nil {
+		h.send(Message{Op: OpNavigate, Path: fragment})
 	}
 }
 
@@ -168,10 +199,13 @@ type helper struct {
 	closing bool // Portplane asked it to close
 }
 
-func spawn(path string, o Options, token string) (*helper, error) {
+func spawn(path string, o Options, token, theme string) (*helper, error) {
 	args := []string{"--ipc", "--url", o.URL, "--browser-url", o.BrowserURL, "--state", o.StatePath}
 	if token != "" {
 		args = append(args, "--activation-token", token)
+	}
+	if theme != "" && theme != ThemeSystem {
+		args = append(args, "--theme", theme)
 	}
 	inR, inW, err := os.Pipe()
 	if err != nil {
@@ -244,7 +278,7 @@ func (h *helper) read(r *os.File, o Options) {
 		switch m.Op {
 		case OpReady:
 			readyOnce.Do(func() { close(h.ready) })
-		case OpPicked:
+		case OpPicked, OpSaved:
 			h.mu.Lock()
 			ch := h.picks[m.ID]
 			h.mu.Unlock()

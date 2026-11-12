@@ -4,6 +4,8 @@ import { Icon, type IconName } from "./Icon";
 export interface MenuItem {
   label: string;
   icon: IconName;
+  /** The keyboard shortcut that does the same, shown on the right: "C". */
+  shortcut?: string;
   onSelect(): void;
 }
 
@@ -100,6 +102,7 @@ export function Menu({ label, items }: { label: string; items: MenuItem[] }) {
               role="menuitem"
               tabIndex={-1}
               className="menu-item"
+              aria-keyshortcuts={item.shortcut}
               onClick={() => {
                 close(true);
                 item.onSelect();
@@ -107,6 +110,11 @@ export function Menu({ label, items }: { label: string; items: MenuItem[] }) {
             >
               <Icon name={item.icon} size={15} />
               {item.label}
+              {item.shortcut && (
+                <kbd className="kbd menu-kbd" aria-hidden="true">
+                  {item.shortcut}
+                </kbd>
+              )}
             </button>
           ))}
         </div>

@@ -1,0 +1,81 @@
+/* Settings → General → Updates (ADR-0025). */
+
+.updates {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+}
+
+.updates-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+}
+
+.updates-summary {
+  flex: 1 1 240px;
+  color: var(--text-2);
+  font-size: var(--text-sm);
+}
+
+.update-list {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  list-style: none;
+}
+
+.update-row {
+  display: grid;
+  grid-template-columns: 8px 88px 88px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 44px;
+  padding: var(--space-1) var(--space-2) var(--space-1) var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.update-row + .update-row {
+  border-top: 1px solid var(--border);
+}
+
+.update-name {
+  font-weight: 600;
+}
+
+.update-status {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.update-new {
+  color: var(--accent-text);
+}
+
+.update-error {
+  color: var(--err);
+}
+
+.update-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-1);
+}
+
+@media (max-width: 560px) {
+  .update-row {
+    grid-template-columns: 8px minmax(0, 1fr) auto;
+  }
+
+  .update-status,
+  .update-actions {
+    grid-column: 2 / -1;
+    justify-content: flex-start;
+  }
+}
