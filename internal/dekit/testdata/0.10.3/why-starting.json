@@ -1,0 +1,1 @@
+{"id":4,"path":"web","state":"idle","wanted":true,"supported":false,"vetoed":false,"pinned":true,"required_by":[],"deps":[{"path":"api","state":"idle","wanted":true,"satisfied":false}],"attempts":0}
