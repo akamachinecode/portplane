@@ -44,6 +44,18 @@
   -webkit-font-smoothing: antialiased;
 }
 
+/* A theme chosen with the header button (theme.js); none follows the system. */
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+/* Each screenshot is in the page twice; only the current theme's shows. */
+.for-dark { display: none !important; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .for-dark { display: block !important; }
+  :root:not([data-theme="light"]) .for-light { display: none !important; }
+}
+:root[data-theme="dark"] .for-dark { display: block !important; }
+:root[data-theme="dark"] .for-light { display: none !important; }
+
 * { box-sizing: border-box; }
 html { scroll-behavior: smooth; scroll-padding-top: 72px; }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
@@ -74,6 +86,10 @@ h2 { font-size: clamp(1.6rem, 3.5vw, 2.2rem); line-height: 1.15; margin: 0 0 12p
 .top nav { display: flex; gap: 24px; font-size: 0.9rem; color: var(--text-2); }
 .top nav a { text-decoration: none; transition: color 0.15s; }
 .top nav a:hover { color: var(--text); }
+.top nav { align-items: center; }
+.theme-toggle { display: grid; place-items: center; width: 30px; height: 30px; margin: -6px -6px -6px 0; padding: 0; border: 0; border-radius: 7px; background: none; color: var(--text-2); cursor: pointer; transition: color 0.15s, background 0.15s; }
+.theme-toggle:hover { color: var(--text); background: var(--surface-2); }
+.theme-toggle svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
 
 /* hero */
 .hero { padding-top: clamp(48px, 10vw, 104px); padding-bottom: 40px; }
