@@ -11,6 +11,8 @@ import { JobCard } from "../../components/JobCard";
 import { ErrorState, LoadingState } from "../../components/States";
 import { previewHostname, renameProblem, SOURCE_LABELS } from "../../lib/portless";
 import { TYPING_DELAY } from "../../lib/setup";
+// Its styles live with the Domains view, which may not have loaded (the app detail opens this too).
+import "../DomainsView.css";
 
 function dirOf(path: string): string {
   const i = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
@@ -33,7 +35,9 @@ function sourceText(info: NameInfo): string {
     case "alias":
       return "The name is a portless alias. Portplane adds the new one and removes the old one.";
     case "compose":
-      return "The name comes from a docker compose label.";
+      return info.editable
+        ? `The name is the portless.name label of the ${info.service ?? "service"} service in the project's compose file. Portplane sets that label${info.running ? ", then starts the project again so the new address takes over" : ""}.`
+        : "The name comes from a docker compose label.";
     default:
       return "";
   }
@@ -42,9 +46,11 @@ function sourceText(info: NameInfo): string {
 /**
  * Changes an app's portless name (plan §5.4): checks the name as you type,
  * previews the final URL and the exact file change, then applies it as a
- * job (write, reload dekit, restart).
+ * job (write, reload dekit, restart). A compose service has no app: it is
+ * named by its address (route) instead, and its name is the portless.name
+ * label in the compose file.
  */
-export function RenameDialog({ machine, appId, label, runner, onClose }: { machine: string; appId: string; label: string; runner?: string; onClose(): void }) {
+export function RenameDialog({ machine, appId, route, label, runner, onClose }: { machine: string; appId: string; route?: string; label: string; runner?: string; onClose(): void }) {
   const { api, toast } = useApp();
   const [info, setInfo] = useState<NameInfo | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -62,7 +68,7 @@ export function RenameDialog({ machine, appId, label, runner, onClose }: { machi
 
   const load = () => {
     setLoadError(null);
-    api.portlessNameInfo(machine, appId).then(
+    api.portlessNameInfo(machine, appId, route).then(
       (i) => {
         setInfo(i);
         setName(i.name);
@@ -70,7 +76,7 @@ export function RenameDialog({ machine, appId, label, runner, onClose }: { machi
       (err: unknown) => setLoadError(errorText(err)),
     );
   };
-  useEffect(load, [api, machine, appId]);
+  useEffect(load, [api, machine, appId, route]);
 
   const local = info ? renameProblem(info, name) : null;
   // The server's preview, a moment after typing stops.
@@ -82,7 +88,7 @@ export function RenameDialog({ machine, appId, label, runner, onClose }: { machi
     const n = ++seq.current;
     setChecking(true);
     const t = setTimeout(() => {
-      api.portlessNamePreview(machine, appId, name).then(
+      api.portlessNamePreview(machine, appId, name, route).then(
         (p) => {
           if (n !== seq.current) return;
           setPreview(p);
@@ -96,7 +102,7 @@ export function RenameDialog({ machine, appId, label, runner, onClose }: { machi
       );
     }, TYPING_DELAY);
     return () => clearTimeout(t);
-  }, [api, machine, appId, name, info, local, nonce]);
+  }, [api, machine, appId, route, name, info, local, nonce]);
 
   useEffect(() => {
     if (job?.state === "succeeded") toast.info(`${label} is now at ${preview?.hostname ?? "its new address"}`);
@@ -107,7 +113,7 @@ export function RenameDialog({ machine, appId, label, runner, onClose }: { machi
     setStarting(true);
     setApplyError(null);
     try {
-      const j = await api.portlessRename(machine, appId, name, preview.digest);
+      const j = await api.portlessRename(machine, appId, name, preview.digest, route);
       setJobId(j.id);
     } catch (err) {
       setApplyError(err instanceof ApiError && err.status === 409 ? "The file changed since this preview. Check the new preview below, then rename again." : errorText(err));
@@ -163,7 +169,7 @@ export function RenameDialog({ machine, appId, label, runner, onClose }: { machi
             <div className="rename-readonly">
               <p>{info.reason}</p>
               {info.source === "compose" && (
-                <pre className="rename-snippet">{`services:\n  <service>:\n    labels:\n      portless.name: ${info.name || "<name>"}`}</pre>
+                <pre className="rename-snippet">{`services:\n  ${info.service ?? "<service>"}:\n    labels:\n      portless.name: ${info.name || "<name>"}`}</pre>
               )}
               {info.file && (
                 <>
@@ -206,7 +212,7 @@ export function RenameDialog({ machine, appId, label, runner, onClose }: { machi
                       }
                     }}
                   />
-                  <span className="name-affix">.{info.tld}</span>
+                  <span className="name-affix">.{info.suffix ?? info.tld}</span>
                 </div>
                 <div className="name-under" id={hintId}>
                   {problem ? (
@@ -228,7 +234,11 @@ export function RenameDialog({ machine, appId, label, runner, onClose }: { machi
                       )}
                     </p>
                   )}
-                  <p className="field-hint">Lowercase letters, digits, dashes and dots. A dot makes a subdomain: api.shop.</p>
+                  <p className="field-hint">
+                    {info.source === "compose"
+                      ? `Lowercase letters, digits and dashes. It goes in front of the project's name, ${info.compose ?? "the project"}.`
+                      : "Lowercase letters, digits, dashes and dots. A dot makes a subdomain: api.shop."}
+                  </p>
                 </div>
               </div>
               {info.notes.map((n) => (
