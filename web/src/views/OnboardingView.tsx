@@ -18,7 +18,7 @@ import { InstallStep } from "./onboarding/InstallStep";
 import { ProxyStep } from "./onboarding/ProxyStep";
 import { ReviewStep } from "./onboarding/ReviewStep";
 import { StartStep } from "./onboarding/StartStep";
-import { flowOf, nextStep, parseStep, progressOf, reached, resumeStep, STEPS, stepIndex, type StepId } from "./onboarding/steps";
+import { flowOf, nextStep, parseStep, reached, resumeStep, STEPS, stepIndex, type StepId } from "./onboarding/steps";
 import { WelcomeStep } from "./onboarding/WelcomeStep";
 import "./OnboardingView.css";
 
@@ -62,6 +62,10 @@ export function OnboardingView() {
     </MachineScope>
   );
 }
+
+// A remote machine's setup is not saved in the preferences (they are this
+// computer's): how far it got is kept for this session only.
+const remoteFurthest = new Map<string, number>();
 
 /** A step's label in the rail and the header, naming a remote machine. */
 function labelOf(step: StepId, remote: string | null): string {
@@ -126,8 +130,14 @@ function OnboardingFlow() {
 
   const flow = useMemo(() => flowOf(checks.items, scope.remote ? false : browsersNeeded), [checks.items, browsersNeeded, scope.remote]);
 
+  // A remote machine's apps open in this computer's browsers, which this
+  // computer's own setup covers: its setup has no Browser trust step.
+  const steps = useMemo(() => (scope.remote ? STEPS.filter((s) => s.id !== "browsers") : STEPS), [scope.remote]);
+  const index = Math.max(0, steps.findIndex((s) => s.id === step));
+
   const go = useCallback(
     (to: StepId) => {
+      if (machineId) remoteFurthest.set(machineId, Math.max(remoteFurthest.get(machineId) ?? 0, stepIndex(to)));
       navigate({ view: "onboarding", step: to, machine: machineId });
       void updatePreferences((p) => ({ ...p, onboarding: reached(p.onboarding, to) }));
     },
@@ -153,7 +163,7 @@ function OnboardingFlow() {
       step,
       go,
       next: () => go(nextStep(step, flow)),
-      back: () => go(STEPS[Math.max(0, stepIndex(step) - 1)].id),
+      back: () => go(steps[Math.max(0, index - 1)].id),
       flow,
       checks,
       setBrowsersNeeded,
@@ -169,7 +179,7 @@ function OnboardingFlow() {
       jobs,
       trackJob,
     }),
-    [step, go, flow, checks, choices, choose, folders, edits, setEdits, scans, roots, jobs, trackJob],
+    [step, steps, index, go, flow, checks, choices, choose, folders, edits, setEdits, scans, roots, jobs, trackJob],
   );
 
   const skip = async () => {
@@ -187,8 +197,7 @@ function OnboardingFlow() {
   };
 
   const View = STEP_VIEWS[step];
-  const index = stepIndex(step);
-  const done = new Set(scope.remote ? [] : (prefs?.onboarding.done ?? []));
+  const done = new Set<string>(machineId ? STEPS.filter((_, i) => i < (remoteFurthest.get(machineId) ?? 0)).map((s) => s.id) : (prefs?.onboarding.done ?? []));
   const scanning = step === "apps" || step === "review";
 
   return (
@@ -198,7 +207,7 @@ function OnboardingFlow() {
           <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="" width={24} height={24} className="ob-top-mark" />
           <span className="ob-top-name">{remote ? `Set up ${remote}` : "Set up Portplane"}</span>
           <span className="ob-top-step">
-            Step {index + 1} of {STEPS.length}
+            Step {index + 1} of {steps.length}
             <span className="ob-top-step-label"> · {labelOf(step, remote)}</span>
           </span>
           {step !== "done" && (
@@ -213,17 +222,17 @@ function OnboardingFlow() {
           role="progressbar"
           aria-label="Setup progress"
           aria-valuemin={0}
-          aria-valuemax={STEPS.length}
+          aria-valuemax={steps.length}
           aria-valuenow={index + 1}
-          aria-valuetext={`Step ${index + 1} of ${STEPS.length}: ${labelOf(step, remote)}`}
+          aria-valuetext={`Step ${index + 1} of ${steps.length}: ${labelOf(step, remote)}`}
         >
-          <span className="ob-progress-bar" style={{ width: `${Math.max(4, progressOf(step) * 100)}%` }} />
+          <span className="ob-progress-bar" style={{ width: `${Math.max(4, (index / (steps.length - 1)) * 100)}%` }} />
         </div>
         <RemoteStatusBanner className="ob-remote-banner" />
         <div className="ob-body">
           <nav className="ob-rail" aria-label="Setup steps">
             <ol>
-              {STEPS.map((s, i) => {
+              {steps.map((s, i) => {
                 const current = s.id === step;
                 const reachable = i <= index || done.has(s.id);
                 const finished = done.has(s.id) && !current;
