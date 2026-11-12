@@ -7,6 +7,7 @@ import { href, navigate, type View } from "../lib/router";
 import { AppsView } from "../views/AppsView";
 import { Announcer } from "./Announcer";
 import "./builtinCommands";
+import { SHORTCUTS_EVENT } from "./polishCommands";
 import { CommandPalette } from "./CommandPalette";
 import { useShell } from "./ShellContext";
 import { ShortcutsDialog } from "./ShortcutsDialog";
@@ -68,6 +69,11 @@ export function Shell() {
   const main = useRef<HTMLElement>(null);
   const mac = isMac(info?.os);
   useGlobalKeys(useCallback(() => setHelp(true), []));
+  useEffect(() => {
+    const open = () => setHelp(true);
+    window.addEventListener(SHORTCUTS_EVENT, open);
+    return () => window.removeEventListener(SHORTCUTS_EVENT, open);
+  }, []);
 
   // Ctrl/⌘K or "/" opens the palette, never while the user types.
   useEffect(() => {
