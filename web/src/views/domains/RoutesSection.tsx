@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { errorText } from "../../api/errors";
 import type { RouteView, StaleRoute } from "../../api/portless";
+import type { App } from "../../api/types";
 import { copyWithToast } from "../../components/appActions";
 import { useApp } from "../../components/AppContext";
 import { ConfirmDialog } from "../../components/Dialog";
@@ -11,14 +12,15 @@ import { StateDot } from "../../components/StateDot";
 import { useNow } from "../../hooks/useNow";
 import { isUserAlias, KIND_LABELS, routeAge, sortRoutes } from "../../lib/portless";
 import { appRoute, href } from "../../lib/router";
+import { isPublic, SHARE_NAMES } from "../../lib/sharing";
 import { AliasDialog, type AliasDraft } from "./AliasDialog";
 import { PlanDialog } from "./PlanDialog";
 import { StatusGate } from "./ProxySection";
 import { RenameDialog } from "./RenameDialog";
+import { ShareAppDialog } from "./ShareControls";
 import { useMachineResources, useRoutes, valueOf } from "./store";
 import { useMachineScope } from "../../components/MachineScope";
 import { openResolved } from "../../lib/popup";
-import type { App } from "../../api/types";
 
 /** What prune will remove and stop, read just before it runs. */
 export function StaleList({ force }: { force: boolean }) {
@@ -77,8 +79,8 @@ function SharedLinks({ r }: { r: RouteView }) {
   return (
     <span className="shared">
       {r.shared.map((s) => (
-        <a key={s.url} className="tag" href={s.url} target="_blank" rel="noopener" title={`Shared with ${s.kind}: ${s.url}`}>
-          {s.kind}
+        <a key={s.url} className={`tag${isPublic(s.kind) ? " tag-warn" : ""}`} href={s.url} target="_blank" rel="noopener" title={`Shared with ${SHARE_NAMES[s.kind]}${isPublic(s.kind) ? ", publicly" : ""}: ${s.url}`}>
+          {SHARE_NAMES[s.kind]}
         </a>
       ))}
     </span>
@@ -116,7 +118,8 @@ function Table({ routes }: { routes: RouteView[] }) {
   const { put } = useMachineResources().routes;
   const now = useNow(true, 30_000);
   const [plan, setPlan] = useState<"prune" | "prune-force" | null>(null);
-  const [rename, setRename] = useState<{ appId: string; machine: string; label: string; runner?: string } | null>(null);
+  const [rename, setRename] = useState<{ appId: string; machine: string; route?: string; label: string; runner?: string } | null>(null);
+  const [share, setShare] = useState<App | null>(null);
   const [alias, setAlias] = useState<AliasDraft | null>(null);
   const sorted = useMemo(() => sortRoutes(routes), [routes]);
   const stale = routes.filter((r) => !r.alive);
@@ -230,8 +233,11 @@ function Table({ routes }: { routes: RouteView[] }) {
                         </a>
                       )}
                       <IconButton icon="copy" label={`Copy ${copyUrl}`} onClick={() => void copyWithToast(ctx, copyUrl, "the URL")} />
+                      {app && app.kind !== "job" ? <IconButton icon="share" label={`Share ${app.label}`} onClick={() => setShare(app)} /> : <IconSlot />}
                       {app ? (
                         <IconButton icon="pencil" label={`Change the name of ${app.label}`} onClick={() => setRename({ appId: app.id, machine: local!.machine.id, label: app.label, runner: app.runner })} />
+                      ) : r.kind === "compose" && r.alive && local ? (
+                        <IconButton icon="pencil" label={`Change the name of ${r.hostname}`} onClick={() => setRename({ appId: "", route: r.hostname, machine: local.machine.id, label: r.hostname })} />
                       ) : isUserAlias(r) ? (
                         <IconButton icon="pencil" label={`Edit ${r.hostname}`} onClick={() => setAlias({ from: r.hostname, name: r.hostname.replace(/\.[^.]+$/, ""), port: r.port })} />
                       ) : (
@@ -252,6 +258,7 @@ function Table({ routes }: { routes: RouteView[] }) {
         </PlanDialog>
       )}
       {rename && <RenameDialog {...rename} onClose={() => setRename(null)} />}
+      {share && local && <ShareAppDialog ms={local} app={share} onClose={() => setShare(null)} />}
       {alias && <AliasDialog draft={alias} routes={routes} onClose={() => setAlias(null)} />}
       <ConfirmDialog
         open={!!removing}

@@ -1,0 +1,47 @@
+{
+  "Version": "1.90.6-t1a2b3c4d5-g0123456789",
+  "TUN": true,
+  "BackendState": "Running",
+  "HaveNodeKey": true,
+  "AuthURL": "",
+  "TailscaleIPs": [
+    "100.101.102.103",
+    "fd7a:115c:a1e0::1234:5678"
+  ],
+  "Self": {
+    "ID": "nAbCdEf1CNTRL",
+    "PublicKey": "nodekey:0000000000000000000000000000000000000000000000000000000000000000",
+    "HostName": "workstation",
+    "DNSName": "workstation.tail4c2a.ts.net.",
+    "OS": "linux",
+    "UserID": 1234567890,
+    "TailscaleIPs": [
+      "100.101.102.103",
+      "fd7a:115c:a1e0::1234:5678"
+    ],
+    "Online": true,
+    "Capabilities": [
+      "HTTPS://TAILSCALE.COM/s/DEPRECATED-NODE-CAPS#see-https://github.com/tailscale/tailscale/issues/11508",
+      "https://tailscale.com/cap/file-sharing",
+      "https://tailscale.com/cap/is-admin",
+      "https://tailscale.com/cap/ssh"
+    ],
+    "CapMap": {
+      "https://tailscale.com/cap/file-sharing": null,
+      "https://tailscale.com/cap/is-admin": null,
+      "https://tailscale.com/cap/ssh": null,
+      "probe-udp-lifetime": null
+    }
+  },
+  "Health": [],
+  "MagicDNSSuffix": "tail4c2a.ts.net",
+  "CurrentTailnet": {
+    "Name": "dev@example.com",
+    "MagicDNSSuffix": "tail4c2a.ts.net",
+    "MagicDNSEnabled": true
+  },
+  "CertDomains": null,
+  "Peer": {},
+  "User": {},
+  "ClientVersion": null
+}

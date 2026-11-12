@@ -3,6 +3,7 @@ import type { Api } from "../../api/client";
 import { errorText } from "../../api/errors";
 import { useJobs } from "../../api/jobs";
 import type { Certificates, DoctorReport, PortlessAction, PortlessStatus, RouteView } from "../../api/portless";
+import type { LanView, SharingOverview } from "../../api/sharing";
 import { useApp } from "../../components/AppContext";
 import { useMachineScope } from "../../components/MachineScope";
 import { LOCAL_MACHINE } from "../../api/machine";
@@ -61,6 +62,10 @@ export interface MachineResources {
   doctor: Resource<DoctorReport>;
   routes: Resource<RouteView[]>;
   certificates: Resource<Certificates>;
+  /** The ways to share and everything shared now (M5.6); also feeds Health's public-share notice. */
+  sharing: Resource<SharingOverview>;
+  /** LAN mode: what it needs, and every app's .local address (M5.6). */
+  lan: Resource<LanView>;
 }
 
 // One set per machine (ADR-0026): this computer's feeds Health; another
@@ -76,6 +81,8 @@ export function resourcesOf(machine: string): MachineResources {
       doctor: resource<DoctorReport>((api) => api.portlessDoctor()),
       routes: resource<RouteView[]>((api) => api.portlessRoutes()),
       certificates: resource<Certificates>((api) => api.portlessCertificates()),
+      sharing: resource<SharingOverview>((api) => api.portlessSharing()),
+      lan: resource<LanView>((api) => api.portlessLan()),
     };
     byMachine.set(machine, r);
   }
@@ -87,6 +94,8 @@ export const statusResource = resourcesOf(LOCAL_MACHINE).status;
 export const doctorResource = resourcesOf(LOCAL_MACHINE).doctor;
 export const routesResource = resourcesOf(LOCAL_MACHINE).routes;
 export const certificatesResource = resourcesOf(LOCAL_MACHINE).certificates;
+export const sharingResource = resourcesOf(LOCAL_MACHINE).sharing;
+export const lanResource = resourcesOf(LOCAL_MACHINE).lan;
 
 /** The resources of the machine the surrounding scope acts on. */
 export function useMachineResources(): MachineResources {
@@ -116,13 +125,23 @@ export function usePortlessStatus() {
 /**
  * Loads portless's status and certificates once in the background (no
  * doctor run), so the Health view knows about a broken service or an
- * untrusted certificate from the first screen.
+ * untrusted certificate from the first screen. It also reads what's
+ * shared (local commands only: tailscale status, ngrok's config), and
+ * LAN mode's needs when the proxy runs in LAN mode, for the sharing
+ * problems (sharingProblems.ts).
  */
 export function usePrimePortless(enabled: boolean): void {
   const { api } = useApp();
+  const status = useSyncExternalStore(statusResource.subscribe, statusResource.get);
+  const lan = valueOf(status)?.proxy.lan === true;
   useEffect(() => {
-    if (enabled) primePortless(api, LOCAL_MACHINE);
+    if (!enabled) return;
+    primePortless(api, LOCAL_MACHINE);
+    if (sharingResource.get().status === "idle") void sharingResource.load(api);
   }, [api, enabled]);
+  useEffect(() => {
+    if (enabled && lan && lanResource.get().status === "idle") void lanResource.load(api);
+  }, [api, enabled, lan]);
 }
 
 /**
@@ -140,6 +159,16 @@ export function useRoutes() {
   return useResource(useMachineResources().routes, true);
 }
 
+/** The sharing overview, loaded on first use (per machine). */
+export function useSharing() {
+  return useResource(useMachineResources().sharing, true);
+}
+
+/** LAN mode's view, loaded on first use (per machine). */
+export function useLan() {
+  return useResource(useMachineResources().lan, true);
+}
+
 /** The doctor report; `autorun` runs doctor when none was loaded yet. */
 export function usePortlessDoctor(autorun = false) {
   return useResource(useMachineResources().doctor, autorun);
@@ -152,7 +181,7 @@ export function usePortlessDoctor(autorun = false) {
 export function useRefreshOnJobs(onDone?: () => void) {
   const { api } = useApp();
   const { id: machine } = useMachineScope();
-  const { status: statusR, routes: routesR, doctor: doctorR, certificates: certificatesR } = resourcesOf(machine);
+  const { status: statusR, routes: routesR, doctor: doctorR, certificates: certificatesR, sharing: sharingR, lan: lanR } = resourcesOf(machine);
   const { jobs } = useJobs();
   const seen = useRef<Set<string> | null>(null);
   const cb = useRef(onDone);
@@ -169,6 +198,8 @@ export function useRefreshOnJobs(onDone?: () => void) {
     void statusR.load(api);
     if (certificatesR.get().status !== "idle") void certificatesR.load(api);
     if (routesR.get().status !== "idle") void routesR.load(api);
+    if (sharingR.get().status !== "idle") void sharingR.load(api);
+    if (lanR.get().status !== "idle") void lanR.load(api);
     if (doctorR.get().status !== "idle") void doctorR.load(api);
     cb.current?.();
   }, [jobs, api, machine, statusR, routesR, doctorR, certificatesR]);
@@ -177,7 +208,13 @@ export function useRefreshOnJobs(onDone?: () => void) {
 // ---- intents ----
 
 /** What to open, on which machine (this computer unless it says another). */
-export type Intent = ({ kind: "new-alias"; port?: number; name?: string } | { kind: "action"; action: PortlessAction } | { kind: "run-doctor" }) & {
+export type Intent = (
+  | { kind: "new-alias"; port?: number; name?: string }
+  | { kind: "action"; action: PortlessAction }
+  | { kind: "run-doctor" }
+  | { kind: "compose-start" }
+  | { kind: "lan-phone" }
+) & {
   machine?: string;
 };
 

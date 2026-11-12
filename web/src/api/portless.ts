@@ -1,5 +1,6 @@
 import { seg, type Http } from "./http";
 import type { Job } from "./jobs";
+import { createSharingHttp, type SharingApi } from "./sharing";
 
 // The portless part of the API (plan §5, M5.2): proxy, routes, aliases,
 // names, portless.json, certificates, hosts, doctor and maintenance.
@@ -263,7 +264,8 @@ export type PortlessAction =
   | "prune"
   | "prune-force"
   | "update"
-  | "uninstall";
+  | "uninstall"
+  | "tailscale-operator";
 
 export interface PlanStep {
   label: string;
@@ -304,6 +306,12 @@ export interface NameInfo {
   prefix?: string;
   port?: number;
   compose?: string;
+  /** The compose service whose portless.name label holds the name. */
+  service?: string;
+  /** What follows the name in the address when it isn't just the TLD (<project>.<tld>). */
+  suffix?: string;
+  /** The route a compose name was looked up by. */
+  route?: string;
   taken: string[];
   notes: string[];
   running: boolean;
@@ -381,7 +389,7 @@ export interface ConfigPreview {
   warnings: string[];
 }
 
-export interface PortlessApi {
+export interface PortlessApi extends SharingApi {
   portlessStatus(): Promise<PortlessStatus>;
   /** Runs portless doctor (a second or two). */
   portlessDoctor(): Promise<DoctorReport>;
@@ -401,10 +409,11 @@ export interface PortlessApi {
   portlessPlan(action: PortlessAction, options?: ProxyOptions): Promise<Plan>;
   /** Runs an action as a job (the same plan, built again from the same choices). */
   portlessRun(action: PortlessAction, options?: ProxyOptions): Promise<Job>;
-  portlessNameInfo(machine: string, app: string): Promise<NameInfo>;
-  portlessNamePreview(machine: string, app: string, name: string): Promise<NamePreview>;
+  /** Where an app's name lives; with route (and no app), a compose service's. */
+  portlessNameInfo(machine: string, app: string, route?: string): Promise<NameInfo>;
+  portlessNamePreview(machine: string, app: string, name: string, route?: string): Promise<NamePreview>;
   /** Writes the previewed change; 409 when a file changed since the preview. */
-  portlessRename(machine: string, app: string, name: string, digest: string): Promise<Job>;
+  portlessRename(machine: string, app: string, name: string, digest: string, route?: string): Promise<Job>;
   portlessConfigs(): Promise<ConfigPlace[]>;
   portlessConfig(dir: string): Promise<ProjectConfigs>;
   portlessConfigPreview(dir: string, target: ConfigTarget, text: string): Promise<ConfigPreview>;
@@ -415,7 +424,9 @@ export interface PortlessApi {
 export function createPortlessHttp(h: Http): PortlessApi {
   const { json } = h;
   const body = (options?: ProxyOptions) => (options ? { options } : {});
+  const where = (machine: string, app: string, route?: string): Record<string, string> => (route ? { machine, app, route } : { machine, app });
   return {
+    ...createSharingHttp(h),
     portlessStatus: () => json<PortlessStatus>("GET", "/api/portless/status"),
     portlessDoctor: () => json<DoctorReport>("GET", "/api/portless/doctor"),
     portlessRoutes: () => json<RouteView[]>("GET", "/api/portless/routes"),
@@ -428,9 +439,9 @@ export function createPortlessHttp(h: Http): PortlessApi {
     portlessHosts: () => json<HostsView>("GET", "/api/portless/hosts"),
     portlessPlan: (action, options) => json<Plan>("POST", `/api/portless/actions/${seg(action)}/plan`, body(options)),
     portlessRun: (action, options) => json<Job>("POST", `/api/portless/actions/${seg(action)}`, body(options)),
-    portlessNameInfo: (machine, app) => json<NameInfo>("GET", `/api/portless/names?${new URLSearchParams({ machine, app })}`),
-    portlessNamePreview: (machine, app, name) => json<NamePreview>("POST", "/api/portless/names/preview", { machine, app, name }),
-    portlessRename: (machine, app, name, digest) => json<Job>("POST", "/api/portless/names/apply", { machine, app, name, digest }),
+    portlessNameInfo: (machine, app, route) => json<NameInfo>("GET", `/api/portless/names?${new URLSearchParams(where(machine, app, route))}`),
+    portlessNamePreview: (machine, app, name, route) => json<NamePreview>("POST", "/api/portless/names/preview", { ...where(machine, app, route), name }),
+    portlessRename: (machine, app, name, digest, route) => json<Job>("POST", "/api/portless/names/apply", { ...where(machine, app, route), name, digest }),
     portlessConfigs: () => json<ConfigPlace[]>("GET", "/api/portless/configs"),
     portlessConfig: (dir) => json<ProjectConfigs>("GET", `/api/portless/config?${new URLSearchParams({ dir })}`),
     portlessConfigPreview: (dir, target, text) => json<ConfigPreview>("POST", "/api/portless/config/preview", { dir, target, text }),

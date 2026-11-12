@@ -29,6 +29,11 @@ type RouteEntry struct {
 	TailscaleFunnel bool   `json:"tailscaleFunnel,omitempty"`
 	NgrokURL        string `json:"ngrokUrl,omitempty"`
 	CloudflareURL   string `json:"cloudflareUrl,omitempty"`
+	// The Tailscale HTTPS port the share took (443, 8443…), and the
+	// tunnel processes portless started.
+	TailscaleHTTPSPort int `json:"tailscaleHttpsPort,omitempty"`
+	NgrokPID           int `json:"ngrokPid,omitempty"`
+	CloudflarePID      int `json:"cloudflarePid,omitempty"`
 }
 
 // Route kinds.

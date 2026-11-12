@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"regexp"
 	"runtime"
@@ -52,7 +53,23 @@ func UnprivilegedProxyOptions() ProxyOptions {
 	return ProxyOptions{Port: UnprivilegedPort, HTTPS: true, TLDs: []string{"localhost"}}
 }
 
-var tldRe = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$`)
+var tldLabelRe = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`)
+
+// ValidTLD reports whether portless accepts tld (validateTld in portless
+// 0.16): one label or several (dev.example.com), each of letters, digits
+// and inner dashes, at most 63 characters, and 253 in all.
+func ValidTLD(tld string) bool {
+	tld = strings.TrimPrefix(tld, ".")
+	if tld == "" || len(tld) > MaxHostname {
+		return false
+	}
+	for _, label := range strings.Split(tld, ".") {
+		if len(label) > MaxLabel || !tldLabelRe.MatchString(label) {
+			return false
+		}
+	}
+	return true
+}
 
 // Validate rejects options portless would refuse.
 func (o ProxyOptions) Validate() error {
@@ -60,7 +77,7 @@ func (o ProxyOptions) Validate() error {
 		return fmt.Errorf("port %d is not between 1 and 65535", o.Port)
 	}
 	for _, t := range o.TLDs {
-		if !tldRe.MatchString(strings.TrimPrefix(t, ".")) {
+		if !ValidTLD(t) {
 			return fmt.Errorf("%q is not a valid top-level domain", t)
 		}
 	}
@@ -72,6 +89,9 @@ func (o ProxyOptions) Validate() error {
 	}
 	if o.LANIP != "" && !o.LAN {
 		return errors.New("a LAN IP needs LAN mode")
+	}
+	if o.LANIP != "" && net.ParseIP(o.LANIP) == nil {
+		return fmt.Errorf("%q is not an IP address", o.LANIP)
 	}
 	return nil
 }

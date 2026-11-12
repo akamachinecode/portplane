@@ -74,9 +74,36 @@ type PortlessDeps struct {
 	Lookup func(string) string
 	GOOS   string
 	Now    func() time.Time
+
+	// Sharing, compose and LAN mode (M5.6).
+
+	// Start starts one task (sharing an app that isn't running yet).
+	Start func(ctx context.Context, root, task string) error
+	// Tool runs a read-only command of another program (tailscale status
+	// --json, docker ps); nil: portless.RunTool.
+	Tool portless.ToolRunner
+	// Network lists this computer's interfaces and the address of its
+	// default route; nil: the real ones.
+	Network func() ([]portless.Iface, string)
+	// OSRelease is /etc/os-release, to name Linux packages.
+	OSRelease func() string
+	// Home is the user's home folder and Getenv reads the environment
+	// (ngrok's config); nil: the real ones.
+	Home   func() string
+	Getenv func(string) string
+	// User is the name of the user Portplane runs as.
+	User func() string
+	// ComposeMemory is the file where Portplane remembers the compose
+	// files it started; empty keeps them in memory only.
+	ComposeMemory string
+	// ShareWait is how long applying a share waits for its URL.
+	ShareWait time.Duration
 }
 
-type portlessAPI struct{ d PortlessDeps }
+type portlessAPI struct {
+	d       PortlessDeps
+	compose *composeMemory
+}
 
 // PortlessHandlers returns the /api/portless endpoints.
 func PortlessHandlers(d PortlessDeps) map[string]http.HandlerFunc {
@@ -105,7 +132,8 @@ func PortlessHandlers(d PortlessDeps) map[string]http.HandlerFunc {
 		d.Machines = func() []model.MachineSnapshot { return nil }
 	}
 	p := &portlessAPI{d: d}
-	return map[string]http.HandlerFunc{
+	p.extDefaults()
+	routes := map[string]http.HandlerFunc{
 		"GET /api/portless/status":                 p.status,
 		"GET /api/portless/doctor":                 p.doctor,
 		"GET /api/portless/routes":                 p.routes,
@@ -127,6 +155,10 @@ func PortlessHandlers(d PortlessDeps) map[string]http.HandlerFunc {
 		"POST /api/portless/config/preview":        p.configPreview,
 		"PUT /api/portless/config":                 p.configSave,
 	}
+	for pattern, h := range p.extRoutes() {
+		routes[pattern] = h
+	}
+	return routes
 }
 
 var errNoPortless = errors.New("portless isn't installed on this computer: install it from Settings → Tools or the welcome screen")

@@ -20,6 +20,20 @@
 
 **Change an app's URL.** Open the app, then its **URL** tab, and click **Change name**. Portplane edits the name where it lives (its task, `portless.json` or an alias), shows the change first, then reloads dekit and restarts the app.
 
+**Share an app on your tailnet or publicly.** Open the app, then its **URL** tab: each way to share (your tailnet, Tailscale Funnel, ngrok, Cloudflare) says what it needs. Portplane adds the flag (`--tailscale`, `--funnel`, `--ngrok`, `--cloudflare`) after the app's name in its task, shows the change first, then restarts the app and shows the shared address. **Domains → Sharing** lists everything shared, with **Stop sharing**. Only apps whose command runs `portless <name>` or `portless run` can be shared; for a task written as `!js`, add the flag in your editor.
+
+**Sharing on the tailnet says HTTPS certificates are off, or Funnel isn't allowed.** Every Tailscale share needs HTTPS certificates: turn on MagicDNS and HTTPS Certificates in the admin console's DNS page (`https://login.tailscale.com/admin/dns`). Funnel also needs your tailnet's policy to allow it for this computer; the **Open the page** link goes to Tailscale's page that turns it on. On Linux, Tailscale lets only the administrator or its operator share: **Let your user share** runs `tailscale set --operator=<you>` once with your password.
+
+**ngrok or Cloudflare doesn't share.** ngrok needs your account's authtoken: paste it in **Domains → Sharing** (Portplane runs `ngrok config add-authtoken` for you) or run that command yourself. Cloudflare's quick tunnels need `cloudflared` and outbound UDP port 7844; on networks that block it, set `TUNNEL_TRANSPORT_PROTOCOL=http2` in the app's environment. A Cloudflare address changes every time the app restarts.
+
+**A share shows "Started outside Portplane".** The app runs with the flag from a terminal or another tool, so Portplane can't stop it: press Ctrl+C where it runs, or start it again without the flag. A share turned on by `PORTLESS_TAILSCALE=1` (or `_FUNNEL`, `_NGROK`, `_CLOUDFLARE`) in the task's environment stops when you remove that line.
+
+**A compose project has no file, or Start asks for one.** portless doesn't record where a project's compose file is. Portplane finds it from the file it last started the project with, a dekit task running `portless compose`, the folder Docker recorded on the containers, or the folders the project builds from. Otherwise give the file (or its folder) once in the dialog. Start a project with **Start** or `portless compose up`, not plain `docker compose up`, which brings back the original ports.
+
+**Starting a compose project fails because the proxy needs a password.** `portless compose up` starts the proxy first when it isn't running, and can't ask for your password from a job. Start the proxy in **Domains → Proxy**, then **Start** the project again.
+
+**Phones can't open my apps in LAN mode.** The phone must be on the same Wi-Fi, and this computer must publish the names: install `avahi-publish-address` (`sudo dnf install avahi-tools`, `sudo apt install avahi-utils`) and run the Avahi service (`sudo systemctl enable --now avahi-daemon`) on Linux; macOS has `dns-sd`. portless 0.16 can't publish `.local` names on Windows. Apps that were running when you turned LAN mode on keep their `.localhost` address until they restart. For the padlock, install portless's certificate on the phone: **Domains → LAN mode → Open on a phone** exports `ca.pem` and lists the iPhone and Android steps.
+
 **"dekit isn't running for …".** Each dekit project has its own runner, which stops after a reboot until something starts it. Click **Start runner**, or run `dekit -C <folder> up`.
 
 **An app stays "starting".** Its process is alive but its port is not listening yet. If it never gets there, it usually ignores the `PORT` variable portless sets: run `portplane setup <folder>` to see the suggested command, or start the framework directly (`pnpm exec next dev`) instead of a script that pins `--port`.

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { errorText } from "../../api/errors";
 import type { NameInfo } from "../../api/portless";
 import { copyWithToast } from "../../components/appActions";
@@ -11,12 +11,14 @@ import { baseName, hostnameFor, proxyUrl, SOURCE_LABELS } from "../../lib/portle
 import { href } from "../../lib/router";
 import type { DetailTabProps } from "../AppDetail";
 import { RenameDialog } from "../domains/RenameDialog";
+import { ShareControls } from "../domains/ShareControls";
 import { usePortlessStatus, useRefreshOnJobs, valueOf } from "../domains/store";
 import { Placeholder } from "./Placeholder";
 
-/** The app's address, where its name comes from, and "Change name" (plan §5.4). */
+/** The app's address, where its name comes from, "Change name" (plan §5.4), and sharing it (plan §5.8). */
 export function UrlTab({ ms, app }: DetailTabProps) {
   const ctx = useApp();
+  const shareId = useId();
   const status = valueOf(usePortlessStatus().state);
   const [info, setInfo] = useState<NameInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -120,6 +122,14 @@ export function UrlTab({ ms, app }: DetailTabProps) {
           {n}
         </p>
       ))}
+      {!["none", "alias", "alias-task", "compose"].includes(info.source) && (
+        <section className="detail-section url-share" aria-labelledby={shareId}>
+          <h3 className="detail-section-title" id={shareId}>
+            Sharing
+          </h3>
+          <ShareControls ms={ms} app={app} headingLevel={4} />
+        </section>
+      )}
       {renaming && <RenameDialog machine={ms.machine.id} appId={app.id} label={app.label} runner={app.runner} onClose={() => setRenaming(false)} />}
     </div>
   );

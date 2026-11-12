@@ -5,6 +5,8 @@ import { navigate, type DomainSection } from "../../lib/router";
 import { registerProblemSource, type Problem, type ProblemFix } from "../../shell/health";
 import type { PortlessAction } from "../../api/portless";
 import { requestIntent, resourcesOf, valueOf } from "./store";
+// Sharing and LAN mode register theirs from their own file.
+import "./sharingProblems";
 
 // The portless center's problems for the Health view (plan §6.4): the
 // service pointing at a Node.js that is gone, and doctor's warnings and
@@ -19,6 +21,7 @@ const SECTION: Partial<Record<PortlessAction, DomainSection>> = {
   "ca-regenerate": "certificates",
   prune: "routes",
   "hosts-sync": "hosts",
+  "tailscale-operator": "sharing",
 };
 
 /** A fix that opens the action's plan in the Domains view of a machine. */

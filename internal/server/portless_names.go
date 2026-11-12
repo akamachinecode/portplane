@@ -42,6 +42,12 @@ type NameInfo struct {
 	Prefix  string `json:"prefix,omitempty"`
 	Port    int    `json:"port,omitempty"`
 	Compose string `json:"compose,omitempty"`
+	// Service is the compose service; Suffix what follows the name in its
+	// address (<project>.<tld>), when that isn't just the TLD.
+	Service string `json:"service,omitempty"`
+	Suffix  string `json:"suffix,omitempty"`
+	// Route is the address a compose name was looked up by.
+	Route string `json:"route,omitempty"`
 	// Taken are hostnames other apps and routes use.
 	Taken []string `json:"taken"`
 	Notes []string `json:"notes"`
@@ -78,8 +84,10 @@ type NamePreview struct {
 type nameRequest struct {
 	Machine string `json:"machine"`
 	App     string `json:"app"`
-	Name    string `json:"name"`
-	Digest  string `json:"digest,omitempty"`
+	// Route names a compose service by its address instead of an app.
+	Route  string `json:"route,omitempty"`
+	Name   string `json:"name"`
+	Digest string `json:"digest,omitempty"`
 }
 
 // renameCtx is everything a rename needs, found once.
@@ -89,6 +97,10 @@ type renameCtx struct {
 	root  string
 	task  *dekit.Task // the task whose cmd holds the name (fragment, task, alias-task)
 	proxy portless.ProxyState
+	// The compose project and service whose portless.name label holds the
+	// name (compose).
+	compose *portless.ComposeProject
+	service portless.ComposeService
 }
 
 func (p *portlessAPI) findApp(ctx context.Context, machine, id string) (model.App, model.MachineSnapshot, error) {
@@ -107,7 +119,10 @@ func (p *portlessAPI) findApp(ctx context.Context, machine, id string) (model.Ap
 	return model.App{}, local, fmt.Errorf("unknown app %q", id)
 }
 
-func (p *portlessAPI) resolveName(ctx context.Context, machine, id string) (*renameCtx, error) {
+func (p *portlessAPI) resolveName(ctx context.Context, machine, id, route string) (*renameCtx, error) {
+	if id == "" && route != "" {
+		return p.resolveRoute(ctx, route)
+	}
 	app, local, err := p.findApp(ctx, machine, id)
 	if err != nil {
 		return nil, err
@@ -207,9 +222,7 @@ func (p *portlessAPI) resolveName(ctx context.Context, machine, id string) (*ren
 		}
 		switch r.Kind {
 		case portless.KindCompose:
-			info.Source, info.Compose = portless.SourceCompose, r.Compose
-			info.Name = portless.BaseName(r.Hostname, rc.proxy.TLDs)
-			info.Reason = "This name comes from the portless.name label of a docker compose service. Change the label in your compose file; editing it here comes later."
+			p.composeName(ctx, rc, r)
 			return rc, nil
 		case portless.KindAlias:
 			info.Source, info.Port = portless.SourceAlias, r.Port
@@ -250,7 +263,7 @@ func (p *portlessAPI) nameInfo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	q := r.URL.Query()
-	rc, err := p.resolveName(r.Context(), q.Get("machine"), q.Get("app"))
+	rc, err := p.resolveName(r.Context(), q.Get("machine"), q.Get("app"), q.Get("route"))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
@@ -278,6 +291,9 @@ func (p *portlessAPI) newHostname(ctx context.Context, rc *renameCtx, name strin
 
 func (p *portlessAPI) planRename(ctx context.Context, rc *renameCtx, name string) (NamePreview, error) {
 	info := rc.info
+	if info.Source == portless.SourceCompose {
+		return p.planComposeRename(rc, name)
+	}
 	name = strings.TrimSuffix(strings.ToLower(strings.TrimSpace(name)), "."+info.TLD)
 	pv := NamePreview{Name: name, Files: []FileEdit{}, Steps: []string{}, Warnings: []string{}}
 	if !info.Editable {
@@ -367,7 +383,7 @@ func (p *portlessAPI) namePreview(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
-	rc, err := p.resolveName(r.Context(), req.Machine, req.App)
+	rc, err := p.resolveName(r.Context(), req.Machine, req.App, req.Route)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
@@ -393,7 +409,7 @@ func (p *portlessAPI) nameApply(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err)
 		return
 	}
-	rc, err := p.resolveName(r.Context(), req.Machine, req.App)
+	rc, err := p.resolveName(r.Context(), req.Machine, req.App, req.Route)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err)
 		return
@@ -413,6 +429,9 @@ func (p *portlessAPI) nameApply(w http.ResponseWriter, r *http.Request) {
 	}
 	info, app, c := rc.info, rc.app, p.d.Client
 	title := fmt.Sprintf("Rename %s to %s", app.Label, pv.Hostname)
+	if info.Source == portless.SourceCompose {
+		title = fmt.Sprintf("Rename %s of %s to %s", info.Service, info.Compose, pv.Hostname)
+	}
 	job := p.d.Jobs.Start(jobs.Spec{Kind: "portless.rename", Title: title, Key: "rename|" + app.ID, Steps: pv.Steps}, func(ctx context.Context, run *jobs.Run) error {
 		defer p.d.Refresh()
 		for _, f := range pv.Files {
@@ -444,6 +463,13 @@ func (p *portlessAPI) nameApply(w http.ResponseWriter, r *http.Request) {
 			run.Step("Restart " + rc.task.Path)
 			if p.d.Restart != nil {
 				if err := p.d.Restart(ctx, rc.root, rc.task.Path); err != nil {
+					return err
+				}
+			}
+		case portless.SourceCompose:
+			p.compose.set(info.Compose, info.File)
+			if info.Running {
+				if err := p.restartCompose(ctx, run, rc); err != nil {
 					return err
 				}
 			}

@@ -41,6 +41,11 @@ import type {
 //   nopassword first run where no password dialog can open (the proxy
 //              service fails with the command to run by hand)
 //   many       300 apps in 25 projects (long lists, windowing)
+// and, for sharing, compose and LAN mode (mockSharing.ts):
+//   tailnet    every way to share ready, apps shared on the tailnet and Funnel
+//   bare       no Tailscale, ngrok, cloudflared, Docker or Avahi
+//   compose    Docker Compose projects: running, stopped and brought down
+//
 //   oldagent   like default, but the remote machine runs an agent older
 //              than this Portplane (ADR-0026: "Update the agent")
 //
@@ -57,6 +62,9 @@ export type Scenario =
   | "node20"
   | "nopassword"
   | "many"
+  | "tailnet"
+  | "bare"
+  | "compose"
   | "oldagent";
 
 /** The agent version ?mock=oldagent gives the remote machine: one from before the machine API. */

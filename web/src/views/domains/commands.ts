@@ -4,8 +4,9 @@ import { suggestName } from "../../lib/portless";
 import { requestIntent } from "./store";
 
 // The portless center in the palette (plan §6.3): new alias, diagnostics,
-// the proxy, and a URL for any listening port. The actions are this
-// computer's; another machine's are in Domains with that machine picked.
+// the proxy, a URL for any listening port, and sharing, compose projects
+// and LAN mode (M5.6). The actions are this computer's; another machine's
+// are in Domains with that machine picked.
 
 export function portlessCommands(ctx: CommandContext): Command[] {
   const local = ctx.snapshot?.machines.find((m) => m.machine.local);
@@ -21,6 +22,59 @@ export function portlessCommands(ctx: CommandContext): Command[] {
     },
   ];
   if (!local?.tools.portless) return out;
+  out.push(
+    {
+      id: "portless.sharing.open",
+      title: "Open sharing",
+      group: "Go to",
+      icon: "share",
+      keywords: ["share", "tailscale", "tailnet", "funnel", "ngrok", "cloudflare", "tunnel", "public"],
+      searchOnly: true,
+      run: () => navigate({ view: "domains", section: "sharing" }),
+    },
+    {
+      id: "portless.compose.open",
+      title: "Open compose projects",
+      group: "Go to",
+      icon: "box",
+      keywords: ["docker", "compose", "containers", "portless"],
+      searchOnly: true,
+      run: () => navigate({ view: "domains", section: "compose" }),
+    },
+    {
+      id: "portless.compose.start",
+      title: "Start a compose project",
+      group: "Actions",
+      icon: "box",
+      keywords: ["docker", "compose", "up", "containers", "portless"],
+      searchOnly: true,
+      run: () => {
+        requestIntent({ kind: "compose-start" });
+        navigate({ view: "domains", section: "compose" });
+      },
+    },
+    {
+      id: "portless.lan.open",
+      title: "Open LAN mode",
+      group: "Go to",
+      icon: "wifi",
+      keywords: ["lan", "network", "wifi", "mdns", "local", "phone", "mobile"],
+      searchOnly: true,
+      run: () => navigate({ view: "domains", section: "lan" }),
+    },
+    {
+      id: "portless.lan.phone",
+      title: "Open an app on a phone",
+      group: "Actions",
+      icon: "qr",
+      keywords: ["phone", "mobile", "qr", "certificate", "lan", "ios", "android", "iphone"],
+      searchOnly: true,
+      run: () => {
+        requestIntent({ kind: "lan-phone" });
+        navigate({ view: "domains", section: "lan" });
+      },
+    },
+  );
   out.push(
     {
       id: "portless.alias.new",

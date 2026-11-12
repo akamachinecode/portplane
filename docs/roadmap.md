@@ -221,12 +221,13 @@ The milestone is done when:
 
 ### M5.6: Extensions
 
-- [ ] Sharing: Tailscale, Funnel, ngrok and Cloudflare.
-- [ ] Compose projects and their routes.
-- [ ] LAN mode, with the CA exported for phones.
+- [x] Sharing: Tailscale, Funnel, ngrok and Cloudflare. Per app in the URL tab and the routes table, everything shared in Domains → Sharing with "Stop sharing". Each way checks what it needs first (Tailscale signed in, HTTPS certificates, Funnel allowed, the operator on Linux; ngrok's authtoken; `cloudflared`) and says how to fix it; a public share needs an explicit confirmation. Turning one on edits the flag in the task's command behind the diff, reloads dekit and restarts the app; the address comes from `routes.json`.
+- [x] Compose projects and their routes: the projects in portless's `compose/` state, their services, ports and addresses; Start and Stop (`portless compose up -d` / `down`) as jobs with Docker's output; renaming a service's address sets its `portless.name` label behind the diff.
+- [x] LAN mode, with the CA exported for phones: what it needs (`avahi-publish-address` on Linux, `dns-sd` on macOS; portless 0.16 has no mDNS publisher on Windows), turning it on or off (following the computer's address or pinning one) through the proxy's options, every app's `.local` address with a QR code, and `ca.pem` with iPhone and Android trust steps.
+- [x] Health reports shares that stopped working, apps open to the internet, and LAN mode without mDNS; the palette opens Sharing, Compose and LAN mode.
 - [x] Remote parity: the agent protocol carries setup, the dekit center and the portless center (output came with M5.4), with privileged steps as commands to run over SSH (ADR-0026).
 
-**Done when:** set for each extension when it is planned.
+**Done when:** every portless command has a place in the app except `mcp`, in mock mode too (`?mock=tailnet`, `?mock=bare`, `?mock=compose`), with parsers and command builders tested against portless 0.16's formats and no test running `tailscale`, `ngrok`, `cloudflared`, `docker` or a state-changing `portless` command.
 
 ## Phase 8: v1.0 release
 
