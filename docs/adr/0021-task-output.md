@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-11-12
+- **Updated:** 2026-11-12, with phase 1 as built (last section)
 - **Supersedes:** the "never a log view" part of [ADR-0011](0011-failures-not-logs.md): "Running apps show no output at all", with `dekit attach` in a terminal as the only way to see more. The failure excerpt and its copy button stand.
 
 ## What it has to do
@@ -59,3 +60,14 @@ Facts checked against dekit 0.10.3:
 - The vision's "no logs" line becomes "no logs in the main view".
 
 **What would make us revisit it:** dekit publishing the attach RPC as stable (which starts phase 2), or a JSON interface that streams a task's output with its scrollback; the polling showing up in the CPU budget; people keeping the panel open as their main view.
+
+## Phase 1 as built (M5.4)
+
+Two parts of the verdict changed while building phase 1, and the cost was measured.
+
+- **No xterm.js.** `dekit screen --json` returns a screen that dekit has already drawn: text and colour codes, rows already cut at the terminal's width, no cursor movement left to replay. A terminal emulator adds nothing for that. The panel draws it with a small parser of colour codes (16 and 256 colours, 24-bit, bold, dim, italic, underline, inverse) whose text only ever reaches the page as React text nodes, and has its own search. No new dependency; xterm.js comes with phase 2, where typing and resizing need it.
+- **Remote machines too.** The agent protocol carries one more method, `output`, so the panel works on every machine from the start instead of waiting for M5.6.
+- **On the agent:** colour codes are kept and every other escape sequence and control character is removed before the screen leaves the machine; an answer is capped at 256 KiB, keeping the end; reads are shared for half a second, so several open panels cost one `dekit screen` a second; the task is checked against the latest snapshot rather than by walking the folders again.
+- **In the panel:** it asks once a second while open, waits for each answer before the next, stops while the window is hidden, has a Pause button, and backs off up to every 10 seconds while requests fail.
+- **Measured cost** (dekit 0.10.3, Linux x86-64): one `dekit screen --json` takes about 2 ms of wall time and 5 ms of CPU, with about 11 MB of peak memory. One open panel costs about 0.5% of one core; a closed one costs nothing.
+- **Upstream:** besides the attach RPC, a smaller ask for scrollback in `dekit screen --json` ([upstream.md](../upstream.md)) would give phase 1 the lines that scrolled off.

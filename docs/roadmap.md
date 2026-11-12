@@ -198,8 +198,8 @@ The milestone is done when:
 
 ### M5.4: Output
 
-- [ ] Output panel, phase 1: the task's screen from `dekit screen --json` while the panel is open (ADR-0021).
-- [ ] Upstream request for a stable attach RPC ([upstream.md](upstream.md)).
+- [x] Output panel, phase 1: the task's screen from `dekit screen --json` while the panel is open, on local and remote machines, with colours, search, copy, pause and "Open in a terminal" (ADR-0021).
+- [x] Upstream requests for a stable attach RPC and for scrollback in `dekit screen --json`, written ([upstream.md](upstream.md)); not filed yet.
 - [ ] Phase 2, an interactive terminal, once dekit publishes it.
 
 **Done when:** the live output of any app is visible without a terminal.
@@ -221,7 +221,7 @@ The milestone is done when:
 - [ ] Sharing: Tailscale, Funnel, ngrok and Cloudflare.
 - [ ] Compose projects and their routes.
 - [ ] LAN mode, with the CA exported for phones.
-- [ ] Remote parity: the agent protocol carries setup, config and output.
+- [ ] Remote parity: the agent protocol carries setup and config (output came with M5.4).
 
 **Done when:** set for each extension when it is planned.
 
