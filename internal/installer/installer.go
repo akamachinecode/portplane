@@ -149,7 +149,7 @@ func DataDir(goos, home string, getenv func(string) string) string {
 		}
 		return filepath.Join(home, "AppData", "Local", "portplane")
 	default:
-		if d := getenv("XDG_DATA_HOME"); d != "" && filepath.IsAbs(d) {
+		if d := getenv("XDG_DATA_HOME"); strings.HasPrefix(d, "/") { // absolute on goos, whatever runs the code
 			return filepath.Join(d, "portplane")
 		}
 		return filepath.Join(home, ".local", "share", "portplane")
