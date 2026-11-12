@@ -160,7 +160,7 @@ func TestDekitRunners(t *testing.T) {
 	if mine.State != "running" || !mine.Watched || mine.PID == 0 || mine.Since == "" || !mine.ConfigExists || mine.Version != "0.10.3" {
 		t.Fatalf("watched runner %+v", mine)
 	}
-	if other := byRoot["/home/dev/code"]; other.State != "stale" || other.Watched {
+	if other := byRoot[filepath.Clean("/home/dev/code")]; other.State != "stale" || other.Watched {
 		t.Fatalf("stale runner %+v", other)
 	}
 	if resp.Host.Kind != "host" || resp.Host.State != "absent" || resp.Host.Name != "This computer" {
