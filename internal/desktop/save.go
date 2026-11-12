@@ -6,6 +6,7 @@ import (
 	"context"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -105,10 +106,11 @@ func xdgDownloadDir(file, home string) string {
 		}
 		v = strings.Trim(v, `"`)
 		v = strings.Replace(v, "$HOME", home, 1)
-		if !filepath.IsAbs(v) || filepath.Clean(v) == filepath.Clean(home) {
+		// user-dirs.dirs is a Unix file: its paths use forward slashes.
+		if !path.IsAbs(v) || path.Clean(v) == path.Clean(home) {
 			return "" // "$HOME" itself means the folder is off
 		}
-		return filepath.Clean(v)
+		return path.Clean(v)
 	}
 	return ""
 }
