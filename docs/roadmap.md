@@ -148,10 +148,10 @@ The milestone is done when:
 - [x] ADR-0019 to ADR-0025.
 - [ ] Find dekit and portless on every check, not once at start, so "Re-check" sees a tool installed while Portplane runs.
 - [ ] See folders added with `portplane folders add` without a restart.
-- [ ] One piece of advice for the proxy everywhere (the banner and Setup disagree today).
-- [ ] A way into Setup from the main view when dekit is missing; a first run that checks the tools and starts the scan.
+- [x] One piece of advice for the proxy everywhere (the banner and Setup disagree today).
+- [x] A way into Setup from the main view when dekit is missing; a first run that checks the tools and starts the scan.
 - [ ] Quick start and stop in the tray; the Folders button opens a dialog named Folders.
-- [ ] New checks: CA trust in the system and in browsers, port 443, git and the package manager.
+- [x] New checks: CA trust in the system and in browsers, port 443, git and the package manager.
 - [ ] Jobs: long operations streamed as `event: job` on the existing event stream (ADR-0024).
 - [ ] The app shell: sidebar, hash router and command palette, with today's views inside (ADR-0024).
 - [ ] Privileged steps through the system's dialog, argv only, per OS (ADR-0020).
@@ -161,14 +161,15 @@ The milestone is done when:
 
 ### M5.1: Onboarding
 
-- [ ] Full-window onboarding on first run that resumes where it stopped, with "Skip for now" (read-only mode and a "Finish setup" notice).
-- [ ] System check, all at once: dekit, Node.js, portless, git, port 443, the proxy service (including a Node path that no longer exists), the CA in the system and in each browser, `/etc/hosts`.
-- [ ] Install dekit, a private Node 24 when needed, and portless, with stages and output (ADR-0019).
-- [ ] The proxy's admin step through the system's dialog, and the no-password option on port 1355 (ADR-0020).
-- [ ] Browser trust for Firefox and Chrome profiles, after a spike per browser and distribution.
-- [ ] Folders, with suggestions such as `~/code`, `~/src` and `~/projects`; then the existing scan, review and write.
-- [ ] First start: pick apps, run `dekit up` and start them, with live progress until each one is on.
-- [ ] Last screen: Ctrl/⌘K, start at login, the tray icon (and the AppIndicator extension on GNOME).
+- [x] Full-window onboarding on first run that resumes where it stopped, with "Skip for now" (read-only mode and a "Finish setup" notice).
+- [x] System check, all at once: dekit, Node.js, portless, git, port 443, the proxy service (including a Node path that no longer exists), the CA in the system and in each browser, `/etc/hosts`.
+- [x] Install dekit, a private Node 24 when needed, and portless, with stages and output (ADR-0019).
+- [x] The proxy's admin step through the system's dialog, and the no-password option on port 1355 (ADR-0020).
+- [x] Browser trust for Firefox and the Chrome family, per profile and per packaging (snap, Flatpak); what uses what is in [troubleshooting](troubleshooting.md#browsers-and-the-local-certificate).
+- [x] Folders, with suggestions such as `~/code`, `~/src` and `~/projects`; then the existing scan, review and write.
+- [x] First start: pick apps, run `dekit up` and start them, with live progress until each one is on.
+- [x] Last screen: Ctrl/⌘K, start at login, the tray icon (and the AppIndicator extension on GNOME).
+- [ ] Checked by hand on Fedora, Ubuntu, macOS and Windows from a clean user account.
 
 **Done when:** criterion 1 holds, checked by hand on Fedora, Ubuntu, macOS and Windows from a clean user account.
 

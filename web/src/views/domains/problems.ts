@@ -1,3 +1,4 @@
+import { PROXY_COMMAND } from "../onboarding/problems";
 import type { Snapshot } from "../../api/types";
 import { FIX_LABELS, groupFindings } from "../../lib/portless";
 import { navigate, type DomainSection } from "../../lib/router";
@@ -34,21 +35,27 @@ export function portlessProblems(snapshot: Snapshot): Problem[] {
   const where = { id: local.machine.id, name: local.machine.name };
   const out: Problem[] = [];
 
-  // Replaces the snapshot's own proxy-down problem (same id) with a fix
-  // that starts the proxy here instead of opening setup.
+  const status = valueOf(statusResource.get());
+
+  // Replaces the snapshot's own proxy-down problem (same id). With the
+  // service installed, the fix starts the proxy here; without it, the guided
+  // setup's proxy step installs it (F2: the same advice everywhere).
   if (!local.tools.proxyRunning) {
+    const installed = status?.service?.installed === true;
     out.push({
       id: `proxy-down|${local.machine.id}`,
       severity: "warning",
       title: "The portless proxy isn't running",
-      detail: "Apps keep their .localhost names, but the URLs won't load until the proxy runs.",
+      detail: installed
+        ? "Apps keep their .localhost names, but the URLs won't load until the proxy runs."
+        : "Apps keep their .localhost names, but the URLs won't load until the proxy runs. Installing it as a service asks for your password once and starts it with your computer.",
+      code: installed ? undefined : PROXY_COMMAND,
       machine: where,
-      fix: planFix("proxy-start", "Start the proxy"),
+      fix: installed ? planFix("proxy-start", "Start the proxy") : { label: "Set up the proxy", run: () => navigate({ view: "onboarding", step: "proxy" }) },
       link: { label: "Proxy", route: { view: "domains", section: "proxy" } },
     });
   }
 
-  const status = valueOf(statusResource.get());
   const prog = status?.program;
   if (status?.service?.installed && prog && (prog.nodeMissing || prog.scriptMissing)) {
     out.push({

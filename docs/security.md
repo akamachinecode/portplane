@@ -93,7 +93,7 @@ Portplane makes outgoing requests only to your SSH hosts and, when you start a d
 - While it runs: `<user cache dir>/portplane/instance.json` (port, URL and token), removed when it quits.
 - With your confirmation, after showing the diff: `<folder>/.portplane/tasks.yaml` and one `load:` line in `<folder>/dekit.yaml` ([ADR-0009](adr/0009-generated-config-location.md)), and the tasks you edit from the app in the file that declares them ([ADR-0022](adr/0022-edit-dekit-config.md)).
 - With your confirmation, after showing the diff: a project's `portless.json`, or the `"portless"` key of its `package.json` (the rest of the file stays byte for byte), when you edit it or rename an app whose name lives there.
-- On your click: the tools it installs ([Installing tools](#installing-tools)), and the line in your shell profile if you accept it.
+- On your click: the tools it installs ([Installing tools](#installing-tools)), the line in your shell profile if you accept it, and portless's CA in a browser profile's own certificate database (`certutil -A`, no password; the browser and profile come from Portplane's own list, never a path from the page).
 - On your click, in portless's state folder: the certificate authority moved to a `ca-backup-<time>` folder before **Regenerate** (nothing is deleted); a copy of `ca.pem` in your Downloads folder for **Export**.
 - With `autostart on`: a LaunchAgent, an XDG autostart file or a `Run` registry value.
 - portless aliases for itself and for open remote apps, removed when it quits.

@@ -119,6 +119,8 @@ describe("mock portless", () => {
     await vi.advanceTimersByTimeAsync(300);
     const problems = portlessProblems(snap!);
     expect(problems.map((p) => p.id)).toContain("proxy-down|local");
-    expect(problems.find((p) => p.id === "proxy-down|local")?.fix?.label).toBe("Start the proxy");
+    // The service status is not loaded here, so the fix is the guided
+    // setup's proxy step; with the service installed it starts the proxy.
+    expect(problems.find((p) => p.id === "proxy-down|local")?.fix?.label).toBe("Set up the proxy");
   });
 });
