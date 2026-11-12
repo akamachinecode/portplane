@@ -45,6 +45,7 @@ type Local struct {
 	os       osinfo.Source
 	git      *gitinfo.Lookup
 	configs  *configCache
+	screens  screenCache // Output's recent screens
 	home     string
 
 	mu       sync.Mutex

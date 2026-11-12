@@ -153,3 +153,18 @@ type Excerpt struct {
 	Lines   []string `json:"lines"`
 	Command string   `json:"command"` // shows the full screen in a terminal
 }
+
+// Output is a task's whole terminal screen, for the Output panel (ADR-0021).
+type Output struct {
+	// Screen is what the task's terminal shows now, rows joined by "\n".
+	// Colour and style codes (ANSI SGR sequences) are kept; every other
+	// control sequence is removed, and trailing blank rows are dropped.
+	Screen string `json:"screen"`
+	// Truncated means the start was cut to keep the answer small.
+	Truncated bool `json:"truncated,omitempty"`
+	// RunnerDown means the project's runner is not running, so no task has a
+	// screen to show (`dekit up` starts it).
+	RunnerDown bool `json:"runnerDown,omitempty"`
+	// Command attaches a terminal to the task: dekit -C <root> attach <task>.
+	Command string `json:"command"`
+}
