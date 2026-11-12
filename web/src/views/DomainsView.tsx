@@ -6,8 +6,8 @@ import { StateDot } from "../components/StateDot";
 import { SubNav } from "../components/SubNav";
 import { ViewHeader } from "../components/ViewHeader";
 import { hostsSectionVisible } from "../lib/portless";
-import { DOMAIN_SECTIONS, type DomainSection } from "../lib/router";
-import { DOMAIN_LABELS } from "../shell/nav";
+import type { DomainSection } from "../lib/router";
+import { DOMAIN_LABELS, domainGroupOf } from "../shell/nav";
 import { useShell } from "../shell/ShellContext";
 import { AliasesSection } from "./domains/AliasesSection";
 import { CertificatesSection } from "./domains/CertificatesSection";
@@ -39,6 +39,22 @@ const SECTIONS: Record<DomainSection, { icon: IconName; Section: ComponentType }
   hosts: { icon: "terminal", Section: HostsSection },
   doctor: { icon: "pulse", Section: DoctorSection },
   maintenance: { icon: "gear", Section: MaintenanceSection },
+};
+
+/** What each of portless's pages is for, in a sentence. */
+const GROUP_TEXT: Record<string, ReactNode> = {
+  routes: (
+    <>
+      Every <code>.localhost</code> address portless answers, and the aliases you added for servers it doesn't start.
+    </>
+  ),
+  proxy: (
+    <>
+      The local server behind every <code>.localhost</code> address, its HTTPS certificate, and how your system finds it.
+    </>
+  ),
+  sharing: <>Open an app to someone else: a public link, every device on your network, or a Docker Compose project at its own address.</>,
+  doctor: <>portless checks its own setup and fixes what it can; maintenance keeps its state tidy.</>,
 };
 
 function ProxyPill() {
@@ -79,22 +95,15 @@ function DomainsBody({ picker }: { picker: ReactNode }) {
   // A fix from Health or the palette opens its plan here.
   useIntent("action", (i) => setAction(i.action));
   const showHosts = section === "hosts" || hostsSectionVisible(status ?? null, doctor ?? null);
-  const sections = DOMAIN_SECTIONS.filter((s) => s !== "hosts" || showHosts);
+  const group = domainGroupOf(section);
+  const sections = group.sections.filter((s) => s !== "hosts" || showHosts);
+  const machineName = scope.ms?.machine.name ?? scope.id;
   return (
     <>
       <ViewHeader
-        title="Domains"
-        description={
-          scope.remote ? (
-            <>
-              The <code>.localhost</code> addresses portless gives the apps on {scope.ms?.machine.name ?? scope.id}, and the proxy behind them. You open them here through Portplane.
-            </>
-          ) : (
-            <>
-              The stable <code>.localhost</code> addresses portless gives your apps, and the proxy behind them.
-            </>
-          )
-        }
+        section="portless"
+        title={group.label}
+        description={scope.remote ? <>{GROUP_TEXT[group.id]} On {machineName}; you open its addresses here through Portplane.</> : GROUP_TEXT[group.id]}
         actions={
           <>
             {picker}
@@ -103,11 +112,15 @@ function DomainsBody({ picker }: { picker: ReactNode }) {
         }
       />
       <RemoteStatusBanner />
-      <div className="with-subnav">
-        <SubNav label="Domain sections" items={sections.map((s) => ({ route: { view: "domains", section: s, machine: inUrl }, label: DOMAIN_LABELS[s], icon: SECTIONS[s].icon, current: s === section }))} />
-        <div className="with-subnav-main">
-          <Section />
-        </div>
+      {sections.length > 1 && (
+        <SubNav
+          variant="tabs"
+          label={`${group.label} sections`}
+          items={sections.map((s) => ({ route: { view: "domains", section: s, machine: inUrl }, label: DOMAIN_LABELS[s], icon: SECTIONS[s].icon, current: s === section }))}
+        />
+      )}
+      <div className="with-subnav-main">
+        <Section />
       </div>
       {action && <PlanDialog action={action} onClose={() => setAction(null)} />}
     </>

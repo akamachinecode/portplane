@@ -29,6 +29,16 @@
   backdrop-filter: blur(8px);
 }
 
+/* the macOS window has no title bar: leave the traffic lights their corner */
+:root[data-window="mac"] .ob-top {
+  min-height: max(48px, calc(var(--titlebar-h) + 20px));
+  padding-left: max(var(--space-5), calc(var(--traffic-w) + var(--space-2)));
+}
+
+:root[data-window="mac"] .ob-progress {
+  top: max(48px, calc(var(--titlebar-h) + 20px));
+}
+
 .ob-top-mark {
   border-radius: 6px;
 }

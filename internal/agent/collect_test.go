@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -378,6 +379,57 @@ func TestAppTags(t *testing.T) {
 	} {
 		if got := appTags(&c.task); !reflect.DeepEqual(got, c.want) {
 			t.Errorf("appTags(%+v) = %v, want %v", c.task, got, c.want)
+		}
+	}
+}
+
+// One dekit.yaml for every repository, with the linked worktrees' tasks in a
+// "worktrees/" folder: each worktree shows under its repository, with the
+// branch it has out.
+func TestCollectGroupsWorktreesUnderTheirRepository(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	root := t.TempDir()
+	shop := filepath.Join(root, "shop")
+	if err := os.MkdirAll(shop, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	gitIn := func(dir string, args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		cmd.Env = append(os.Environ(), "GIT_AUTHOR_NAME=t", "GIT_AUTHOR_EMAIL=t@example.com", "GIT_COMMITTER_NAME=t", "GIT_COMMITTER_EMAIL=t@example.com")
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	gitIn(shop, "init", "-q", "-b", "main")
+	gitIn(shop, "commit", "-q", "--allow-empty", "-m", "init")
+	gitIn(shop, "worktree", "add", "-q", "-b", "feat/x", filepath.Join(root, "worktrees", "feat-x"))
+	writeFile(t, root+"/dekit.yaml", `tasks:
+  shop/web:
+    cwd: shop
+    cmd: pnpm dev
+  worktrees/feat-x/web:
+    cwd: worktrees/feat-x
+    cmd: pnpm dev
+`)
+	l := NewLocal(Options{Folders: []string{root}, Dekit: &fakeDekit{}, Portless: fakeRouter{}, OS: fakeOS{}})
+	snap := l.collect(context.Background())
+	if len(snap.Projects) != 1 {
+		t.Fatalf("want one project, got %+v", snap.Projects)
+	}
+	p := snap.Projects[0]
+	if p.Name != "shop" || len(p.Worktrees) != 2 {
+		t.Fatalf("project: %+v", p)
+	}
+	if p.Worktrees[0].Branch != "main" || p.Worktrees[1].Name != "feat-x" || p.Worktrees[1].Branch != "feat/x" {
+		t.Fatalf("worktrees: %+v", p.Worktrees)
+	}
+	for _, a := range snap.Apps {
+		if a.Project != "shop" {
+			t.Errorf("%s is in project %q", a.Task, a.Project)
 		}
 	}
 }

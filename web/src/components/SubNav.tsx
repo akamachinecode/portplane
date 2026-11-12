@@ -8,10 +8,13 @@ export interface SubNavItem {
   current: boolean;
 }
 
-/** Links between a view's sections (Settings, Domains): a column when wide, a scrolling row when narrow. */
-export function SubNav({ label, items }: { label: string; items: SubNavItem[] }) {
+/**
+ * Links between a view's sections: a column when wide and a scrolling row
+ * when narrow (Settings), or a row of tabs along the top (portless's pages).
+ */
+export function SubNav({ label, items, variant = "column" }: { label: string; items: SubNavItem[]; variant?: "column" | "tabs" }) {
   return (
-    <nav className="subnav" aria-label={label}>
+    <nav className={variant === "tabs" ? "subnav subnav-tabs" : "subnav"} aria-label={label}>
       <ul>
         {items.map((item) => (
           <li key={item.label}>

@@ -45,6 +45,14 @@ describe("parseRoute", () => {
     });
   });
 
+  it("decodes a project, with its runner when two share a name", () => {
+    expect(parseRoute("#/project/local/shop")).toEqual({ view: "project", machine: "local", name: "shop" });
+    const runner = encodeURIComponent("/home/dev/code");
+    expect(parseRoute(`#/project/box/shop/${runner}`)).toEqual({ view: "project", machine: "box", name: "shop", runner: "/home/dev/code" });
+    expect(href({ view: "project", machine: "box", name: "my shop", runner: "/r" })).toBe("#/project/box/my%20shop/%2Fr");
+    expect(parseRoute("#/project/local")).toEqual({ view: "apps" });
+  });
+
   it("accepts a missing hash, a missing slash and a trailing slash", () => {
     expect(parseRoute("")).toEqual({ view: "apps" });
     expect(parseRoute("#")).toEqual({ view: "apps" });

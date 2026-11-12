@@ -8,7 +8,7 @@ import { PopMenu, type PopSection } from "./PopMenu";
 const toggle = <T,>(list: T[], v: T) => (list.includes(v) ? list.filter((x) => x !== v) : [...list, v]);
 
 const LAYOUTS = [
-  { value: "cards" as LayoutPref, label: "Cards", icon: "cards" as const },
+  { value: "cards" as LayoutPref, label: "List", icon: "rows" as const },
   { value: "table" as LayoutPref, label: "Table", icon: "table" as const },
 ];
 

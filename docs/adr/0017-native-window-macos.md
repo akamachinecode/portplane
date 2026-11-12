@@ -1,6 +1,6 @@
 # ADR-0017: Show the UI in a native window on macOS; keep the browser window elsewhere
 
-- **Status:** Accepted. The browser window it kept on Linux and Windows is superseded by [ADR-0018](0018-native-window-linux-windows.md).
+- **Status:** Accepted. The browser window it kept on Linux and Windows is superseded by [ADR-0018](0018-native-window-linux-windows.md); the window's title bar is drawn by the page since [ADR-0027](0027-projects-first-layout.md).
 - **Date:** 2026-11-11
 - **Supersedes:** the window part of [ADR-0004](0004-desktop-shell.md) on macOS. The tray, the loopback server and the browser window on Linux and Windows stay as ADR-0004 says.
 

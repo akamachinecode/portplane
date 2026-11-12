@@ -29,7 +29,7 @@ func TestFindMainAndLinkedWorktree(t *testing.T) {
 	git(t, main, "init", "-q")
 	git(t, main, "commit", "-q", "--allow-empty", "-m", "init")
 	wt := filepath.Join(base, "shop-feature")
-	git(t, main, "worktree", "add", "-q", wt)
+	git(t, main, "worktree", "add", "-q", "-b", "feat/x", wt)
 
 	l := NewLookup()
 	r := l.Find(filepath.Join(main, "apps", "web"))
@@ -45,6 +45,17 @@ func TestFindMainAndLinkedWorktree(t *testing.T) {
 	wantRoot, _ := filepath.EvalSymlinks(main)
 	if gotRoot != wantRoot || r.WorktreeName != "shop-feature" || r.Name() != "shop" {
 		t.Fatalf("linked worktree: %+v", r)
+	}
+	if b := r.Branch(); b != "feat/x" {
+		t.Fatalf("linked worktree branch: %q", b)
+	}
+	// The branch is read on each call: a switch shows at once.
+	git(t, wt, "switch", "-q", "-c", "feat/y")
+	if b := l.Find(wt).Branch(); b != "feat/y" {
+		t.Fatalf("branch after a switch: %q", b)
+	}
+	if b := l.Find(main).Branch(); b == "" || b == "feat/x" {
+		t.Fatalf("main checkout branch: %q", b)
 	}
 	if l.Find(base) != nil && l.Find(base).Root == base {
 		t.Fatalf("base is not a repository")

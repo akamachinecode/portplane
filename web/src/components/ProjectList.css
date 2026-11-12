@@ -1,0 +1,201 @@
+/* Projects in a list (ADR-0027): one group per project, full width, its
+   checkouts inside (the main one, then each linked worktree), each with its
+   apps. Groups fold; a linked worktree with nothing running starts folded. */
+
+.projects {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.project {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+.project-failed {
+  border-color: color-mix(in srgb, var(--err) 32%, var(--border));
+}
+
+.project-headless {
+  overflow: hidden;
+}
+
+.project-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 6px 8px 6px 8px;
+}
+
+.project-head > .dot {
+  margin: 0 2px;
+}
+
+.project-title {
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--text-md);
+  font-weight: 620;
+  letter-spacing: -0.005em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-title a {
+  border-radius: 3px;
+  text-decoration: none;
+}
+
+.project-title a:hover {
+  color: var(--accent-text);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.project-meta {
+  flex: none;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+
+.fold {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+}
+
+.fold:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.fold-icon {
+  transition: transform var(--dur-fast) var(--ease);
+}
+
+.fold[aria-expanded="true"] .fold-icon {
+  transform: rotate(90deg);
+}
+
+/* checkouts */
+
+.checkout-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 3px 8px 3px 15px;
+  border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface-2) 50%, var(--surface));
+  color: var(--text-2);
+  font-size: var(--text-sm);
+}
+
+.checkout-head .fold {
+  margin-left: -4px;
+}
+
+.checkout-icon {
+  color: var(--text-3);
+}
+
+.checkout-name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-weight: 560;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.checkout:not(.is-linked) .checkout-name {
+  color: var(--text-2);
+  font-weight: 500;
+}
+
+.branch-chip {
+  flex: none;
+  max-width: 34ch;
+  overflow: hidden;
+  padding: 0 6px;
+  border-radius: 5px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 19px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.checkout-path {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-3);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.checkout.is-folded .checkout-head {
+  color: var(--text-3);
+}
+
+/* rows inside a project line up under the project's state dot, and their
+   names under the checkout's name; the selection box sits in the gutter */
+.project .row-main,
+.project .row-main.has-check {
+  position: relative;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
+  padding-left: 40px;
+}
+
+.project .row-check {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  margin: 0;
+  transform: translateY(-50%);
+}
+
+/* actions: the toggle and the menu always show; the rest on hover */
+.row:not(:hover, :focus-within, .is-cursor) :is(.row-pin:not(.is-pinned), .row-restart) {
+  opacity: 0;
+}
+
+.row-check {
+  transition: opacity var(--dur-fast);
+}
+
+.apps:not(.has-selection) .row:not(:hover, :focus-within, .is-cursor, .is-selected) .row-check {
+  opacity: 0;
+}
+
+@media (hover: none) {
+  .row :is(.row-pin, .row-restart, .row-check) {
+    opacity: 1 !important;
+  }
+}
+
+.project-head .group-actions,
+.checkout-head .group-actions {
+  margin-left: 0;
+}
+
+.checkout-head .count {
+  margin-left: 2px;
+}

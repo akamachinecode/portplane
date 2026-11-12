@@ -191,7 +191,7 @@ function OnboardingFlow() {
     const ok = await updatePreferences((p) => ({ ...p, onboarding: { ...p.onboarding, skipped: true, step } }));
     setLeaving(false);
     if (ok) {
-      toast.info("You can finish setting up any time from the notice on top, or from Settings.");
+      toast.info("Get started, on the Apps page, picks up where you left off.");
       navigate({ view: "apps" });
     }
   };
@@ -203,7 +203,7 @@ function OnboardingFlow() {
   return (
     <OnboardingContext value={ctx}>
       <main className="onboarding" id="main">
-        <header className="ob-top">
+        <header className="ob-top" data-drag-region>
           <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="" width={24} height={24} className="ob-top-mark" />
           <span className="ob-top-name">{remote ? `Set up ${remote}` : "Set up Portplane"}</span>
           <span className="ob-top-step">
@@ -213,7 +213,7 @@ function OnboardingFlow() {
           {step !== "done" && (
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => void skip()} disabled={leaving} aria-busy={leaving || undefined}>
               {leaving && <Spinner size={12} />}
-              {remote ? "Back to machines" : "Skip for now"}
+              {remote ? "Back to machines" : "Back to Portplane"}
             </button>
           )}
         </header>

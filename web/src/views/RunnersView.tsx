@@ -155,6 +155,7 @@ function RunnersBody({ picker }: { picker: ReactNode }) {
   return (
     <>
       <ViewHeader
+        section="dekit"
         title="Runners"
         description={`dekit runs one supervisor per project folder, plus one for ${name ?? "this computer"}. An app can only start while its runner is up.`}
         actions={actions}

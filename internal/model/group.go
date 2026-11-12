@@ -1,45 +1,113 @@
 package model
 
 import (
+	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 )
 
+// JoinRepos gives every app in a git repository the same project, wherever
+// its task is declared: a "worktrees/" folder of a dekit.yaml that covers
+// many repositories, another runner, the repository's own dekit.yaml. The
+// name is the task folder its main checkout's apps share, or the
+// repository's folder name when they name it differently or there are none
+// (only linked worktrees). Group keeps such apps in one project.
+func JoinRepos(apps []App) {
+	names := repoNames(apps)
+	for i := range apps {
+		if apps[i].Repo != "" {
+			apps[i].Project = names[apps[i].Repo]
+		}
+	}
+}
+
+// repoNames maps each repository to its project's name.
+func repoNames(apps []App) map[string]string {
+	seen := map[string]map[string]bool{}
+	first := map[string]string{}
+	for _, a := range apps {
+		if a.Repo == "" {
+			continue
+		}
+		if _, ok := seen[a.Repo]; !ok {
+			seen[a.Repo] = map[string]bool{}
+		}
+		if a.Worktree != "" {
+			continue
+		}
+		seen[a.Repo][a.Project] = true
+		if _, ok := first[a.Repo]; !ok {
+			first[a.Repo] = a.Project
+		}
+	}
+	names := map[string]string{}
+	for repo, ps := range seen {
+		if len(ps) == 1 {
+			names[repo] = first[repo]
+		} else {
+			names[repo] = filepath.Base(repo)
+		}
+	}
+	return names
+}
+
 // Group arranges apps into projects and worktrees for display. Projects with
 // something running come first; otherwise everything keeps config order.
+// Apps in a git repository form one project (JoinRepos names it), even from
+// several runners; the others group by runner and task folder.
 func Group(apps []App) []Project {
 	type wtAcc struct {
-		wt    Worktree
-		order int
-		tasks []string
+		wt      Worktree
+		order   int
+		tasks   []string
+		runners map[string]bool
 	}
 	type projAcc struct {
-		p     Project
-		order int
-		wts   map[string]*wtAcc
-		tasks []string
+		p       Project
+		order   int
+		wts     map[string]*wtAcc
+		tasks   []string
+		runners []string
+		home    bool // the runner was set by a main checkout app
+	}
+	keyOf := func(a App) string {
+		if a.Repo != "" {
+			return "\x01" + a.Repo
+		}
+		return a.Runner + "\x00" + a.Project
 	}
 	byKey := map[string]*projAcc{}
 	var keys []string
 	for _, a := range apps {
-		key := a.Runner + "\x00" + a.Project
+		key := keyOf(a)
 		pa, ok := byKey[key]
 		if !ok {
 			pa = &projAcc{p: Project{Name: a.Project, Runner: a.Runner}, order: a.Order, wts: map[string]*wtAcc{}}
 			byKey[key] = pa
 			keys = append(keys, key)
 		}
+		if a.Worktree == "" && !pa.home {
+			pa.p.Runner, pa.home = a.Runner, true
+		}
+		if pa.p.Repo == "" {
+			pa.p.Repo = a.Repo
+		}
+		if !slices.Contains(pa.runners, a.Runner) {
+			pa.runners = append(pa.runners, a.Runner)
+		}
 		if a.Order < pa.order {
 			pa.order = a.Order
 		}
 		wa, ok := pa.wts[a.Worktree]
 		if !ok {
-			wa = &wtAcc{wt: Worktree{Name: a.Worktree}, order: a.Order}
+			wa = &wtAcc{wt: Worktree{Name: a.Worktree, Path: a.Checkout, Branch: a.Branch}, order: a.Order, runners: map[string]bool{}}
 			pa.wts[a.Worktree] = wa
 		}
 		if a.Order < wa.order {
 			wa.order = a.Order
 		}
+		wa.runners[a.Runner] = true
 		wa.wt.Apps = append(wa.wt.Apps, a.ID)
 		wa.tasks = append(wa.tasks, a.Task)
 		pa.tasks = append(pa.tasks, a.Task)
@@ -55,10 +123,20 @@ func Group(apps []App) []Project {
 	var out []*projAcc
 	for _, k := range keys {
 		pa := byKey[k]
-		pa.p.Prefix = CommonPrefix(pa.tasks)
+		if len(pa.runners) > 1 {
+			// Task paths of two runners share no folder that an action could use.
+			pa.p.Runners = pa.runners
+		} else {
+			pa.p.Prefix = CommonPrefix(pa.tasks)
+		}
 		var wts []*wtAcc
 		for _, wa := range pa.wts {
-			wa.wt.Prefix = CommonPrefix(wa.tasks)
+			if len(wa.runners) == 1 {
+				for r := range wa.runners {
+					wa.wt.Runner = r
+				}
+				wa.wt.Prefix = CommonPrefix(wa.tasks)
+			}
 			wts = append(wts, wa)
 		}
 		sort.SliceStable(wts, func(i, j int) bool {
@@ -105,7 +183,7 @@ func Group(apps []App) []Project {
 		for j := range p.Worktrees {
 			wt := &p.Worktrees[j]
 			all = append(all, wt.Apps...)
-			if wt.Prefix != "" && clash(p.Runner, wt.Prefix, wt.Apps) {
+			if wt.Prefix != "" && clash(wt.Runner, wt.Prefix, wt.Apps) {
 				wt.Prefix = ""
 			}
 		}

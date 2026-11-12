@@ -189,6 +189,21 @@ func (l *Local) collect(ctx context.Context) model.MachineSnapshot {
 	for _, t := range tasks {
 		l.describe(t, tasks, routeByPID, routeByPort, proxy, listening, claimed)
 	}
+	// The branch each checkout has out, read once per checkout and
+	// collection (git switch changes it at any time).
+	branches := map[string]string{}
+	for _, t := range tasks {
+		a := &t.app
+		if a.Checkout == "" {
+			continue
+		}
+		b, ok := branches[a.Checkout]
+		if !ok {
+			b = l.git.Find(a.Dir).Branch()
+			branches[a.Checkout] = b
+		}
+		a.Branch = b
+	}
 	for _, t := range tasks {
 		t.app.State, t.app.Detail = deriveState(t, tasks, listening)
 		snap.Apps = append(snap.Apps, t.app)
@@ -228,6 +243,7 @@ func (l *Local) collect(ctx context.Context) model.MachineSnapshot {
 		return snap.OtherPorts[i].Port < snap.OtherPorts[j].Port
 	})
 
+	model.JoinRepos(snap.Apps)
 	snap.Projects = model.Group(snap.Apps)
 	snap.UpdatedAt = time.Now().UTC()
 	return snap
@@ -410,6 +426,7 @@ func (l *Local) describe(t *task, all []*task, routeByPID, routeByPort map[int]p
 	repo := l.git.Find(a.Dir)
 	if repo != nil {
 		a.Worktree = repo.WorktreeName
+		a.Repo, a.Checkout = repo.Root, repo.Worktree
 	}
 	switch {
 	case strings.Contains(a.Task, "/"):

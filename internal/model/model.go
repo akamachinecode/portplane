@@ -64,13 +64,20 @@ type Target struct {
 
 // App is one dekit task.
 type App struct {
-	ID        string   `json:"id"` // stable within a machine: runner root + "#" + task path
-	Runner    string   `json:"runner"`
-	Task      string   `json:"task"`
-	Label     string   `json:"label"`
-	Kind      string   `json:"kind"` // service or job
-	Project   string   `json:"project"`
-	Worktree  string   `json:"worktree,omitempty"` // empty for the main checkout
+	ID       string `json:"id"` // stable within a machine: runner root + "#" + task path
+	Runner   string `json:"runner"`
+	Task     string `json:"task"`
+	Label    string `json:"label"`
+	Kind     string `json:"kind"` // service or job
+	Project  string `json:"project"`
+	Worktree string `json:"worktree,omitempty"` // empty for the main checkout
+	// Repo is the main checkout of the git repository the app's folder is in,
+	// Checkout the checkout itself (Repo for the main one, a linked worktree's
+	// folder otherwise), and Branch what that checkout has out. Empty outside
+	// git.
+	Repo      string   `json:"repo,omitempty"`
+	Checkout  string   `json:"checkout,omitempty"`
+	Branch    string   `json:"branch,omitempty"`
 	Dir       string   `json:"dir,omitempty"`
 	Command   []string `json:"command,omitempty"`
 	Deps      []string `json:"deps,omitempty"`
@@ -152,10 +159,16 @@ type Snapshot struct {
 	Version  uint64            `json:"version"` // increases on every change
 }
 
-// Project groups the apps of one project, by worktree.
+// Project groups the apps of one project, by worktree. A project is a git
+// repository when its apps live in one: its linked worktrees join it from any
+// folder of any dekit.yaml. Apps outside git group by their task folder.
 type Project struct {
-	Name      string     `json:"name"`
-	Runner    string     `json:"runner"`
+	Name   string `json:"name"`
+	Runner string `json:"runner"` // the runner of its main checkout's apps (its first one's otherwise)
+	// Runners lists every runner its apps come from when there is more than
+	// one (a worktree's tasks in another dekit.yaml); empty otherwise.
+	Runners   []string   `json:"runners,omitempty"`
+	Repo      string     `json:"repo,omitempty"`   // the repository's main checkout
 	Prefix    string     `json:"prefix,omitempty"` // shared task path prefix, for project-wide actions
 	Running   int        `json:"running"`          // services alive
 	Total     int        `json:"total"`            // services (jobs are steps, not counted)
@@ -164,7 +177,10 @@ type Project struct {
 
 // Worktree groups the apps of one checkout.
 type Worktree struct {
-	Name    string   `json:"name"` // empty for the main checkout
+	Name    string   `json:"name"`             // empty for the main checkout
+	Path    string   `json:"path,omitempty"`   // the checkout's folder
+	Branch  string   `json:"branch,omitempty"` // what it has out now
+	Runner  string   `json:"runner,omitempty"` // its apps' runner, when they share one
 	Prefix  string   `json:"prefix,omitempty"`
 	Running int      `json:"running"`
 	Apps    []string `json:"apps"` // App IDs, in config order

@@ -4,7 +4,8 @@ import { appHref, copyableUrl, isAlive, isVisible } from "../lib/apps";
 import { inferHome, shortenPath } from "../lib/format";
 import { appRoute, DOMAIN_SECTIONS, navigate, SETTINGS_SECTIONS } from "../lib/router";
 import { registerCommandSource, type Command, type CommandContext } from "./commands";
-import { DOMAIN_LABELS, NAV, SETTINGS_LABELS, SETTINGS_NAV } from "./nav";
+import { sidebarProjects } from "../lib/projects";
+import { DOMAIN_GROUPS, DOMAIN_LABELS, NAV, SETTINGS_LABELS, SETTINGS_NAV } from "./nav";
 import { isSidebarCollapsed, setSidebarCollapsed } from "./sidebarState";
 
 // The palette's built-in commands. Other files add theirs the same way:
@@ -19,11 +20,20 @@ function navigationCommands(): Command[] {
     keywords: item.view === "settings" ? ["preferences", "options"] : undefined,
     run: () => navigate(item.route),
   }));
+  const groups = DOMAIN_GROUPS.map<Command>((g) => ({
+    id: `go.portless.${g.id}`,
+    title: `portless: ${g.label}`,
+    group: "Go to",
+    icon: g.icon,
+    keywords: ["domains", ...g.sections.map((s) => DOMAIN_LABELS[s])],
+    run: () => navigate({ view: "domains", section: g.sections[0] }),
+  }));
   const domains = DOMAIN_SECTIONS.map<Command>((section) => ({
     id: `go.domains.${section}`,
-    title: `Domains: ${DOMAIN_LABELS[section]}`,
+    title: `portless: ${DOMAIN_LABELS[section]}`,
     group: "Go to",
     icon: "globe",
+    keywords: ["domains"],
     searchOnly: true,
     run: () => navigate({ view: "domains", section }),
   }));
@@ -35,7 +45,23 @@ function navigationCommands(): Command[] {
     searchOnly: true,
     run: () => navigate({ view: "settings", section }),
   }));
-  return [...views, ...domains, ...settings];
+  return [...views.filter((v) => v.id !== "go.domains"), ...groups, ...domains, ...settings];
+}
+
+/** Every project, to open its page. */
+function projectCommands(ctx: CommandContext): Command[] {
+  if (!ctx.snapshot) return [];
+  const multi = ctx.snapshot.machines.length > 1;
+  return sidebarProjects(ctx.snapshot).map((p) => ({
+    id: `project.${p.key}`,
+    title: p.project.name,
+    group: "Projects",
+    icon: "box",
+    hint: [p.running > 0 ? `${p.running} of ${p.total} running` : `${p.total} ${p.total === 1 ? "app" : "apps"}`, multi ? p.ms.machine.name : ""].filter(Boolean).join(" · "),
+    keywords: [...p.project.worktrees.map((w) => w.name), ...p.project.worktrees.map((w) => w.branch ?? "")].filter(Boolean),
+    searchOnly: true,
+    run: () => navigate(p.route),
+  }));
 }
 
 function where(ms: MachineSnapshot, app: App): string {
@@ -230,7 +256,7 @@ function settingsCommands(ctx: CommandContext): Command[] {
   const collapsed = isSidebarCollapsed();
   out.push({
     id: "sidebar.toggle",
-    title: collapsed ? "Expand the sidebar" : "Collapse the sidebar",
+    title: collapsed ? "Show the sidebar" : "Hide the sidebar",
     group: "Settings",
     icon: "sidebar",
     searchOnly: true,
@@ -238,7 +264,7 @@ function settingsCommands(ctx: CommandContext): Command[] {
   });
   out.push({
     id: "onboarding.open",
-    title: "Show the welcome screen",
+    title: "Open the guided setup",
     group: "Settings",
     icon: "wand",
     keywords: ["onboarding", "guided setup", "first run"],
@@ -249,6 +275,7 @@ function settingsCommands(ctx: CommandContext): Command[] {
 }
 
 registerCommandSource("builtin.navigation", navigationCommands);
+registerCommandSource("builtin.projects", projectCommands);
 registerCommandSource("builtin.apps", appsCommands);
 registerCommandSource("builtin.actions", actionCommands);
 registerCommandSource("builtin.settings", settingsCommands);

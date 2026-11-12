@@ -91,6 +91,28 @@ function Appearance() {
   );
 }
 
+/** Brings back "Get started" on the Apps page after it was hidden. */
+function ShowChecklist() {
+  const { preferences, updatePreferences } = useShell();
+  if (preferences.status !== "ok") return null;
+  const hidden = preferences.value.onboarding.choices?.checklist === "hidden";
+  return (
+    <Switch
+      label="Show Get started on the Apps page"
+      description="The steps from nothing to your first app at https://….localhost, ticked as each one is done. It hides by itself once they all are."
+      checked={!hidden}
+      onChange={(show) =>
+        void updatePreferences((p) => {
+          const choices = { ...p.onboarding.choices };
+          if (show) delete choices.checklist;
+          else choices.checklist = "hidden";
+          return { ...p, onboarding: { ...p.onboarding, choices } };
+        })
+      }
+    />
+  );
+}
+
 export function GeneralSection() {
   return (
     <>
@@ -99,6 +121,7 @@ export function GeneralSection() {
       </SettingsGroup>
       <Appearance />
       <SettingsGroup title="Guided setup">
+        <ShowChecklist />
         <SettingRow label="Run setup again" description="Checks your computer, installs what's missing, and walks through the proxy, your folders and your apps again.">
           <a className="btn" href={href({ view: "onboarding", step: "welcome" })}>
             <Icon name="wand" size={14} />

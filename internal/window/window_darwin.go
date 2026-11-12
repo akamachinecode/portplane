@@ -97,24 +97,78 @@ static NSMenu *ppMenu(id owner) {
 	return bar;
 }
 
-@interface PPWindow : NSObject <NSWindowDelegate, WKNavigationDelegate, WKUIDelegate>
+// The window has no visible title bar (ADR-0027): the page runs under it,
+// from the top edge, and the traffic lights sit over the page's sidebar.
+// The page learns where they are from data attributes and CSS variables on
+// <html>, and asks for a window drag or a zoom through a script message,
+// since a WKWebView has no -webkit-app-region:
+//
+//   data-window="mac"            set before the page's scripts run
+//   data-fullscreen="true"       while in full screen (no traffic lights)
+//   data-active="true|false"     whether the window is the key window
+//   --titlebar-h, --traffic-w    the title bar's height, and where the
+//                                traffic lights end, in CSS pixels
+//   webkit.messageHandlers.portplane.postMessage("drag" | "zoom")
+static NSString *const ppBridge = @"portplane";
+
+@interface PPWindow : NSObject <NSWindowDelegate, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandler>
 @property (strong) NSURL *home;
 @property (strong) NSWindow *window;
 @property (strong) WKWebView *web;
 @property (strong) WKWebsiteDataStore *store;
+@property (strong) NSEvent *lastDown;
+@property (strong) id downMonitor;
 @end
 
 @implementation PPWindow
 
+// The JavaScript that tells the page where the title bar and the traffic
+// lights are, as of now.
+- (NSString *)chromeScript {
+	CGFloat bar = 28;
+	CGFloat traffic = 78;
+	NSWindow *w = self.window;
+	if (w != nil) {
+		CGFloat h = NSHeight(w.frame) - NSHeight(w.contentLayoutRect);
+		if (h > 0) {
+			bar = h;
+		}
+		NSButton *zoom = [w standardWindowButton:NSWindowZoomButton];
+		if (zoom != nil && zoom.superview != nil) {
+			NSRect f = [zoom convertRect:zoom.bounds toView:nil];
+			traffic = NSMaxX(f) + 12;
+		}
+	}
+	BOOL full = w != nil && (w.styleMask & NSWindowStyleMaskFullScreen) != 0;
+	BOOL active = w == nil || w.isKeyWindow;
+	return [NSString stringWithFormat:
+		@"(function(){var d=document.documentElement;d.dataset.window='mac';"
+		 "d.style.setProperty('--titlebar-h','%.0fpx');d.style.setProperty('--traffic-w','%.0fpx');"
+		 "d.dataset.active='%@';"
+		 "if(%d){d.dataset.fullscreen='true'}else{delete d.dataset.fullscreen}})();",
+		bar, traffic, active ? @"true" : @"false", full ? 1 : 0];
+}
+
+- (void)updateChrome {
+	if (self.web != nil) {
+		[self.web evaluateJavaScript:[self chromeScript] completionHandler:nil];
+	}
+}
+
 - (void)show {
 	if (self.window == nil) {
 		NSWindowStyleMask style = NSWindowStyleMaskTitled | NSWindowStyleMaskClosable |
-			NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable;
+			NSWindowStyleMaskMiniaturizable | NSWindowStyleMaskResizable |
+			NSWindowStyleMaskFullSizeContentView;
 		NSWindow *w = [[NSWindow alloc] initWithContentRect:NSMakeRect(0, 0, 1120, 760)
 		                                          styleMask:style
 		                                            backing:NSBackingStoreBuffered
 		                                              defer:NO];
 		w.title = @"Portplane";
+		// The title stays for the Window menu and Mission Control; the bar
+		// itself is the page's (see ppBridge).
+		w.titleVisibility = NSWindowTitleHidden;
+		w.titlebarAppearsTransparent = YES;
 		w.releasedWhenClosed = NO;
 		w.delegate = self;
 		w.minSize = NSMakeSize(560, 400);
@@ -132,6 +186,12 @@ static NSMenu *ppMenu(id owner) {
 	if (self.web == nil) {
 		WKWebViewConfiguration *c = [WKWebViewConfiguration new];
 		c.websiteDataStore = self.store;
+		WKUserContentController *ucc = [WKUserContentController new];
+		[ucc addUserScript:[[WKUserScript alloc] initWithSource:[self chromeScript]
+			injectionTime:WKUserScriptInjectionTimeAtDocumentStart
+			forMainFrameOnly:YES]];
+		[ucc addScriptMessageHandler:self name:ppBridge];
+		c.userContentController = ucc;
 		WKWebView *web = [[WKWebView alloc] initWithFrame:self.window.contentView.bounds configuration:c];
 		web.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
 		web.navigationDelegate = self;
@@ -143,6 +203,17 @@ static NSMenu *ppMenu(id owner) {
 		self.window.contentView = web;
 		self.web = web;
 		[web loadRequest:[NSURLRequest requestWithURL:self.home]];
+		// A drag starts from the mouse-down that the page reports, so keep the
+		// last one in this window until its mouse-up.
+		__weak PPWindow *weakSelf = self;
+		self.downMonitor = [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskLeftMouseDown | NSEventMaskLeftMouseUp
+			handler:^NSEvent *(NSEvent *e) {
+				PPWindow *me = weakSelf;
+				if (me != nil && e.window == me.window) {
+					me.lastDown = e.type == NSEventTypeLeftMouseDown ? e : nil;
+				}
+				return e;
+			}];
 	}
 	// A Dock icon and a menu bar while the window is open; back to a
 	// menu-bar-only app when it closes (Info.plist sets LSUIElement).
@@ -165,10 +236,65 @@ static NSMenu *ppMenu(id owner) {
 	self.window.title = t.length > 0 ? t : @"Portplane";
 }
 
+// The page asks to move the window (a mouse-down on its title bar area) or
+// to zoom it (a double-click there, doing what System Settings says).
+- (void)userContentController:(WKUserContentController *)ucc didReceiveScriptMessage:(WKScriptMessage *)message {
+	if (![message.body isKindOfClass:[NSString class]] || self.window == nil) {
+		return;
+	}
+	NSString *kind = message.body;
+	if ((self.window.styleMask & NSWindowStyleMaskFullScreen) != 0) {
+		return;
+	}
+	if ([kind isEqualToString:@"drag"]) {
+		if (self.lastDown != nil) {
+			[self.window performWindowDragWithEvent:self.lastDown];
+		}
+	} else if ([kind isEqualToString:@"zoom"]) {
+		NSString *action = [[NSUserDefaults standardUserDefaults] stringForKey:@"AppleActionOnDoubleClick"];
+		if ([action isEqualToString:@"Minimize"]) {
+			[self.window performMiniaturize:nil];
+		} else if (![action isEqualToString:@"None"]) {
+			[self.window performZoom:nil];
+		}
+	}
+}
+
+- (void)webView:(WKWebView *)web didFinishNavigation:(WKNavigation *)navigation {
+	[self updateChrome];
+}
+
+- (void)windowDidEnterFullScreen:(NSNotification *)note {
+	[self updateChrome];
+}
+
+- (void)windowDidExitFullScreen:(NSNotification *)note {
+	[self updateChrome];
+}
+
+- (void)windowDidChangeBackingProperties:(NSNotification *)note {
+	[self updateChrome];
+}
+
+- (void)windowDidBecomeKey:(NSNotification *)note {
+	[self updateChrome];
+}
+
+- (void)windowDidResignKey:(NSNotification *)note {
+	[self updateChrome];
+}
+
 - (void)windowWillClose:(NSNotification *)note {
+	if (self.downMonitor != nil) {
+		[NSEvent removeMonitor:self.downMonitor];
+		self.downMonitor = nil;
+	}
+	self.lastDown = nil;
 	// Drop the page: a closed window keeps no event stream open, so
 	// Portplane goes back to its slow polling.
 	if (self.web != nil) {
+		// The content controller keeps its handler: let go of this object.
+		[self.web.configuration.userContentController removeScriptMessageHandlerForName:ppBridge];
 		[self.web removeObserver:self forKeyPath:@"title"];
 		[self.web stopLoading];
 		self.web.navigationDelegate = nil;

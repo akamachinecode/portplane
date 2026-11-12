@@ -87,17 +87,25 @@ function app(p: Partial<App> & Pick<App, "task" | "label" | "project" | "state" 
 }
 
 export function mockApps(): App[] {
+  const mono = { repo: `${ROOT}/my-monorepo`, checkout: `${ROOT}/my-monorepo`, branch: "main" };
+  const monoWt = { repo: `${ROOT}/my-monorepo`, checkout: `${ROOT}/my-monorepo-checkout`, branch: "feat/checkout" };
+  const blog = { repo: `${ROOT}/blog`, checkout: `${ROOT}/blog`, branch: "main" };
+  // A worktree whose tasks sit in a "worktrees/" folder of the same
+  // dekit.yaml: the agent puts it under its repository (JoinWorktrees).
+  const blogWt = { repo: `${ROOT}/blog`, checkout: `${ROOT}/worktrees/redesign`, branch: "design/new", worktree: "redesign" };
   return [
-    app({ task: "my-monorepo/install", label: "install", kind: "job", project: "my-monorepo", dir: `${ROOT}/my-monorepo`, command: ["pnpm", "install"], state: "done", rawState: "exited", order: 0 }),
-    app({ task: "my-monorepo/web", label: "web", project: "my-monorepo", dir: `${ROOT}/my-monorepo/apps/web`, command: ["portless", "my-monorepo", "pnpm", "run", "dev"], deps: ["my-monorepo/install"], tags: ["frontend", "autostart"], state: "on", rawState: "running", url: "https://my-monorepo.localhost", hostname: "my-monorepo.localhost", port: 4514, ports: [4514], pid: 41201, order: 1 }),
-    app({ task: "my-monorepo/api", label: "api", project: "my-monorepo", dir: `${ROOT}/my-monorepo/apps/api`, command: ["portless", "api.my-monorepo", "pnpm", "run", "dev"], deps: ["my-monorepo/install"], tags: ["backend", "autostart"], state: "on", rawState: "running", url: "https://api.my-monorepo.localhost", hostname: "api.my-monorepo.localhost", port: 4515, ports: [4515, 9229], pid: 41202, order: 2 }),
-    app({ task: "my-monorepo/admin", label: "admin", project: "my-monorepo", dir: `${ROOT}/my-monorepo/apps/admin`, command: ["portless", "admin.my-monorepo", "pnpm", "run", "dev"], deps: ["my-monorepo/install"], tags: ["frontend"], state: "failed", rawState: "exited", detail: "exit code 3", hostname: "admin.my-monorepo.localhost", order: 3 }),
-    app({ task: "my-monorepo/docs", label: "docs", project: "my-monorepo", dir: `${ROOT}/my-monorepo/apps/docs`, tags: ["docs"], state: "starting", rawState: "running", detail: "waiting for port", hostname: "docs.my-monorepo.localhost", pid: 41260, order: 4 }),
-    app({ task: "my-monorepo-checkout/install", label: "install", kind: "job", project: "my-monorepo", worktree: "checkout", dir: `${ROOT}/my-monorepo-checkout`, state: "starting", rawState: "running", detail: "running", pid: 41310, order: 5 }),
-    app({ task: "my-monorepo-checkout/web", label: "web", project: "my-monorepo", worktree: "checkout", dir: `${ROOT}/my-monorepo-checkout/apps/web`, deps: ["my-monorepo-checkout/install"], tags: ["frontend"], state: "starting", rawState: "waiting", detail: "waiting for install", hostname: "checkout.my-monorepo.localhost", order: 6 }),
-    app({ task: "my-monorepo-checkout/api", label: "api", project: "my-monorepo", worktree: "checkout", dir: `${ROOT}/my-monorepo-checkout/apps/api`, tags: ["backend"], state: "off", rawState: "stopped", hostname: "api.checkout.my-monorepo.localhost", order: 7 }),
-    app({ task: "blog/site", label: "site", project: "blog", dir: `${ROOT}/blog`, tags: ["frontend"], state: "off", rawState: "stopped", hostname: "blog.localhost", order: 8 }),
-    app({ task: "blog/studio", label: "studio", project: "blog", dir: `${ROOT}/blog/studio`, tags: ["cms"], state: "off", rawState: "stopped", hostname: "studio.blog.localhost", order: 9 }),
+    app({ task: "my-monorepo/install", label: "install", kind: "job", project: "my-monorepo", ...mono, dir: `${ROOT}/my-monorepo`, command: ["pnpm", "install"], state: "done", rawState: "exited", order: 0 }),
+    app({ task: "my-monorepo/web", label: "web", project: "my-monorepo", ...mono, dir: `${ROOT}/my-monorepo/apps/web`, command: ["portless", "my-monorepo", "pnpm", "run", "dev"], deps: ["my-monorepo/install"], tags: ["frontend", "autostart"], state: "on", rawState: "running", url: "https://my-monorepo.localhost", hostname: "my-monorepo.localhost", port: 4514, ports: [4514], pid: 41201, order: 1 }),
+    app({ task: "my-monorepo/api", label: "api", project: "my-monorepo", ...mono, dir: `${ROOT}/my-monorepo/apps/api`, command: ["portless", "api.my-monorepo", "pnpm", "run", "dev"], deps: ["my-monorepo/install"], tags: ["backend", "autostart"], state: "on", rawState: "running", url: "https://api.my-monorepo.localhost", hostname: "api.my-monorepo.localhost", port: 4515, ports: [4515, 9229], pid: 41202, order: 2 }),
+    app({ task: "my-monorepo/admin", label: "admin", project: "my-monorepo", ...mono, dir: `${ROOT}/my-monorepo/apps/admin`, command: ["portless", "admin.my-monorepo", "pnpm", "run", "dev"], deps: ["my-monorepo/install"], tags: ["frontend"], state: "failed", rawState: "exited", detail: "exit code 3", hostname: "admin.my-monorepo.localhost", order: 3 }),
+    app({ task: "my-monorepo/docs", label: "docs", project: "my-monorepo", ...mono, dir: `${ROOT}/my-monorepo/apps/docs`, tags: ["docs"], state: "starting", rawState: "running", detail: "waiting for port", hostname: "docs.my-monorepo.localhost", pid: 41260, order: 4 }),
+    app({ task: "my-monorepo-checkout/install", label: "install", kind: "job", project: "my-monorepo", worktree: "checkout", ...monoWt, dir: `${ROOT}/my-monorepo-checkout`, state: "starting", rawState: "running", detail: "running", pid: 41310, order: 5 }),
+    app({ task: "my-monorepo-checkout/web", label: "web", project: "my-monorepo", worktree: "checkout", ...monoWt, dir: `${ROOT}/my-monorepo-checkout/apps/web`, deps: ["my-monorepo-checkout/install"], tags: ["frontend"], state: "starting", rawState: "waiting", detail: "waiting for install", hostname: "checkout.my-monorepo.localhost", order: 6 }),
+    app({ task: "my-monorepo-checkout/api", label: "api", project: "my-monorepo", worktree: "checkout", ...monoWt, dir: `${ROOT}/my-monorepo-checkout/apps/api`, tags: ["backend"], state: "off", rawState: "stopped", hostname: "api.checkout.my-monorepo.localhost", order: 7 }),
+    app({ task: "blog/site", label: "site", project: "blog", ...blog, dir: `${ROOT}/blog`, tags: ["frontend"], state: "off", rawState: "stopped", hostname: "blog.localhost", order: 8 }),
+    app({ task: "blog/studio", label: "studio", project: "blog", ...blog, dir: `${ROOT}/blog/studio`, tags: ["cms"], state: "off", rawState: "stopped", hostname: "studio.blog.localhost", order: 9 }),
+    app({ task: "worktrees/redesign/site", label: "site", project: "blog", ...blogWt, dir: `${ROOT}/worktrees/redesign`, tags: ["frontend"], state: "off", rawState: "stopped", hostname: "redesign.blog.localhost", order: 10 }),
+    app({ task: "worktrees/redesign/studio", label: "studio", project: "blog", ...blogWt, dir: `${ROOT}/worktrees/redesign/studio`, tags: ["cms"], state: "off", rawState: "stopped", hostname: "studio.redesign.blog.localhost", order: 11 }),
   ];
 }
 
@@ -141,27 +149,58 @@ export function mockOtherPorts(): Port[] {
   ];
 }
 
+/** The longest folder prefix ("a/b/") every task path shares, like model.CommonPrefix. */
+function commonPrefix(tasks: string[]): string {
+  if (!tasks.length) return "";
+  const dir = (t: string) => (t.includes("/") ? t.slice(0, t.lastIndexOf("/")).split("/") : []);
+  let common = dir(tasks[0]);
+  for (const t of tasks.slice(1)) {
+    const d = dir(t);
+    let n = 0;
+    while (n < common.length && n < d.length && common[n] === d[n]) n++;
+    common = common.slice(0, n);
+  }
+  return common.length ? `${common.join("/")}/` : "";
+}
+
 /** Groups like internal/model.Group, enough for the mock (the server does this for real). */
 export function groupForMock(apps: App[]): MachineSnapshot["projects"] {
+  // Every app of a git repository is one project, wherever its task sits
+  // (model.JoinRepos names it): the agent already renamed them.
+  const keyOf = (a: App) => (a.repo ? `repo\u0000${a.repo}` : `${a.runner}\u0000${a.project}`);
   const byProject = new Map<string, App[]>();
-  for (const a of apps) byProject.set(a.project, [...(byProject.get(a.project) ?? []), a]);
+  for (const a of apps) byProject.set(keyOf(a), [...(byProject.get(keyOf(a)) ?? []), a]);
   const alive = (a: App) => a.kind !== "job" && ["on", "starting", "stopping"].includes(a.state);
-  const projects = [...byProject.entries()].map(([name, list]) => {
+  const clash = (runner: string, prefix: string, members: App[]) => apps.some((a) => a.runner === runner && a.task.startsWith(prefix) && !members.includes(a));
+  const projects = [...byProject.values()].map((list) => {
     const wts = new Map<string, App[]>();
     for (const a of list) wts.set(a.worktree ?? "", [...(wts.get(a.worktree ?? "") ?? []), a]);
-    const multiWorktree = wts.size > 1;
+    const runners = [...new Set(list.map((a) => a.runner))];
+    const main = list.find((a) => !a.worktree) ?? list[0];
+    const prefix = runners.length === 1 ? commonPrefix(list.map((a) => a.task)) : "";
     return {
-      name,
-      runner: list[0].runner,
-      prefix: multiWorktree ? undefined : `${list[0].task.split("/")[0]}/`,
+      name: main.project,
+      runner: main.runner,
+      ...(runners.length > 1 ? { runners } : {}),
+      ...(main.repo ? { repo: main.repo } : {}),
+      prefix: prefix && !clash(main.runner, prefix, list) ? prefix : undefined,
       running: list.filter(alive).length,
-      total: list.length,
-      worktrees: [...wts.entries()].map(([wt, wl]) => ({
-        name: wt,
-        prefix: `${wl[0].task.split("/")[0]}/`,
-        running: wl.filter(alive).length,
-        apps: wl.map((a) => a.id),
-      })),
+      total: list.filter((a) => a.kind !== "job").length,
+      worktrees: [...wts.entries()]
+        .sort(([a], [b]) => Number(a !== "") - Number(b !== ""))
+        .map(([wt, wl]) => {
+          const wtRunners = new Set(wl.map((a) => a.runner));
+          const p = wtRunners.size === 1 ? commonPrefix(wl.map((a) => a.task)) : "";
+          return {
+            name: wt,
+            ...(wl[0].checkout ? { path: wl[0].checkout } : {}),
+            ...(wl[0].branch ? { branch: wl[0].branch } : {}),
+            ...(wtRunners.size === 1 ? { runner: wl[0].runner } : {}),
+            prefix: p && !clash(wl[0].runner, p, wl) ? p : undefined,
+            running: wl.filter(alive).length,
+            apps: wl.map((a) => a.id),
+          };
+        }),
       order: Math.min(...list.map((a) => a.order)),
     };
   });

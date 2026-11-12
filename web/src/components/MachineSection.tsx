@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import type { MachineSnapshot } from "../api/types";
+import type { Folds } from "../hooks/useFolds";
 import { inferHome } from "../lib/format";
 import { navigate } from "../lib/router";
 import type { AppEntry, ProjectGroup } from "../views/apps/model";
@@ -22,6 +23,8 @@ export interface MachineBodyProps {
   filtering: boolean;
   /** Renders the projects (cards, or the table's rows). */
   renderProjects(projects: ProjectGroup[]): React.ReactNode;
+  /** More than one machine: name this one above its projects. */
+  showHeader?: boolean;
 }
 
 /** What a machine with no app to show says instead (first run, no dekit.yaml). */
@@ -56,7 +59,7 @@ function RemoteStatus({ ms }: { ms: MachineSnapshot }) {
 }
 
 /** A machine in the Apps view: its name and state, its projects, and its other ports. */
-export function MachineSection({ ms, projects, filtering, renderProjects }: MachineBodyProps) {
+export function MachineSection({ ms, projects, filtering, renderProjects, showHeader = true }: MachineBodyProps) {
   const { openEditMachine, openRemoveMachine } = useApp();
   const { machine } = ms;
   const home = useMemo(
@@ -73,7 +76,7 @@ export function MachineSection({ ms, projects, filtering, renderProjects }: Mach
 
   return (
     <section className="machine" aria-labelledby={headingId}>
-      <header className="machine-head">
+      <header className={showHeader ? "machine-head" : "machine-head sr-only"}>
         <Icon name="machine" size={15} className="machine-icon" />
         <h2 className="machine-name" id={headingId}>
           {machine.name}
@@ -103,12 +106,12 @@ export function MachineSection({ ms, projects, filtering, renderProjects }: Mach
   );
 }
 
-/** Cards mode: a grid of project cards. */
-export function ProjectGrid({ ms, projects, extras }: { ms: MachineSnapshot; projects: ProjectGroup[]; extras(e: AppEntry): RowExtras }) {
+/** List mode: one foldable group per project, worktrees inside. */
+export function ProjectGrid({ ms, projects, extras, folds, forceOpen }: { ms: MachineSnapshot; projects: ProjectGroup[]; extras(e: AppEntry): RowExtras; folds?: Folds; forceOpen?: boolean }) {
   return (
-    <div className="grid">
+    <div className="projects">
       {projects.map((p) => (
-        <ProjectCard key={p.key} ms={ms} group={p} extras={extras} />
+        <ProjectCard key={p.key} ms={ms} group={p} extras={extras} folds={folds} forceOpen={forceOpen} />
       ))}
     </div>
   );

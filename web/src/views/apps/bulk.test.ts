@@ -30,7 +30,7 @@ describe("bulkRequests", () => {
       {
         machine: "local",
         runner: "/home/dev/code",
-        tasks: ["my-monorepo/web", "my-monorepo/api", "my-monorepo/docs", "my-monorepo/admin", "my-monorepo-checkout/install", "my-monorepo-checkout/web", "my-monorepo-checkout/api", "blog/site", "blog/studio"],
+        tasks: ["my-monorepo/web", "my-monorepo/api", "my-monorepo/docs", "my-monorepo/admin", "my-monorepo-checkout/install", "my-monorepo-checkout/web", "my-monorepo-checkout/api", "blog/site", "blog/studio", "worktrees/redesign/site", "worktrees/redesign/studio"],
       },
       { machine: "box", runner: "/home/dev/src", tasks: ["shop/web", "shop/api", "shop/worker"] },
     ]);
@@ -43,10 +43,10 @@ describe("actOnEntries", () => {
     const stopped = BULK_ACTIONS.find((a) => a.id === "start")!.applies(all);
     await actOnEntries(ctx, stopped, "start");
     expect(calls.map((c) => `${c.target.machine}:${c.target.tasks?.join(",")}:${c.verb}`)).toEqual([
-      "local:my-monorepo/admin,my-monorepo-checkout/api,blog/site,blog/studio:start",
+      "local:my-monorepo/admin,my-monorepo-checkout/api,blog/site,blog/studio,worktrees/redesign/site,worktrees/redesign/studio:start",
       "box:shop/worker:start",
     ]);
-    expect(keys).toHaveLength(5);
+    expect(keys).toHaveLength(7);
     expect(keys[0]).toBe("app|local|/home/dev/code#my-monorepo/admin|start");
   });
 

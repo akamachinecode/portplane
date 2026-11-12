@@ -8,11 +8,14 @@
   color-scheme: light dark;
 
   /* colour */
-  --bg: light-dark(#f6f6f7, #0f1013);
+  --bg: light-dark(#fafafb, #101114);
   --surface: light-dark(#ffffff, #16171b);
   --surface-2: light-dark(#f1f1f3, #1e2025);
   --surface-raised: light-dark(#ffffff, #1c1d22);
   --sidebar-bg: light-dark(#efeff1, #0b0c0f);
+  /* the window around the view's panel: the sidebar sits on it */
+  --chrome-bg: light-dark(#eeeef0, #0a0a0c);
+  --panel-border: light-dark(#e1e1e6, #1d1e23);
   --border: light-dark(#e5e5e9, #26282e);
   --border-strong: light-dark(#d5d5db, #34373f);
   --text: light-dark(#17181c, #e8e9ec);
@@ -42,6 +45,7 @@
   --shadow-2: 0 2px 4px light-dark(rgb(16 18 24 / 6%), rgb(0 0 0 / 30%)), 0 10px 28px light-dark(rgb(16 18 24 / 11%), rgb(0 0 0 / 42%));
   --shadow-3: 0 4px 8px light-dark(rgb(16 18 24 / 6%), rgb(0 0 0 / 32%)), 0 24px 56px light-dark(rgb(16 18 24 / 16%), rgb(0 0 0 / 52%));
   --shadow-card: var(--shadow-1);
+  --shadow-panel: 0 1px 3px light-dark(rgb(16 18 24 / 5%), transparent);
   --shadow-pop: var(--shadow-2);
 
   /* type: 12 13 14 16 20 24 */
@@ -588,10 +592,6 @@ code {
   box-shadow: var(--shadow-card);
 }
 
-.card-failed {
-  border-color: color-mix(in srgb, var(--err) 30%, var(--border));
-}
-
 .card-head {
   display: flex;
   align-items: center;
@@ -629,10 +629,6 @@ code {
   font-size: var(--text-sm);
 }
 
-.wt-icon {
-  color: var(--text-3);
-}
-
 .wt-name {
   min-width: 0;
   overflow: hidden;
@@ -656,11 +652,6 @@ code {
 
 .row {
   border-top: 1px solid var(--border);
-}
-
-.card > .wt:last-child .row:last-child {
-  border-bottom-left-radius: var(--radius);
-  border-bottom-right-radius: var(--radius);
 }
 
 .row-main {
@@ -2554,7 +2545,39 @@ kbd,
 
 .subnav {
   position: sticky;
-  top: calc(48px + var(--space-4));
+  top: calc(var(--toolbar-h, 52px) + var(--space-4));
+}
+
+/* tabs along the top of a page */
+.subnav-tabs {
+  position: static;
+  margin: 0 0 var(--space-5);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.subnav-tabs ul {
+  flex-direction: row;
+  gap: var(--space-1);
+  width: max-content;
+}
+
+.subnav-tabs .subnav-item {
+  position: relative;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 0;
+  white-space: nowrap;
+}
+
+.subnav-tabs .subnav-item:hover {
+  background: transparent;
+}
+
+.subnav-tabs .subnav-item[aria-current="page"] {
+  background: transparent;
+  box-shadow: inset 0 -2px 0 var(--accent);
 }
 
 .subnav-item {
