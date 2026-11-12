@@ -542,7 +542,12 @@ func TestDetectInstall(t *testing.T) {
 		t.Skip("symlinks")
 	}
 	none := func(string) string { return "" }
-	root := t.TempDir()
+	// macOS's temp folder is behind a symlink (/var → /private/var), and
+	// DetectInstall resolves links: compare resolved paths.
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
 	mk := func(p string) string {
 		t.Helper()
 		full := filepath.Join(root, p)
