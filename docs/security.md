@@ -37,7 +37,9 @@ On macOS the UI opens in Portplane's own window, a system web view (WKWebView) t
 
 - Reached only with your system `ssh`, your keys and your `~/.ssh/config` ([ADR-0015](adr/0015-remote-transport.md)). Portplane stores the host name, never credentials.
 - The agent binary is uploaded to `~/.cache/portplane/<version>-<hash>/` and its SHA-256 is checked on the remote side before use. For another platform, the binary comes from the same GitHub release and is checked against its `checksums.txt`.
-- The agent can only do what that SSH user can do: list ports and processes, run dekit there, and connect to loopback ports there.
+- The agent can only do what that SSH user can do: list ports and processes, run dekit and portless there, read and write the dekit and portless config of the folders Portplane watches there, install dekit, Node.js and portless into that user's home, and connect to loopback ports there.
+- Setup, dekit and portless requests for a remote machine pass ADR-0008's token and Host checks in Portplane first, then travel over the SSH session to the agent, which serves them in memory: it opens no port ([ADR-0026](adr/0026-remote-parity.md)). Only those areas travel, under `/api/m/<machine>/`, with size and time limits.
+- The agent never asks for a password and Portplane never sends one: a step that needs an administrator on a remote machine is shown as an `ssh -t <machine> 'sudo …'` command for you to run.
 - Opening a remote app goes through the same SSH session to a local loopback proxy ([ADR-0016](adr/0016-remote-urls.md)); nothing is exposed on either network.
 - Installs and privileged steps run on your local machine only.
 

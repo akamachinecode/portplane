@@ -224,7 +224,7 @@ The milestone is done when:
 - [ ] Sharing: Tailscale, Funnel, ngrok and Cloudflare.
 - [ ] Compose projects and their routes.
 - [ ] LAN mode, with the CA exported for phones.
-- [ ] Remote parity: the agent protocol carries setup and config (output came with M5.4).
+- [x] Remote parity: the agent protocol carries setup, the dekit center and the portless center (output came with M5.4), with privileged steps as commands to run over SSH (ADR-0026).
 
 **Done when:** set for each extension when it is planned.
 

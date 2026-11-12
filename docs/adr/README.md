@@ -42,5 +42,6 @@ Accepted ADRs are not rewritten. A decision that changes gets a new ADR that sup
 | [0023](0023-portless-cli.md) | Act on portless through its CLI, read its state files, and parse its text with versioned fixtures | Accepted |
 | [0024](0024-app-shell.md) | Turn the UI into an app shell with a sidebar, a hash router and background jobs | Accepted |
 | [0025](0025-network-use.md) | Use the network only for downloads the user starts and update checks the user asks for | Accepted |
+| [0026](0026-remote-parity.md) | Serve setup, dekit and portless on every machine by tunnelling API requests to the agent | Accepted |
 
 Pending decisions are tracked in [../open-questions.md](../open-questions.md).
