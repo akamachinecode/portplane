@@ -121,7 +121,8 @@ func TestHeadless(t *testing.T) {
 	if Method() != "" || Available() {
 		t.Fatal("a headless machine has no password dialog")
 	}
-	err := Run(context.Background(), Command{Argv: []string{"/bin/true"}}, nil)
+	// Never run: a headless machine stops before starting anything.
+	err := Run(context.Background(), Command{Argv: []string{filepath.Join(t.TempDir(), "true")}}, nil)
 	if !errors.Is(err, ErrUnavailable) {
 		t.Fatalf("%v", err)
 	}
