@@ -11,7 +11,10 @@ import (
 
 // Repo describes where a folder sits in git.
 type Repo struct {
-	// Root is the main checkout of the repository.
+	// Root is the main checkout of the repository, with symbolic links and
+	// short names resolved: a linked worktree's .git file names it by its
+	// real path (/private/var on macOS, C:\Users\runneradmin rather than
+	// RUNNER~1 on Windows), so every checkout of one repository agrees on it.
 	Root string
 	// Worktree is the checkout that contains the folder (equal to Root for
 	// the main checkout).
@@ -61,12 +64,12 @@ func find(dir string) *Repo {
 		gitPath := filepath.Join(d, ".git")
 		if fi, err := os.Stat(gitPath); err == nil {
 			if fi.IsDir() {
-				return &Repo{Root: d, Worktree: d, GitDir: gitPath}
+				return &Repo{Root: canonical(d), Worktree: d, GitDir: gitPath}
 			}
 			if r := fromGitFile(d, gitPath); r != nil {
 				return r
 			}
-			return &Repo{Root: d, Worktree: d}
+			return &Repo{Root: canonical(d), Worktree: d}
 		}
 		parent := filepath.Dir(d)
 		if parent == d {
@@ -97,7 +100,7 @@ func fromGitFile(worktree, gitFile string) *Repo {
 	if err != nil {
 		// No commondir: a submodule (gitdir under .git/modules), not a linked
 		// worktree. It is its own repository.
-		return &Repo{Root: worktree, Worktree: worktree, GitDir: gitdir}
+		return &Repo{Root: canonical(worktree), Worktree: worktree, GitDir: gitdir}
 	}
 	common := strings.TrimSpace(string(c))
 	if !filepath.IsAbs(common) {
@@ -107,13 +110,22 @@ func fromGitFile(worktree, gitFile string) *Repo {
 	// common is <main>/.git for a normal repository; a submodule's gitdir
 	// lives under .git/modules and has no commondir: treat it as its own repo.
 	if filepath.Base(common) != ".git" {
-		return &Repo{Root: worktree, Worktree: worktree, GitDir: gitdir}
+		return &Repo{Root: canonical(worktree), Worktree: worktree, GitDir: gitdir}
 	}
-	root := filepath.Dir(common)
-	if root == worktree {
+	root := canonical(filepath.Dir(common))
+	if root == canonical(worktree) {
 		return &Repo{Root: root, Worktree: worktree, GitDir: gitdir}
 	}
 	return &Repo{Root: root, Worktree: worktree, WorktreeName: filepath.Base(worktree), GitDir: gitdir}
+}
+
+// canonical resolves symbolic links (and, on Windows, short names) in p, so
+// two spellings of one folder compare equal; p as it is when that fails.
+func canonical(p string) string {
+	if r, err := filepath.EvalSymlinks(p); err == nil {
+		return r
+	}
+	return p
 }
 
 // Branch is the branch the checkout has out now, read from its HEAD on every

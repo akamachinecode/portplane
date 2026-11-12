@@ -32,18 +32,24 @@ func TestFindMainAndLinkedWorktree(t *testing.T) {
 	git(t, main, "worktree", "add", "-q", "-b", "feat/x", wt)
 
 	l := NewLookup()
+	// Compare after resolving symlinks: TempDir may live behind one (macOS
+	// /var), or under a short name (Windows RUNNER~1), and Root never does.
+	real := func(p string) string {
+		r, err := filepath.EvalSymlinks(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return r
+	}
 	r := l.Find(filepath.Join(main, "apps", "web"))
-	if r == nil || r.Root != main || r.Worktree != main || r.WorktreeName != "" || r.Name() != "shop" {
+	if r == nil || r.Root != real(main) || r.Worktree != main || r.WorktreeName != "" || r.Name() != "shop" {
 		t.Fatalf("main checkout: %+v", r)
 	}
 	r = l.Find(wt)
 	if r == nil {
 		t.Fatal("linked worktree not found")
 	}
-	// Compare after resolving symlinks: TempDir may live behind one (macOS /var).
-	gotRoot, _ := filepath.EvalSymlinks(r.Root)
-	wantRoot, _ := filepath.EvalSymlinks(main)
-	if gotRoot != wantRoot || r.WorktreeName != "shop-feature" || r.Name() != "shop" {
+	if r.Root != real(main) || r.WorktreeName != "shop-feature" || r.Name() != "shop" {
 		t.Fatalf("linked worktree: %+v", r)
 	}
 	if b := r.Branch(); b != "feat/x" {
@@ -59,5 +65,37 @@ func TestFindMainAndLinkedWorktree(t *testing.T) {
 	}
 	if l.Find(base) != nil && l.Find(base).Root == base {
 		t.Fatalf("base is not a repository")
+	}
+}
+
+// Repositories reached through a symbolic link (macOS's /var, a ~/Repos that
+// points elsewhere): git writes the worktree's gitdir with the real path, and
+// both checkouts must still name the same Root.
+func TestRootIsTheSameThroughASymlink(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not installed")
+	}
+	base := t.TempDir()
+	realDir := filepath.Join(base, "real")
+	if err := os.MkdirAll(filepath.Join(realDir, "shop"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(base, "link")
+	if err := os.Symlink(realDir, link); err != nil {
+		t.Skipf("no symlinks here: %v", err)
+	}
+	main := filepath.Join(link, "shop")
+	git(t, main, "init", "-q")
+	git(t, main, "commit", "-q", "--allow-empty", "-m", "init")
+	wt := filepath.Join(link, "shop-feature")
+	git(t, main, "worktree", "add", "-q", wt)
+
+	l := NewLookup()
+	a, b := l.Find(main), l.Find(wt)
+	if a == nil || b == nil || a.Root != b.Root {
+		t.Fatalf("main %+v and worktree %+v disagree on the repository", a, b)
+	}
+	if b.WorktreeName != "shop-feature" || b.Worktree != wt {
+		t.Fatalf("worktree: %+v", b)
 	}
 }
