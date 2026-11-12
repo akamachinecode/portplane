@@ -16,6 +16,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -271,7 +272,7 @@ func TestApplyArchive(t *testing.T) {
 	if read(t, exe) != "version=0.6.0" || read(t, filepath.Join(dir, "portplane-window")) != "new window" || read(t, filepath.Join(dir, "dekit")) != "someone else's" {
 		t.Fatal("not replaced as expected")
 	}
-	if fi, _ := os.Stat(exe); fi.Mode()&0o111 == 0 {
+	if fi, _ := os.Stat(exe); runtime.GOOS != "windows" && fi.Mode()&0o111 == 0 { // Windows has no execute bits
 		t.Fatal("not executable")
 	}
 	entries, _ := os.ReadDir(dir)
