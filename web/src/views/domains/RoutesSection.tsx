@@ -3,6 +3,7 @@ import { errorText } from "../../api/errors";
 import type { RouteView, StaleRoute } from "../../api/portless";
 import { copyWithToast } from "../../components/appActions";
 import { useApp } from "../../components/AppContext";
+import { ConfirmDialog } from "../../components/Dialog";
 import { Icon } from "../../components/Icon";
 import { IconButton, IconSlot } from "../../components/IconButton";
 import { EmptyState, ErrorState, LoadingState } from "../../components/States";
@@ -93,14 +94,23 @@ function Table({ routes }: { routes: RouteView[] }) {
   const stale = routes.filter((r) => !r.alive);
   const local = snapshot?.machines.find((m) => m.machine.local);
 
-  const remove = (r: RouteView) =>
-    ctx.api.portlessRemoveAlias(r.hostname).then(
-      (next) => {
-        routesResource.put(next);
-        ctx.toast.info(`Removed ${r.hostname}`);
-      },
-      (err: unknown) => ctx.toast.error(errorText(err)),
-    );
+  const [removing, setRemoving] = useState<RouteView | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [removeError, setRemoveError] = useState<string | null>(null);
+  const remove = async () => {
+    if (!removing) return;
+    setBusy(true);
+    setRemoveError(null);
+    try {
+      routesResource.put(await ctx.api.portlessRemoveAlias(removing.hostname));
+      ctx.toast.info(`Removed ${removing.hostname}`);
+      setRemoving(null);
+    } catch (err) {
+      setRemoveError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <>
@@ -186,7 +196,7 @@ function Table({ routes }: { routes: RouteView[] }) {
                       ) : (
                         <IconSlot />
                       )}
-                      {isUserAlias(r) ? <IconButton icon="trash" label={`Remove ${r.hostname}`} onClick={() => void remove(r)} /> : <IconSlot />}
+                      {isUserAlias(r) ? <IconButton icon="trash" label={`Remove ${r.hostname}`} onClick={() => setRemoving(r)} /> : <IconSlot />}
                     </span>
                   </td>
                 </tr>
@@ -202,6 +212,22 @@ function Table({ routes }: { routes: RouteView[] }) {
       )}
       {rename && <RenameDialog {...rename} onClose={() => setRename(null)} />}
       {alias && <AliasDialog draft={alias} routes={routes} onClose={() => setAlias(null)} />}
+      <ConfirmDialog
+        open={!!removing}
+        title={`Remove ${removing?.hostname ?? ""}?`}
+        confirmLabel="Remove alias"
+        busy={busy}
+        error={removeError}
+        onConfirm={() => void remove()}
+        onClose={() => {
+          setRemoving(null);
+          setRemoveError(null);
+        }}
+      >
+        <p className="dialog-text">
+          {removing?.hostname} stops opening port {removing?.port}. The server itself keeps running.
+        </p>
+      </ConfirmDialog>
     </>
   );
 }
