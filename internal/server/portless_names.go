@@ -298,8 +298,8 @@ func (p *portlessAPI) planRename(ctx context.Context, rc *renameCtx, name string
 			return pv, nil
 		}
 	}
-	if strings.Contains(name, ".") {
-		pv.Warnings = append(pv.Warnings, "A name with a dot is a subdomain. Apps on sibling subdomains (app.shop and api.shop) share a login only when the cookie domain is the parent (shop."+info.TLD+"), and services with a CORS allowlist need the new origin.")
+	if _, parent, ok := strings.Cut(name, "."); ok {
+		pv.Warnings = append(pv.Warnings, "A name with a dot is a subdomain of "+parent+"."+info.TLD+". Apps on sibling subdomains share a login only when the cookie domain is that parent, and services with a CORS allowlist need the new origin.")
 	}
 	switch info.Source {
 	case portless.SourceFragment, portless.SourceTask, portless.SourceAliasTask:
