@@ -1,0 +1,20 @@
+
+portless doctor
+
+Version: 0.16.0
+Node.js: 24.11.1
+Platform: linux x64
+State dir: /home/dev/.portless
+Proxy target: https://127.0.0.1
+Mode: HTTPS, .localhost
+
+ok    Node.js 24.11.1 satisfies portless requirements.
+ok    State directory is writable: /home/dev/.portless
+ok    Proxy is responding on port 443.
+ok    Proxy PID file points to the responding proxy process: 1993
+ok    OpenSSL is available for certificate generation.
+ok    Local CA is trusted by the OS trust store.
+ok    Routes: 3 active routes.
+ok    Registered hostnames resolve through the system resolver.
+
+Summary: 0 failures, 0 warnings.

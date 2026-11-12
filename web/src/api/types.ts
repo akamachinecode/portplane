@@ -2,7 +2,8 @@
 // source of truth, and remote agents send the same JSON (ADR-0005).
 
 export type State = "on" | "starting" | "stopping" | "failed" | "off" | "done" | "unknown";
-export type Verb = "start" | "stop" | "restart";
+/** start, stop and restart; kill (hard), veto (keep stopped), force-restart (kill, then start) and rm (remove a dynamic or Portplane task). */
+export type Verb = "start" | "stop" | "restart" | "kill" | "veto" | "force-restart" | "rm";
 
 export interface Target {
   machine: string;
@@ -35,6 +36,10 @@ export interface App {
   pid?: number;
   order: number;
   remoteUrl?: string;
+  /** Added at run time (dekit spawn), not in any config file. */
+  dynamic?: boolean;
+  /** Declared in Portplane's own fragment (.portplane/tasks.yaml). */
+  portplane?: boolean;
 }
 
 export interface Port {
@@ -113,6 +118,18 @@ export interface Excerpt {
   command: string; // the dekit command that shows the full screen
 }
 
+/** An app's whole terminal screen, for the Output panel (ADR-0021). */
+export interface TaskOutput {
+  /** Rows joined by "\n", with ANSI colour codes (SGR) and nothing else. */
+  screen: string;
+  /** The start was cut to keep the answer small. */
+  truncated?: boolean;
+  /** The project's runner isn't running, so there is no screen. */
+  runnerDown?: boolean;
+  /** Attaches a terminal to the task: dekit -C <root> attach <task>. */
+  command: string;
+}
+
 export interface Settings {
   folders: string[];
 }
@@ -125,26 +142,72 @@ export interface Info {
   picker: boolean; // a native folder picker is available (POST /api/folders/pick)
 }
 
-// ---- Setup (internal/setup, internal/server/setup.go) ----
+// ---- Setup (internal/setup, internal/server/setup.go and tools.go) ----
 
-export type RequirementId = "node" | "dekit" | "portless" | "proxy" | "portplane";
+/** The checks of GET /api/setup/check, in the order the server lists them. */
+export type RequirementId =
+  | "dekit"
+  | "node"
+  | "portless"
+  | "git"
+  | "packages"
+  | "port"
+  | "proxy"
+  | "ca"
+  | "hosts"
+  | "lan"
+  | "path"
+  | "tray"
+  | "portplane";
 
-/** One thing setup needs, with how to get it. Portplane only shows the commands (ADR-0014). */
+/** ok, missing, outdated, warning, info, or skipped (the check does not apply here). */
+export type RequirementStatus = "ok" | "missing" | "outdated" | "warning" | "info" | "skipped";
+
+/** What Portplane itself can do about a requirement (M5.1). */
+export type RequirementFix =
+  | "install-dekit"
+  | "install-node"
+  | "install-portless"
+  | "update-dekit"
+  | "update-portless"
+  | "proxy"
+  | "reinstall-service"
+  | "use-1355"
+  | "trust-system"
+  | "trust-browsers"
+  | "path-profile";
+
+/** One thing setup checks, with how to fix it by hand (commands) or from Portplane (fix). */
 export interface Requirement {
   id: RequirementId;
   name: string;
   why: string;
   ok: boolean;
+  /** Older binaries leave it out: statusOf() in lib/setup.ts derives it. */
+  status?: RequirementStatus;
   version?: string;
+  detail?: string; // what was found
   problem?: string;
   commands?: string[]; // copyable, in order
   docs?: string;
-  privilege: boolean; // the command needs sudo or an elevated terminal
+  privilege: boolean; // the step needs an administrator
+  optional?: boolean; // setup works without it
+  fix?: RequirementFix;
+  origin?: import("./tools").ToolOrigin;
+  install?: import("./tools").InstallPlan;
+  port?: import("./tools").PortInfo;
+  service?: import("./tools").ServiceInfo;
+  browsers?: import("./tools").BrowserReport;
+  managers?: Record<string, string>; // package manager -> version ("" missing)
+  path?: import("./tools").PathStatus;
 }
 
 export interface SetupCheck {
   requirements: Requirement[];
   ready: boolean; // everything needed to write and run config
+  /** How this computer asks for the admin password: pkexec, osascript, uac, or "" (none: run it in a terminal). */
+  admin?: string;
+  os?: string;
 }
 
 export type ProposalStatus = "new" | "unchanged" | "changed" | "manual" | "skipped";
@@ -179,9 +242,20 @@ export interface FileChange {
   changed: boolean;
 }
 
+/** A project setup found but can't write tasks for yet (not JavaScript or TypeScript). */
+export interface UnsupportedProject {
+  project: string;
+  dir: string; // relative to the folder
+  kinds: string[]; // "Python", "Go", "Docker Compose"…
+}
+
 export interface Proposal {
   folder: string;
+  /** The dekit project the tasks join (the folder, or the project above it). */
+  root?: string;
   apps: AppProposal[];
+  /** Older binaries leave it out. */
+  unsupported?: UnsupportedProject[];
   warnings: string[];
   change: ProposalChange;
   files: FileChange[];
@@ -246,6 +320,8 @@ export interface OnboardingProgress {
   skipped: boolean;
   step?: string;
   done: string[]; // steps finished
+  /** What the user picked on the way, such as proxy: "service" | "unprivileged". */
+  choices?: Record<string, string>;
 }
 
 /** How the user likes the app. PUT sends the whole object back. */

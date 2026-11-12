@@ -387,6 +387,8 @@ func (l *Local) describe(t *task, all []*task, routeByPID, routeByPort map[int]p
 		a.Kind = t.cfg.Kind
 	}
 	a.ID = t.root + "#" + a.Task
+	a.Dynamic = t.cfg == nil && t.state != nil
+	a.Portplane = t.cfg != nil && filepath.Clean(t.cfg.File) == filepath.Join(t.root, filepath.FromSlash(dekit.PortplaneFragment))
 	var cmd []string
 	if t.cfg != nil {
 		if a.Label == "" {

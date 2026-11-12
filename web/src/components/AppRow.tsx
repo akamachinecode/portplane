@@ -4,6 +4,7 @@ import { appHref, copyableUrl, isAlive, rowAddress } from "../lib/apps";
 import { dekitCommand, portLabel, stateLabel } from "../lib/format";
 import { appRoute, href as routeHref, navigate } from "../lib/router";
 import { withShortcut } from "../lib/shortcuts";
+import { useAppActionMenu } from "./AppActionMenu";
 import { actOnApp, appKey, copyWithToast } from "./appActions";
 import { useApp } from "./AppContext";
 import { ExcerptPanel } from "./ExcerptPanel";
@@ -86,6 +87,8 @@ function AppRowImpl({ app, ms, extras, variant = "list", showProject, placeCell,
     });
   }
   menu.push({ label: "Copy dekit command", icon: "terminal", onSelect: () => copy(dekitCommand(app), "the command") });
+  const more = useAppActionMenu(ms, app);
+  menu.push(...more.items);
 
   const toggleVerb: Verb = alive ? "stop" : "start";
   const rowClass = `row row-${app.state}${app.kind === "job" ? " row-job" : ""}${extras?.cursor ? " is-cursor" : ""}${extras?.selected ? " is-selected" : ""}`;
@@ -234,6 +237,7 @@ function AppRowImpl({ app, ms, extras, variant = "list", showProject, placeCell,
         {actions}
       </div>
       {failed && expanded && <ExcerptPanel id={excerptId} machine={machine} app={app} />}
+      {more.element}
     </li>
   );
 }

@@ -30,10 +30,27 @@ const (
 	VerbStart   Verb = "start"
 	VerbStop    Verb = "stop"
 	VerbRestart Verb = "restart"
+	// VerbKill stops at once with a hard kill, for an app that does not
+	// answer Stop.
+	VerbKill Verb = "kill"
+	// VerbVeto stops and keeps it stopped, even when another app needs it,
+	// until it is started again (start lifts the veto: dekit has no unveto).
+	VerbVeto Verb = "veto"
+	// VerbForceRestart kills and starts again; a stopped app just starts.
+	VerbForceRestart Verb = "force-restart"
+	// VerbRemove removes a task: only one spawned at run time (dynamic) or
+	// one in Portplane's own fragment, which loses its entry there.
+	VerbRemove Verb = "rm"
 )
 
 // Valid reports whether v is a known verb.
-func (v Verb) Valid() bool { return v == VerbStart || v == VerbStop || v == VerbRestart }
+func (v Verb) Valid() bool {
+	switch v {
+	case VerbStart, VerbStop, VerbRestart, VerbKill, VerbVeto, VerbForceRestart, VerbRemove:
+		return true
+	}
+	return false
+}
 
 // Target names what an action applies to on one machine: one task, or every
 // task under a path prefix (a project or worktree) in one runner.
@@ -68,6 +85,10 @@ type App struct {
 	PID       int      `json:"pid,omitempty"`
 	Order     int      `json:"order"`               // position in the config
 	RemoteURL string   `json:"remoteUrl,omitempty"` // set by the hub for apps on other machines
+	// Dynamic: added at run time (dekit spawn), not in any config file.
+	Dynamic bool `json:"dynamic,omitempty"`
+	// Portplane: declared in Portplane's own fragment (.portplane/tasks.yaml).
+	Portplane bool `json:"portplane,omitempty"`
 }
 
 // Port is a listening TCP port that no known app owns.
@@ -153,4 +174,19 @@ type Worktree struct {
 type Excerpt struct {
 	Lines   []string `json:"lines"`
 	Command string   `json:"command"` // shows the full screen in a terminal
+}
+
+// Output is a task's whole terminal screen, for the Output panel (ADR-0021).
+type Output struct {
+	// Screen is what the task's terminal shows now, rows joined by "\n".
+	// Colour and style codes (ANSI SGR sequences) are kept; every other
+	// control sequence is removed, and trailing blank rows are dropped.
+	Screen string `json:"screen"`
+	// Truncated means the start was cut to keep the answer small.
+	Truncated bool `json:"truncated,omitempty"`
+	// RunnerDown means the project's runner is not running, so no task has a
+	// screen to show (`dekit up` starts it).
+	RunnerDown bool `json:"runnerDown,omitempty"`
+	// Command attaches a terminal to the task: dekit -C <root> attach <task>.
+	Command string `json:"command"`
 }

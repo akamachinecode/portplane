@@ -55,17 +55,35 @@ sha256sum --check --ignore-missing checksums.txt
 ## What else you need
 
 - **[dekit](https://dekit.run)** runs your dev servers.
-- **[portless](https://github.com/vercel-labs/portless)** (Node.js 24+) gives them `https://<name>.localhost` URLs. Run `sudo portless service install` once so its proxy starts with your computer and its certificate is trusted.
+- **[portless](https://github.com/vercel-labs/portless)** (Node.js 24+) gives them `https://<name>.localhost` URLs. Its proxy is installed once as a service, so it starts with your computer and its certificate is trusted. Portplane's guided setup does it for you, or click **Install the service** in **Domains → Proxy**. **Domains → Maintenance** updates or removes portless later, with the tool that installed it.
 
-`portplane setup <folder>` and the Setup screen check all of this and print the exact command for your OS. Without dekit and portless, Portplane still lists the ports open on your machine.
+You don't have to install them first: the guided setup does it (below). Without dekit and portless, Portplane still lists the ports open on your machine.
+
+Once dekit is installed, **Runners → Update…** updates it: with dekit's own updater when it came from the install script, or with Homebrew, npm or pip when it came from one of them, and then switches the running projects to the new version.
 
 ## First run
 
+Open Portplane. On a first run it shows a guided setup that takes about five minutes and no terminal:
+
+1. **Check your computer:** dekit, Node.js, portless, git, port 443, the proxy, the local certificate and your browsers.
+2. **Install tools,** without a password: dekit through its official installer, a private Node.js 24 if yours is missing or older (it doesn't touch your own Node), and portless with npm. Each card says where the download comes from, how it is checked and where it goes before you click.
+3. **HTTPS and the proxy:** your password once, through your system's dialog, after showing the exact command. Or **without a password** on port 1355, with addresses like `https://web.localhost:1355`.
+4. **Browser trust,** for browsers that keep their own certificates (see [troubleshooting](troubleshooting.md#browsers-and-the-local-certificate)).
+5. **Your folders, your apps, review and write:** the folders where your projects live, the dev servers found in them, and the exact files Portplane writes.
+6. **First start:** start a few apps and open the first one.
+
+"Skip for now" leaves a notice until you finish; **Settings → General → Run setup again** opens it later. From a terminal, the same steps are:
+
 ```sh
-portplane folders add ~/code   # where your projects live
-portplane                      # opens https://portplane.localhost
-portplane autostart on         # optional: start at login
+curl -fsSL https://dekit.run/install.sh | sh   # dekit
+npm install -g portless                        # portless (Node.js 24+)
+sudo portless service install                  # the proxy, once
+portplane folders add ~/code                   # where your projects live
+portplane                                      # opens https://portplane.localhost
+portplane autostart on                         # optional: start at login
 ```
+
+`portplane setup <folder>` finds the apps in a folder and proposes their dekit tasks.
 
 Pin the apps you use most with the star on their row: they come first in the Apps view and get start and stop in the tray. Settings → General has the theme, notifications (failures only, at first) and **Check for updates**, which only goes online when you click it, or once a day if you turn that on.
 

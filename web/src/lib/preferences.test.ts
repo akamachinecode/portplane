@@ -96,6 +96,12 @@ describe("normalizePreferences", () => {
     });
   });
 
+  it("keeps the onboarding's choices, dropping values that are not strings", () => {
+    const p = normalizePreferences({ onboarding: { completed: false, skipped: true, step: "proxy", done: ["welcome"], choices: { proxy: "unprivileged", bad: 3 } } });
+    expect(p.onboarding).toEqual({ completed: false, skipped: true, step: "proxy", done: ["welcome"], choices: { proxy: "unprivileged" } });
+    expect(normalizePreferences({ onboarding: { choices: "x" } }).onboarding.choices).toBeUndefined();
+  });
+
   it("returns a fresh object, never the defaults themselves", () => {
     const p = normalizePreferences({});
     p.favorites.push("x");

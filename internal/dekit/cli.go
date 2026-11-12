@@ -102,11 +102,14 @@ func (c *CLI) Version(ctx context.Context) (string, error) {
 
 // RunnerRecord is one entry of `dekit runner list --json`.
 type RunnerRecord struct {
-	PID     int    `json:"pid"`
-	Root    string `json:"root"`
-	Kind    string `json:"kind"`
-	Running bool   `json:"running"`
-	Version string `json:"version"`
+	PID       int      `json:"pid"`
+	Root      string   `json:"root"`
+	Kind      string   `json:"kind"`
+	Running   bool     `json:"running"`
+	Version   string   `json:"version"`
+	Binary    string   `json:"binary,omitempty"`
+	StartedAt int64    `json:"started_at,omitempty"` // Unix seconds
+	Warnings  []string `json:"warnings,omitempty"`
 }
 
 // Runners lists the runner records on this machine.
@@ -115,11 +118,7 @@ func (c *CLI) Runners(ctx context.Context) ([]RunnerRecord, error) {
 	if err != nil {
 		return nil, err
 	}
-	var recs []RunnerRecord
-	if err := json.Unmarshal(out, &recs); err != nil {
-		return nil, fmt.Errorf("dekit runner list: %w", err)
-	}
-	return recs, nil
+	return ParseRunnerList(out)
 }
 
 // TaskState is one entry of `dekit ls --json`.
@@ -165,14 +164,15 @@ func (c *CLI) List(ctx context.Context, root string) ([]TaskState, error) {
 	return res.Tasks, nil
 }
 
-// Act runs start, stop or restart on a target (a task path, glob or +tag).
+// Act runs a task verb on a target (a task path, glob or +tag): start,
+// stop, restart, kill, veto (stop and keep stopped until started again) or
+// rm (remove; tasks from dekit.yaml come back at its next load).
 func (c *CLI) Act(ctx context.Context, root, verb, target string) error {
-	switch verb {
-	case "start", "stop", "restart":
-	default:
-		return fmt.Errorf("unknown verb %q", verb)
+	args, err := ActArgs(root, verb, target)
+	if err != nil {
+		return err
 	}
-	_, err := c.run(ctx, 30*time.Second, "-C", root, verb, target)
+	_, err = c.run(ctx, 30*time.Second, args...)
 	return err
 }
 

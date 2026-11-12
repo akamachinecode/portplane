@@ -6,6 +6,14 @@ import { isMac, isPaletteShortcut, isTypingTarget } from "../lib/keyboard";
 import { href, navigate, type View } from "../lib/router";
 import { AppsView } from "../views/AppsView";
 import { Announcer } from "./Announcer";
+import { FinishSetupNotice } from "../views/onboarding/FinishSetupNotice";
+import { firstRunAction, resumeStep } from "../views/onboarding/steps";
+// Palette commands and Health problems register when their module loads,
+// so they come with the shell even though their views load on first use.
+import "../views/onboarding/problems";
+import "../views/domains/commands";
+import "../views/domains/problems";
+import "../views/projects/commands";
 import "./builtinCommands";
 import { SHORTCUTS_EVENT } from "./polishCommands";
 import { CommandPalette } from "./CommandPalette";
@@ -62,7 +70,7 @@ function ExpiredBanner() {
  */
 export function Shell() {
   const { info } = useApp();
-  const { route, status } = useShell();
+  const { route, status, snapshot, preferences, updatePreferences } = useShell();
   const collapsed = useSidebarCollapsed();
   const [palette, setPalette] = useState(false);
   const [help, setHelp] = useState(false);
@@ -85,6 +93,19 @@ export function Shell() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [mac]);
+
+  // First run (plan §3.1): the guided setup takes the window, once per
+  // start; someone already set up is marked done without seeing it.
+  const firstRun = useRef(false);
+  useEffect(() => {
+    if (firstRun.current || preferences.status !== "ok" || !snapshot) return;
+    const local = snapshot.machines.find((m) => m.machine.local);
+    if (!local) return;
+    firstRun.current = true;
+    const action = firstRunAction(preferences.value, local);
+    if (action === "complete") void updatePreferences((p) => ({ ...p, onboarding: { ...p.onboarding, completed: true } }));
+    else if (action === "show" && route.view !== "onboarding") navigate({ view: "onboarding", step: resumeStep(preferences.value.onboarding) }, { replace: true });
+  }, [preferences, snapshot, route.view, updatePreferences]);
 
   // An unknown or non-canonical URL becomes the route it showed.
   useEffect(() => {
@@ -141,6 +162,7 @@ export function Shell() {
         <TopBar onSearch={() => setPalette(true)} />
         <main id="main" className="view" ref={main} tabIndex={-1}>
           {status === "expired" && <ExpiredBanner />}
+          <FinishSetupNotice />
           <Suspense fallback={<LoadingState />}>
             <View />
           </Suspense>

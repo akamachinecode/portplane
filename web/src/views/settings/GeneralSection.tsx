@@ -15,7 +15,7 @@ import { UpdatesGroup } from "./UpdatesGroup";
 type AutostartState = { status: "loading" } | { status: "error"; message: string } | { status: "ok"; enabled: boolean; busy: boolean };
 
 /** Start at login (PUT /api/autostart): applies at once. */
-function StartAtLogin() {
+export function StartAtLogin() {
   const { api, toast } = useApp();
   const [state, setState] = useState<AutostartState>({ status: "loading" });
 
@@ -99,10 +99,10 @@ export function GeneralSection() {
       </SettingsGroup>
       <Appearance />
       <SettingsGroup title="Guided setup">
-        <SettingRow label="Welcome screen" description="Walks through the tools, your folders and your apps again.">
-          <a className="btn" href={href({ view: "onboarding" })}>
+        <SettingRow label="Run setup again" description="Checks your computer, installs what's missing, and walks through the proxy, your folders and your apps again.">
+          <a className="btn" href={href({ view: "onboarding", step: "welcome" })}>
             <Icon name="wand" size={14} />
-            Open
+            Run setup again
           </a>
         </SettingRow>
       </SettingsGroup>

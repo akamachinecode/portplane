@@ -24,6 +24,8 @@ const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "obj
 const oneOf = <T extends string>(values: readonly T[], v: unknown, fallback: T): T => (values.includes(v as T) ? (v as T) : fallback);
 const bool = (v: unknown, fallback: boolean) => (typeof v === "boolean" ? v : fallback);
 const strings = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
+const stringMap = (v: Record<string, unknown>): Record<string, string> =>
+  Object.fromEntries(Object.entries(v).filter((e): e is [string, string] => typeof e[1] === "string"));
 
 /**
  * Preferences as the UI uses them, whatever the server sent: fields an older
@@ -51,6 +53,7 @@ export function normalizePreferences(raw: unknown): Preferences {
       skipped: bool(o.skipped, false),
       ...(typeof o.step === "string" && o.step !== "" ? { step: o.step } : {}),
       done: strings(o.done),
+      ...(isObject(o.choices) ? { choices: stringMap(o.choices) } : {}),
     },
     appsLayout: oneOf(APPS_LAYOUTS, p.appsLayout, d.appsLayout),
   };

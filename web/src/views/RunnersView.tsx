@@ -1,90 +1,149 @@
-import type { MachineSnapshot } from "../api/types";
-import { runnerKey, startRunner } from "../components/appActions";
+import { useState } from "react";
+import { errorText } from "../api/errors";
 import { useApp } from "../components/AppContext";
-import { Icon, Spinner } from "../components/Icon";
-import { EmptyState } from "../components/States";
-import { StateDot } from "../components/StateDot";
+import { ConfirmDialog } from "../components/Dialog";
+import { Icon } from "../components/Icon";
+import { EmptyState, ErrorState, LoadingState } from "../components/States";
 import { ViewHeader } from "../components/ViewHeader";
-import { indexApps, projectApps, serviceCounts } from "../lib/apps";
-import { inferHome, shortenPath } from "../lib/format";
+import { inferHome } from "../lib/format";
 import { href } from "../lib/router";
-import { SnapshotGate } from "../shell/SnapshotGate";
+import { useShell } from "../shell/ShellContext";
+import { DekitAbout } from "./runners/DekitAbout";
+import { DekitHelpHost } from "./runners/DekitHelp";
+import { RunnerJob, RunnerRow } from "./runners/RunnerList";
+import { setRunnerJob, useRunners } from "./runners/useRunners";
 import "./RunnersView.css";
+import "./projects/commands";
 
-function MachineRunners({ ms }: { ms: MachineSnapshot }) {
-  const ctx = useApp();
-  const machine = ms.machine;
-  const home = inferHome([...ms.folders, ...ms.runners.map((r) => r.root)]);
-  const byId = indexApps(ms.apps);
-  const live = machine.local || machine.status === "online";
-  return (
-    <section className="runners-machine" aria-labelledby={`runners-${machine.id}`}>
-      <h2 className="section-title" id={`runners-${machine.id}`}>
-        <Icon name="machine" size={14} />
-        {machine.name}
-      </h2>
-      {!live ? (
-        <p className="muted runners-note">Not connected: its runners show once it's back online.</p>
-      ) : !ms.tools.dekit ? (
-        <p className="muted runners-note">
-          dekit isn't installed on this machine. <a href={href({ view: "health" })}>See Health</a>
-        </p>
-      ) : ms.runners.length === 0 ? (
-        <p className="muted runners-note">No dekit.yaml in its folders.</p>
-      ) : (
-        <ul className="runner-rows">
-          {ms.runners.map((r) => {
-            const apps = ms.projects.filter((p) => p.runner === r.root).flatMap((p) => projectApps(p, byId));
-            const { running, total } = serviceCounts(apps);
-            const busy = ctx.pending.has(runnerKey(machine.id, r.root));
-            return (
-              <li key={r.root} className={`runner-row${r.up ? "" : " is-down"}`}>
-                <StateDot state={r.up ? (r.error ? "failed" : "on") : "off"} />
-                <div className="runner-row-text">
-                  <a className="runner-row-name" href={href({ view: "projects", runner: { machine: machine.id, root: r.root } })}>
-                    {r.name}
-                  </a>
-                  <span className="runner-row-path mono">{shortenPath(r.root, home)}</span>
-                  {r.error && <span className="runner-row-error">{r.error}</span>}
-                </div>
-                <span className="runner-row-state">{r.up ? "Up" : "Down"}</span>
-                <span className="runner-row-apps" title={`${running} of ${total} apps running`}>
-                  {running}/{total}
-                  <span className="sr-only"> apps running</span>
-                </span>
-                <span className="runner-row-action">
-                  {!r.up && (
-                    <button type="button" className="btn btn-sm" aria-busy={busy || undefined} disabled={busy} onClick={() => void startRunner(ctx, machine.id, r.root)}>
-                      {busy ? <Spinner size={12} /> : <Icon name="play" size={12} />}
-                      Start
-                    </button>
-                  )}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </section>
-  );
-}
-
-/** dekit's runners, one per project folder, with up or down (plan §4.1; the full controls come in M5.3). */
+/**
+ * Every dekit runner on this computer (plan §4.1): the projects', the host
+ * runner as "This computer", with their state and every runner action, and
+ * dekit itself (§4.8). Other machines' runners show in Projects.
+ */
 export function RunnersView() {
-  return (
+  const ctx = useApp();
+  const { snapshot } = useShell();
+  const { load, reload } = useRunners();
+  const [asking, setAsking] = useState<"clean" | "upgrade" | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const local = snapshot?.machines.find((m) => m.machine.local);
+  const home = inferHome([...(local?.folders ?? []), ...(load.status === "ok" ? load.value.runners.map((r) => r.root) : [])]);
+
+  const run = async (what: "clean" | "upgrade") => {
+    setBusy(true);
+    setError(null);
+    try {
+      if (what === "clean") {
+        await ctx.api.dekitCleanRunners();
+        ctx.toast.info("Cleaned the stale runner records");
+      } else {
+        const job = await ctx.api.dekitUpgradeAll();
+        setRunnerJob("*", job.id);
+      }
+      setAsking(null);
+      reload();
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const value = load.status === "ok" ? load.value : null;
+  const actions = value?.available && (
     <>
-      <ViewHeader title="Runners" description="dekit runs one supervisor per project folder. An app can only start while its runner is up." />
-      <SnapshotGate>
-        {(snapshot) =>
-          snapshot.machines.some((ms) => ms.runners.length > 0) ? (
-            snapshot.machines.map((ms) => <MachineRunners key={ms.machine.id} ms={ms} />)
+      <button type="button" className="btn" disabled={!value.stale} title={value.stale ? undefined : "No stale records"} onClick={() => setAsking("clean")}>
+        <Icon name="trash" size={14} />
+        Clean stale records{value.stale ? ` (${value.stale})` : ""}
+      </button>
+      {value.live && (
+        <button type="button" className="btn" onClick={() => setAsking("upgrade")}>
+          <Icon name="arrowUp" size={14} />
+          Upgrade all
+        </button>
+      )}
+    </>
+  );
+
+  let body;
+  if (load.status === "loading") body = <LoadingState label="Reading dekit's runners…" />;
+  else if (load.status === "error") body = <ErrorState title="Couldn't list the runners" message={load.message} onRetry={reload} />;
+  else if (!load.value.available)
+    body = (
+      <EmptyState icon="layers" title="dekit isn't installed">
+        Runners are dekit's supervisors, one per project. Install dekit from <a href={href({ view: "settings", section: "tools" })}>Settings → Tools</a>.
+      </EmptyState>
+    );
+  else {
+    const v = load.value;
+    body = (
+      <>
+        <DekitAbout />
+        {!v.live && (
+          <p className="dk-note">
+            <Icon name="info" size={14} /> On Windows dekit can't restart or upgrade a runner in place: stop it and start it again to switch versions.
+          </p>
+        )}
+        <section className="dk-section" aria-labelledby="dk-host-title">
+          <h2 className="section-title" id="dk-host-title">
+            <Icon name="monitor" size={14} />
+            This computer
+          </h2>
+          <p className="dk-section-text">Tasks that belong to you rather than a project, such as a database you always want up. Their config lives in your home folder.</p>
+          <ul className="dk-runners">
+            <RunnerRow runner={v.host} home={home} live={v.live} onChanged={reload} />
+          </ul>
+        </section>
+        <section className="dk-section" aria-labelledby="dk-projects-title">
+          <h2 className="section-title" id="dk-projects-title">
+            <Icon name="layers" size={14} />
+            Projects
+          </h2>
+          {v.runners.length ? (
+            <ul className="dk-runners">
+              {v.runners.map((r) => (
+                <RunnerRow key={r.root} runner={r} home={home} live={v.live} onChanged={reload} />
+              ))}
+            </ul>
           ) : (
             <EmptyState icon="layers" title="No runners yet">
               A runner appears for each folder with a <code>dekit.yaml</code>. Set up a folder in <a href={href({ view: "settings", section: "folders" })}>Settings</a>.
             </EmptyState>
-          )
-        }
-      </SnapshotGate>
+          )}
+        </section>
+        {snapshot && snapshot.machines.some((m) => !m.machine.local && m.machine.status === "online") && (
+          <p className="dk-note">
+            <Icon name="machine" size={14} />
+            <span>
+              Runners on other machines show in <a href={href({ view: "projects" })}>Projects</a>; managing them from here comes later.
+            </span>
+          </p>
+        )}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <ViewHeader title="Runners" description="dekit runs one supervisor per project folder, plus one for this computer. An app can only start while its runner is up." actions={actions} />
+      {body}
+      {asking === "clean" && (
+        <ConfirmDialog open title="Clean stale records?" confirmLabel="Clean records" busy={busy} error={error} onClose={() => setAsking(null)} onConfirm={() => void run("clean")}>
+          <p className="dialog-text">
+            Removes dekit's records of runners whose process is gone ({value?.stale ?? 0}). Running runners are never touched, and no config changes.
+          </p>
+        </ConfirmDialog>
+      )}
+      {asking === "upgrade" && (
+        <ConfirmDialog open title="Upgrade every runner?" confirmLabel="Upgrade all" busy={busy} error={error} onClose={() => setAsking(null)} onConfirm={() => void run("upgrade")}>
+          <p className="dialog-text">
+            Switches every running runner on an older copy of this dekit to the current one, in place: tasks keep running. Runners pinned to another binary (a project's <code>kernel:</code>) are left alone.
+          </p>
+        </ConfirmDialog>
+      )}
+      <RunnerJob root="*" />
+      <DekitHelpHost />
     </>
   );
 }

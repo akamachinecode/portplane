@@ -10,6 +10,23 @@ const PATHS = {
       <path d="M11.8 5.85L15.75 5.5L14.05 1.9" />
     </>
   ),
+  bolt: <path d="M13 3.5L5.5 13.5H12l-1 7 7.5-10H12z" />,
+  pause: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M10 9v6M14 9v6" />
+    </>
+  ),
+  book: (
+    <>
+      <path d="M5 5.5A1.5 1.5 0 0 1 6.5 4H18.5v14H6.5A1.5 1.5 0 0 0 5 19.5z" />
+      <path d="M5 19.5A1.5 1.5 0 0 0 6.5 21h12" />
+      <path d="M9 8h6" />
+    </>
+  ),
+  arrowUp: <path d="M12 19V5M6 11l6-6 6 6" />,
+  arrowDown: <path d="M12 5v14M6 13l6 6 6-6" />,
+  sparkle: <path d="M12 3.5l1.8 5.2 5.2 1.8-5.2 1.8L12 17.5l-1.8-5.2-5.2-1.8 5.2-1.8z" />,
   open: (
     <>
       <path d="M14 5h5v5" />

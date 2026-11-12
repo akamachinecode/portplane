@@ -2,6 +2,9 @@ import { useState } from "react";
 import { errorText } from "../api/errors";
 import type { MachineSnapshot, Port } from "../api/types";
 import { shortenPath, sortOtherPorts } from "../lib/format";
+import { navigate } from "../lib/router";
+import { suggestName } from "../lib/portless";
+import { requestIntent, usePrimePortless } from "../views/domains/store";
 import { openResolved } from "../lib/popup";
 import { useApp } from "./AppContext";
 import { Icon, Spinner } from "./Icon";
@@ -89,9 +92,23 @@ function PortRow({ port, ms, home }: { port: Port; ms: MachineSnapshot; home: st
             network
           </span>
         )}
+        {local && ms.tools.portless && !port.route && (
+          <button
+            type="button"
+            className="btn btn-sm btn-ghost"
+            title={`Give port ${port.port} a stable .localhost address with a portless alias`}
+            onClick={() => {
+              requestIntent({ kind: "new-alias", port: port.port, name: suggestName(port.process) });
+              navigate({ view: "domains", section: "aliases" });
+            }}
+          >
+            <Icon name="link" size={13} />
+            Give it a URL
+          </button>
+        )}
         {local ? (
           <a href={href} target="_blank" rel="noopener" className="addr">
-            localhost:{port.port}
+            {port.route ?? `localhost:${port.port}`}
           </a>
         ) : (
           ms.machine.status === "online" && <RemoteOpen machine={ms.machine.id} machineName={ms.machine.name} port={port.port} />
@@ -105,6 +122,9 @@ function PortRow({ port, ms, home }: { port: Port; ms: MachineSnapshot; home: st
 export function OtherPorts({ ms, home }: { ms: MachineSnapshot; home: string | undefined }) {
   const machine = ms.machine.id;
   const [open, setOpen] = useState<boolean>(() => readOpen(machine) ?? ms.apps.length === 0);
+  // Health lists portless's own problems (a service whose Node.js is gone)
+  // without a visit to Domains first.
+  usePrimePortless(ms.machine.local && !!ms.tools.portless);
   if (ms.otherPorts.length === 0) return null;
   const sorted = sortOtherPorts(ms.otherPorts);
   const inside = sorted.filter((p) => p.inFolder);

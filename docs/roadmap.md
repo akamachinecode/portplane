@@ -100,7 +100,7 @@ Quality:
 - [x] Generator applying the field-note defaults: run from the app folder, `<pm> run <script>`, a single install job per checkout, agent variables unset, the cross-platform wrapper from ADR-0010. (`portless alias` jobs for servers that cannot be wrapped are recognised when written by hand.)
 - [x] Preview as a diff, write only after confirmation (digest-checked), never touch hand-written config.
 - [x] Re-scan: new apps and worktrees appear as a proposed diff.
-- [ ] Add an app by hand from the UI (command and folder); moved to M5.3. A hand-written task in `dekit.yaml` works today.
+- [x] Add an app by hand from the UI (command and folder); done in M5.3.
 - [x] Warnings the app cannot fix: parent cookie domain, CORS allowlists.
 
 **Exit:** on a fresh machine with Node, the setup flow takes a real monorepo with worktrees from nothing to every app reachable at its stable URL, with no hand edits.
@@ -148,10 +148,10 @@ The milestone is done when:
 - [x] ADR-0019 to ADR-0025.
 - [ ] Find dekit and portless on every check, not once at start, so "Re-check" sees a tool installed while Portplane runs.
 - [ ] See folders added with `portplane folders add` without a restart.
-- [ ] One piece of advice for the proxy everywhere (the banner and Setup disagree today).
-- [ ] A way into Setup from the main view when dekit is missing; a first run that checks the tools and starts the scan.
-- [ ] Quick start and stop in the tray; the Folders button opens a dialog named Folders. (Tray: done in M5.5, pinned apps with start and stop.)
-- [ ] New checks: CA trust in the system and in browsers, port 443, git and the package manager.
+- [x] One piece of advice for the proxy everywhere (the banner and Setup disagree today).
+- [x] A way into Setup from the main view when dekit is missing; a first run that checks the tools and starts the scan.
+- [x] Quick start and stop in the tray (M5.5: pinned apps with start and stop); the Folders button that opened a dialog named Settings is gone (M5.0: Settings is a view).
+- [x] New checks: CA trust in the system and in browsers, port 443, git and the package manager.
 - [ ] Jobs: long operations streamed as `event: job` on the existing event stream (ADR-0024).
 - [ ] The app shell: sidebar, hash router and command palette, with today's views inside (ADR-0024).
 - [ ] Privileged steps through the system's dialog, argv only, per OS (ADR-0020).
@@ -161,45 +161,48 @@ The milestone is done when:
 
 ### M5.1: Onboarding
 
-- [ ] Full-window onboarding on first run that resumes where it stopped, with "Skip for now" (read-only mode and a "Finish setup" notice).
-- [ ] System check, all at once: dekit, Node.js, portless, git, port 443, the proxy service (including a Node path that no longer exists), the CA in the system and in each browser, `/etc/hosts`.
-- [ ] Install dekit, a private Node 24 when needed, and portless, with stages and output (ADR-0019).
-- [ ] The proxy's admin step through the system's dialog, and the no-password option on port 1355 (ADR-0020).
-- [ ] Browser trust for Firefox and Chrome profiles, after a spike per browser and distribution.
-- [ ] Folders, with suggestions such as `~/code`, `~/src` and `~/projects`; then the existing scan, review and write.
-- [ ] First start: pick apps, run `dekit up` and start them, with live progress until each one is on.
-- [ ] Last screen: Ctrl/⌘K, start at login, the tray icon (and the AppIndicator extension on GNOME).
+- [x] Full-window onboarding on first run that resumes where it stopped, with "Skip for now" (read-only mode and a "Finish setup" notice).
+- [x] System check, all at once: dekit, Node.js, portless, git, port 443, the proxy service (including a Node path that no longer exists), the CA in the system and in each browser, `/etc/hosts`.
+- [x] Install dekit, a private Node 24 when needed, and portless, with stages and output (ADR-0019).
+- [x] The proxy's admin step through the system's dialog, and the no-password option on port 1355 (ADR-0020).
+- [x] Browser trust for Firefox and the Chrome family, per profile and per packaging (snap, Flatpak); what uses what is in [troubleshooting](troubleshooting.md#browsers-and-the-local-certificate).
+- [x] Folders, with suggestions such as `~/code`, `~/src` and `~/projects`; then the existing scan, review and write.
+- [x] First start: pick apps, run `dekit up` and start them, with live progress until each one is on.
+- [x] Last screen: Ctrl/⌘K, start at login, the tray icon (and the AppIndicator extension on GNOME).
+- [ ] Checked by hand on Fedora, Ubuntu, macOS and Windows from a clean user account.
 
 **Done when:** criterion 1 holds, checked by hand on Fedora, Ubuntu, macOS and Windows from a clean user account.
 
 ### M5.2: portless center
 
-- [ ] Proxy: state, start and stop, install, reinstall and uninstall the service, and its options (port, HTTPS, TLDs, wildcard, LAN, own certificate).
-- [ ] Routes: every route with its owner, type, age and state; prune stale routes; kill orphaned servers, after a confirmation that lists them.
-- [ ] Aliases: add, edit and remove; "Give this port a URL" from Other ports.
-- [ ] Rename any app's URL wherever its name lives: Portplane's fragment, `dekit.yaml`, `portless.json`, `package.json` or an alias.
-- [ ] `portless.json` editor.
-- [ ] Certificates: the CA's fingerprint, expiry and where it is trusted; trust, trust in browsers, export, regenerate.
-- [ ] `/etc/hosts`: state, sync and clean.
-- [ ] Diagnosis from `doctor`, with a fix for each failure; update and uninstall portless.
+- [x] Proxy: state, start and stop, install, reinstall and uninstall the service, and its options (port, HTTPS, TLDs, wildcard, LAN, own certificate).
+- [x] Routes: every route with its owner, type, age and state; prune stale routes; kill orphaned servers, after a confirmation that lists them.
+- [x] Aliases: add, edit and remove; "Give this port a URL" from Other ports.
+- [x] Rename any app's URL wherever its name lives: Portplane's fragment, `dekit.yaml`, `portless.json`, `package.json` or an alias.
+- [x] `portless.json` editor.
+- [x] Certificates: the CA's fingerprint, expiry and where it is trusted; trust, export, regenerate, and fixing the owner of the system's copy on Linux.
+- [ ] Certificates: trust in each browser, once M5.1's browser check is wired into the Certificates section (the API has the field).
+- [x] `/etc/hosts`: state, sync and clean.
+- [x] Diagnosis from `doctor`, with a fix for each failure; update and uninstall portless.
 
 **Done when:** every portless command has a place in the app, except sharing (`--tailscale`, `--funnel`, `--ngrok`, `--cloudflare`), `compose` and `mcp`.
 
 ### M5.3: dekit center
 
-- [ ] Runners: list with state and warnings; up, down, stop, restart, upgrade and clean; the host runner.
-- [ ] Every task state and mark (pinned, vetoed, needed by); kill, veto, force restart and remove; bulk actions; restart a whole project.
-- [ ] App detail drawer with "why" (`dekit why --json`) and the task's dependencies.
-- [ ] Task and project forms, a YAML tab with dekit's schema, and the reload review (ADR-0022).
-- [ ] Add an app by hand, in any language, and run a one-off command (`dekit spawn`).
-- [ ] dekit itself: version, how it was installed, kernel, update, and dekit's help inside the app.
+- [x] Runners: list with state and warnings; up, down, stop, restart, upgrade and clean; the host runner.
+- [x] Every task state and mark (pinned, vetoed, needed by); kill, veto, force restart and remove; restart a whole project. Bulk actions come with the dense table (M5.5), reusing `appActionList`.
+- [x] App detail drawer with "why" (`dekit why --json`) and the task's dependencies.
+- [x] Task and project forms, a YAML tab with dekit's schema, and the reload review (ADR-0022).
+- [x] Add an app by hand, in any language, and run a one-off command (`dekit spawn`).
+- [x] dekit itself: version, how it was installed, kernel, update, and dekit's help inside the app.
+- [ ] Runners and config of other machines (local first, plan §10); dekit 0.10.3 has no "retry in" for `backoff`, so the UI shows restart attempts instead.
 
 **Done when:** every dekit command has a place in the app, except `attach` (M5.4) and what is left out on purpose: `mprocs`, `runner run` and the settings of dekit's own TUI.
 
 ### M5.4: Output
 
-- [ ] Output panel, phase 1: the task's screen from `dekit screen --json` while the panel is open (ADR-0021).
-- [ ] Upstream request for a stable attach RPC ([upstream.md](upstream.md)).
+- [x] Output panel, phase 1: the task's screen from `dekit screen --json` while the panel is open, on local and remote machines, with colours, search, copy, pause and "Open in a terminal" (ADR-0021).
+- [x] Upstream requests for a stable attach RPC and for scrollback in `dekit screen --json`, written ([upstream.md](upstream.md)); not filed yet.
 - [ ] Phase 2, an interactive terminal, once dekit publishes it.
 
 **Done when:** the live output of any app is visible without a terminal.
@@ -221,7 +224,7 @@ The milestone is done when:
 - [ ] Sharing: Tailscale, Funnel, ngrok and Cloudflare.
 - [ ] Compose projects and their routes.
 - [ ] LAN mode, with the CA exported for phones.
-- [ ] Remote parity: the agent protocol carries setup, config and output.
+- [ ] Remote parity: the agent protocol carries setup and config (output came with M5.4).
 
 **Done when:** set for each extension when it is planned.
 

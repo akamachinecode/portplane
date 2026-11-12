@@ -12,6 +12,7 @@ import {
 } from "../lib/setup";
 import { Banner } from "./Banner";
 import { Icon } from "./Icon";
+import "./SetupApps.css";
 
 type ShownStatus = ProposalStatus | "pending";
 
@@ -155,17 +156,48 @@ function ProposalRow({ app, edits, clash, onName, onInclude }: AppRowProps) {
   );
 }
 
+/** Projects setup found but can't write tasks for yet (ADR-0014 P3). */
+function Unsupported({ projects }: { projects: NonNullable<Proposal["unsupported"]> }) {
+  return (
+    <section className="setup-unsupported" aria-labelledby="setup-unsupported-title">
+      <h3 id="setup-unsupported-title" className="setup-unsupported-title">
+        <Icon name="info" size={14} />
+        Not supported yet: add {projects.length === 1 ? "it" : "them"} by hand
+      </h3>
+      <p className="setup-unsupported-text">
+        Setup writes tasks for JavaScript and TypeScript apps only, for now. To run {projects.length === 1 ? "this one" : "these"} with Portplane, add a
+        task to its <code>dekit.yaml</code> with <code>portless &lt;name&gt; &lt;command&gt;</code>; Portplane shows it like any other app.
+      </p>
+      <ul className="setup-unsupported-list">
+        {projects.map((p) => (
+          <li key={p.dir}>
+            <span className="mono">{p.dir}</span>
+            {p.kinds.map((k) => (
+              <span key={k} className="tag">
+                {k}
+              </span>
+            ))}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 /** Step 2: the apps a scan found, grouped by project and checkout, with names and skips to edit. */
 export function SetupApps({
   proposal,
   edits,
   onName,
   onInclude,
+  onIncludeAll,
 }: {
   proposal: Proposal;
   edits: SetupEdits;
   onName(task: string, value: string | undefined): void;
   onInclude(task: string, include: boolean): void;
+  /** Ticks or unticks every app of a project at once ("Include all / none"). */
+  onIncludeAll?(tasks: string[], include: boolean): void;
 }) {
   const groups = groupProposalApps(proposal.apps);
   const clashes = nameClashes(proposal.apps, edits);
@@ -182,7 +214,7 @@ export function SetupApps({
         </Banner>
       )}
 
-      {groups.length === 0 && (
+      {groups.length === 0 && !proposal.unsupported?.length && (
         <div className="panel setup-empty">
           <p className="panel-title">No apps found</p>
           <p className="panel-text">
@@ -192,9 +224,25 @@ export function SetupApps({
         </div>
       )}
 
-      {groups.map((g) => (
+      {groups.map((g) => {
+        const editable = g.worktrees.flatMap((wt) => wt.apps).filter((a) => a.status !== "manual");
+        const on = editable.filter((a) => isIncluded(a, edits)).length;
+        return (
         <section key={g.project} className="setup-project" aria-label={g.project}>
-          <h3 className="setup-project-name">{g.project}</h3>
+          <div className="setup-project-head">
+            <h3 className="setup-project-name">{g.project}</h3>
+            {onIncludeAll && editable.length > 1 && (
+              <span className="setup-project-all">
+                <button type="button" className="link-btn" disabled={on === editable.length} onClick={() => onIncludeAll(editable.map((a) => a.task), true)}>
+                  Include all
+                </button>
+                <span aria-hidden="true">·</span>
+                <button type="button" className="link-btn" disabled={on === 0} onClick={() => onIncludeAll(editable.map((a) => a.task), false)}>
+                  None
+                </button>
+              </span>
+            )}
+          </div>
           {g.worktrees.map((wt) => (
             <div key={wt.worktree} className="setup-wt">
               {(g.worktrees.length > 1 || wt.worktree) && (
@@ -217,7 +265,10 @@ export function SetupApps({
             </div>
           ))}
         </section>
-      ))}
+        );
+      })}
+
+      {proposal.unsupported && proposal.unsupported.length > 0 && <Unsupported projects={proposal.unsupported} />}
 
       {proposal.change.removed.length > 0 && (
         <section className="setup-removed" aria-labelledby="setup-removed-title">
