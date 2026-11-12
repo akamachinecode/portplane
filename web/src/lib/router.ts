@@ -4,13 +4,16 @@ import { useSyncExternalStore } from "react";
 // alike, Back and Forward work, and the tray or a notification can point at
 // one thing. Every segment is URL-encoded (app ids and runners are paths).
 //
-//   #/apps                                  #/runners
+//   #/apps                                  #/runners/<machine?>
 //   #/apps/<machine>/<appId>/<tab?>         #/machines
 //   #/projects                              #/health
 //   #/projects/<machine>/<runner>           #/settings/<section?>
-//   #/domains/<section?>                    #/onboarding/<step?>
+//   #/domains/<section?>/<machine?>         #/onboarding/<step?>
+//   #/setup/<machine>/<step?>  (the guided setup on a machine over SSH)
 //
-// Anything else shows the apps.
+// Runners and Domains act on one machine (ADR-0026): without one in the
+// URL, the machine last picked there; with one, that machine. Anything
+// else shows the apps.
 
 export const APP_TABS = ["summary", "output", "config", "url"] as const;
 export const DOMAIN_SECTIONS = ["proxy", "routes", "aliases", "sharing", "compose", "lan", "config", "certificates", "hosts", "doctor", "maintenance"] as const;
@@ -29,12 +32,12 @@ export interface AppRef {
 export type Route =
   | { view: "apps"; detail?: AppRef & { tab: AppTab } }
   | { view: "projects"; runner?: { machine: string; root: string } }
-  | { view: "domains"; section: DomainSection }
-  | { view: "runners" }
+  | { view: "domains"; section: DomainSection; machine?: string }
+  | { view: "runners"; machine?: string }
   | { view: "machines" }
   | { view: "health" }
   | { view: "settings"; section: SettingsSection }
-  | { view: "onboarding"; step?: string };
+  | { view: "onboarding"; step?: string; machine?: string };
 
 export type View = Route["view"];
 
@@ -67,8 +70,10 @@ export function parseRoute(hash: string): Route {
         if (!a || !b || c !== undefined) return null;
         return { view: "projects", runner: { machine: a, root: b } };
       case "domains": {
-        const section = b === undefined ? pick(DOMAIN_SECTIONS, a, "proxy") : null;
-        return section && { view: "domains", section };
+        const section = c === undefined ? pick(DOMAIN_SECTIONS, a, "proxy") : null;
+        if (!section) return null;
+        if (b === undefined) return { view: "domains", section };
+        return b ? { view: "domains", section, machine: b } : null;
       }
       case "settings": {
         const section = b === undefined ? pick(SETTINGS_SECTIONS, a, "general") : null;
@@ -77,7 +82,12 @@ export function parseRoute(hash: string): Route {
       case "onboarding":
         if (b !== undefined) return null;
         return a ? { view: "onboarding", step: a } : { view: "onboarding" };
+      case "setup":
+        if (!a || c !== undefined || a === "local") return null;
+        return b ? { view: "onboarding", machine: a, step: b } : { view: "onboarding", machine: a };
       case "runners":
+        if (a === undefined) return { view: "runners" };
+        return a && b === undefined ? { view: "runners", machine: a } : null;
       case "machines":
       case "health":
         return a === undefined ? { view } : null;
@@ -101,10 +111,14 @@ export function href(route: Route): string {
     case "projects":
       return route.runner ? `#/projects/${enc(route.runner.machine)}/${enc(route.runner.root)}` : "#/projects";
     case "domains":
+      if (route.machine) return `#/domains/${route.section}/${enc(route.machine)}`;
       return route.section === "proxy" ? "#/domains" : `#/domains/${route.section}`;
+    case "runners":
+      return route.machine ? `#/runners/${enc(route.machine)}` : "#/runners";
     case "settings":
       return route.section === "general" ? "#/settings" : `#/settings/${route.section}`;
     case "onboarding":
+      if (route.machine && route.machine !== "local") return `#/setup/${enc(route.machine)}${route.step ? `/${enc(route.step)}` : ""}`;
       return route.step ? `#/onboarding/${enc(route.step)}` : "#/onboarding";
     default:
       return `#/${route.view}`;

@@ -76,3 +76,18 @@ export function createHttp(token: string | null, fetchImpl: FetchLike = (i, o) =
 export function seg(value: string): string {
   return encodeURIComponent(value);
 }
+
+/**
+ * The same requests for one machine (ADR-0026): /api/<path> becomes
+ * /api/m/<machine>/<path>, which Portplane serves for this computer or
+ * passes to that machine's agent.
+ */
+export function machineHttp(h: Http, machine: string): Http {
+  const to = (path: string) => (path.startsWith("/api/") ? `/api/m/${seg(machine)}/${path.slice(5)}` : path);
+  return {
+    send: (method, path, body, signal) => h.send(method, to(path), body, signal),
+    json: <T>(method: string, path: string, body?: unknown, signal?: AbortSignal) => h.json<T>(method, to(path), body, signal),
+    none: (method, path, body, signal) => h.none(method, to(path), body, signal),
+    fail: h.fail,
+  };
+}

@@ -7,7 +7,10 @@ import { CommandLine } from "../../components/Controls";
 import { Dialog } from "../../components/Dialog";
 import { Icon, Spinner } from "../../components/Icon";
 import { JobCard } from "../../components/JobCard";
+import { useMachineScope } from "../../components/MachineScope";
 import { ErrorState, LoadingState } from "../../components/States";
+import { sshCommand } from "../../lib/machineScope";
+import { useMachineResources } from "./store";
 
 /** Actions that remove or kill something get a red button. */
 const DESTRUCTIVE: PortlessAction[] = ["uninstall", "prune-force", "ca-regenerate", "service-uninstall", "hosts-clean", "proxy-stop"];
@@ -90,6 +93,8 @@ export function PlanDialog({
   children?: ReactNode;
 }) {
   const { api, toast } = useApp();
+  const scope = useMachineScope();
+  const resources = useMachineResources();
   const [plan, setPlan] = useState<Plan | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
@@ -126,8 +131,25 @@ export function PlanDialog({
   };
 
   const noDialog = !!plan?.admin && !plan.method;
-  const terminal = plan?.steps.filter((s) => s.terminal).map((s) => s.terminal!) ?? [];
+  const local = plan?.steps.filter((s) => s.terminal).map((s) => s.terminal!) ?? [];
+  // On a machine over SSH (ADR-0026) the commands run there, from a
+  // terminal on this computer; nobody there can answer a password dialog.
+  const name = scope.ms?.machine.name ?? scope.id;
+  const terminal = scope.remote ? local.map((t) => sshCommand(scope.host, t)) : local;
   const danger = DESTRUCTIVE.includes(action);
+  const [checking, setChecking] = useState(false);
+  const checkAgain = async () => {
+    setChecking(true);
+    await Promise.all([
+      resources.status.load(api),
+      resources.routes.get().status !== "idle" ? resources.routes.load(api) : null,
+      resources.doctor.get().status !== "idle" ? resources.doctor.load(api) : null,
+    ]);
+    setChecking(false);
+    toast.info(`Checked ${name} again`);
+    onDone?.(true);
+    onClose();
+  };
 
   const footer = (
     <>
@@ -141,7 +163,13 @@ export function PlanDialog({
           <button type="button" className="btn btn-ghost" onClick={onClose}>
             Cancel
           </button>
-          {plan && (
+          {plan && noDialog && scope.remote && (
+            <button type="button" className="btn btn-primary" onClick={() => void checkAgain()} disabled={checking} aria-busy={checking || undefined} aria-describedby={descId}>
+              {checking && <Spinner />}
+              Check again
+            </button>
+          )}
+          {plan && !(noDialog && scope.remote) && (
             <button
               type="button"
               className={`btn ${danger ? "btn-danger" : "btn-primary"}`}
@@ -183,7 +211,9 @@ export function PlanDialog({
           <p className="plan-password" id={descId}>
             {plan.admin
               ? noDialog
-                ? "This computer can't show a password dialog here. Run the commands above in a terminal instead:"
+                ? scope.remote
+                  ? `Nobody at ${name}'s screen can answer a password dialog. Run these in a terminal here: each one opens SSH to ${name}, where sudo asks for your password. Then check again.`
+                  : "This computer can't show a password dialog here. Run the commands above in a terminal instead:"
                 : `Portplane asks for your password with ${METHOD[plan.method] ?? "your system's own dialog"}. It never sees your password.`
               : "This doesn't need your password."}
           </p>

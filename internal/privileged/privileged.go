@@ -15,6 +15,7 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"sync/atomic"
 )
 
 // Command is what to run as administrator.
@@ -38,10 +39,22 @@ var ErrUnavailable = errors.New("cannot ask for an administrator password here")
 
 // Method names how this system asks: "pkexec", "osascript", "uac", or ""
 // when it cannot.
-func Method() string { return method() }
+func Method() string {
+	if headless.Load() {
+		return ""
+	}
+	return method()
+}
 
 // Available reports whether Run can ask for a password here.
-func Available() bool { return method() != "" }
+func Available() bool { return Method() != "" }
+
+var headless atomic.Bool
+
+// Headless says nobody sits at this machine's screen, as on a machine
+// reached over SSH (ADR-0026): Run never asks for a password and returns
+// ErrUnavailable, so the user runs Terminal(cmd) over SSH instead.
+func Headless() { headless.Store(true) }
 
 // Run runs c as administrator after the system asked for a password. The
 // program's output goes to out as it comes. It returns ErrDenied when the
@@ -58,6 +71,9 @@ func Run(ctx context.Context, c Command, out io.Writer) error {
 		if k == "" || strings.ContainsAny(k, "=\x00") {
 			return fmt.Errorf("bad environment variable name %q", k)
 		}
+	}
+	if headless.Load() {
+		return ErrUnavailable
 	}
 	if out == nil {
 		out = io.Discard

@@ -18,4 +18,27 @@ export interface MockContext {
   later(ms: number, fn: () => void): void;
   /** Fake jobs: their events reach subscribers like the server's. */
   jobs: MockJobs;
+  /**
+   * Set when the context acts on a machine reached over SSH (ADR-0026):
+   * snapshot() shows that machine as the local one, update() changes it,
+   * and jobs carry its id. Nobody there can answer a password dialog.
+   */
+  remote?: { id: string; name: string };
+}
+
+/** The remote machine's project folder in the mock (mockRemote in mock.ts). */
+export const MOCK_REMOTE_ROOT = "/home/dev/src";
+
+/** The context for one machine reached over SSH. */
+export function scopeMockContext(ctx: MockContext, id: string, name: string): MockContext {
+  return {
+    ...ctx,
+    remote: { id, name },
+    snapshot() {
+      const s = ctx.snapshot();
+      return { ...s, machines: s.machines.map((m) => ({ ...m, machine: { ...m.machine, local: m.machine.id === id } })) };
+    },
+    update: (fn, machine = id) => ctx.update(fn, machine),
+    jobs: { ...ctx.jobs, start: (spec) => ctx.jobs.start({ ...spec, machine: id }) },
+  };
 }

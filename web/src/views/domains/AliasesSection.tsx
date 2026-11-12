@@ -11,10 +11,13 @@ import { useNow } from "../../hooks/useNow";
 import { isUserAlias, routeAge } from "../../lib/portless";
 import { AliasDialog, type AliasDraft } from "./AliasDialog";
 import { StatusGate } from "./ProxySection";
-import { routesResource, useIntent, useRoutes, valueOf } from "./store";
+import { useIntent, useMachineResources, useRoutes, valueOf } from "./store";
+import { useMachineScope } from "../../components/MachineScope";
 
 function List({ routes }: { routes: RouteView[] }) {
   const ctx = useApp();
+  const { remote } = useMachineScope();
+  const { put } = useMachineResources().routes;
   const now = useNow(true, 30_000);
   const [draft, setDraft] = useState<AliasDraft | null>(null);
   const [removing, setRemoving] = useState<RouteView | null>(null);
@@ -29,7 +32,7 @@ function List({ routes }: { routes: RouteView[] }) {
     setBusy(true);
     setError(null);
     try {
-      routesResource.put(await ctx.api.portlessRemoveAlias(removing.hostname));
+      put(await ctx.api.portlessRemoveAlias(removing.hostname));
       ctx.toast.info(`Removed ${removing.hostname}`);
       setRemoving(null);
     } catch (err) {
@@ -73,9 +76,14 @@ function List({ routes }: { routes: RouteView[] }) {
               {aliases.map((r) => (
                 <tr key={r.hostname}>
                   <td>
-                    <a className="addr" href={r.url} target="_blank" rel="noopener">
-                      {r.hostname}
-                    </a>
+                    {remote ? (
+                      // It points at that machine's own loopback (ADR-0016).
+                      <span className="addr">{r.hostname}</span>
+                    ) : (
+                      <a className="addr" href={r.url} target="_blank" rel="noopener">
+                        {r.hostname}
+                      </a>
+                    )}
                   </td>
                   <td className="mono">127.0.0.1:{r.port}</td>
                   <td>{r.owner ? r.owner.label : <span className="warn-text">Nothing: start the server, or remove the alias</span>}</td>

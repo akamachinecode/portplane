@@ -6,6 +6,7 @@ import { useApp } from "../../components/AppContext";
 import { Banner } from "../../components/Banner";
 import { Icon, Spinner } from "../../components/Icon";
 import { IconButton } from "../../components/IconButton";
+import { useMachineScope } from "../../components/MachineScope";
 import { ErrorState, LoadingState } from "../../components/States";
 import { StateDot } from "../../components/StateDot";
 import { expiry } from "../../lib/portless";
@@ -21,6 +22,10 @@ function CA({ certs, reload }: { certs: Certificates; reload(): void }) {
   const [exporting, setExporting] = useState(false);
   const [exported, setExported] = useState<string | null>(null);
   const ca = certs.ca;
+  // A remote machine's apps open here with this computer's certificate
+  // (ADR-0016): its own matters to programs on that machine only.
+  const scope = useMachineScope();
+  const remote = scope.remote ? (scope.ms?.machine.name ?? scope.id) : null;
   const now = Date.now();
   const exp = expiry(ca.notAfter, now);
 
@@ -53,7 +58,14 @@ function CA({ certs, reload }: { certs: Certificates; reload(): void }) {
           <span className="mono">{ca.systemCopy}</span> should belong to the administrator. While it's yours, any program you run could replace it with another certificate that your system would then trust.
         </Banner>
       )}
-      <SettingsGroup title="Local certificate authority" description="portless signs a certificate for every address with its own authority. Your system and browsers need to trust it once for the padlock to show.">
+      <SettingsGroup
+        title="Local certificate authority"
+        description={
+          remote
+            ? `portless on ${remote} signs a certificate for every address there with its own authority. Its apps open here with this computer's certificate; ${remote}'s own matters to programs there that call https://….localhost addresses.`
+            : "portless signs a certificate for every address with its own authority. Your system and browsers need to trust it once for the padlock to show."
+        }
+      >
         {!ca.exists ? (
           <p className="muted">portless hasn't created it yet. Trusting it creates it, or starting the proxy with HTTPS.</p>
         ) : (
@@ -61,24 +73,26 @@ function CA({ certs, reload }: { certs: Certificates; reload(): void }) {
             <SettingRow label="Trusted by the system">
               <span className="inline-state">
                 <StateDot state={ca.trusted ? "on" : "failed"} />
-                {ca.trusted ? "Yes" : "No: browsers warn on every .localhost address"}
+                {ca.trusted ? "Yes" : remote ? `No: programs on ${remote} refuse its https://….localhost addresses` : "No: browsers warn on every .localhost address"}
               </span>
             </SettingRow>
-            <SettingRow label="Browsers" description="Firefox and some Linux browsers keep their own list of trusted certificates.">
-              {certs.browsers ? (
-                <ul className="browser-list">
-                  {certs.browsers.map((b) => (
-                    <li key={`${b.browser}-${b.profile ?? ""}`} className="inline-state">
-                      <StateDot state={b.trusted ? "on" : "failed"} />
-                      {b.browser}
-                      {b.profile && <span className="muted"> · {b.profile}</span>}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <span className="muted">Not checked here yet: the welcome screen's browser step checks them</span>
-              )}
-            </SettingRow>
+            {!remote && (
+              <SettingRow label="Browsers" description="Firefox and some Linux browsers keep their own list of trusted certificates.">
+                {certs.browsers ? (
+                  <ul className="browser-list">
+                    {certs.browsers.map((b) => (
+                      <li key={`${b.browser}-${b.profile ?? ""}`} className="inline-state">
+                        <StateDot state={b.trusted ? "on" : "failed"} />
+                        {b.browser}
+                        {b.profile && <span className="muted"> · {b.profile}</span>}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <span className="muted">Not checked here yet: the welcome screen's browser step checks them</span>
+                )}
+              </SettingRow>
+            )}
             <SettingRow label="Fingerprint (SHA-256)">
               <span className="fingerprint">
                 <code className="mono">{ca.fingerprint}</code>

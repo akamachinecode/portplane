@@ -5,7 +5,8 @@ import { requestIntent } from "./store";
 
 // The portless center in the palette (plan §6.3): new alias, diagnostics,
 // the proxy, a URL for any listening port, and sharing, compose projects
-// and LAN mode (M5.6).
+// and LAN mode (M5.6). The actions are this computer's; another machine's
+// are in Domains with that machine picked.
 
 export function portlessCommands(ctx: CommandContext): Command[] {
   const local = ctx.snapshot?.machines.find((m) => m.machine.local);
@@ -83,7 +84,7 @@ export function portlessCommands(ctx: CommandContext): Command[] {
       keywords: ["portless", "url", "port", "route", "localhost"],
       run: () => {
         requestIntent({ kind: "new-alias" });
-        navigate({ view: "domains", section: "aliases" });
+        navigate({ view: "domains", section: "aliases", machine: local.machine.id });
       },
     },
     {
@@ -94,7 +95,7 @@ export function portlessCommands(ctx: CommandContext): Command[] {
       keywords: ["portless", "doctor", "check", "health", "diagnose"],
       run: () => {
         requestIntent({ kind: "run-doctor" });
-        navigate({ view: "domains", section: "doctor" });
+        navigate({ view: "domains", section: "doctor", machine: local.machine.id });
       },
     },
     {
@@ -106,7 +107,7 @@ export function portlessCommands(ctx: CommandContext): Command[] {
       searchOnly: true,
       run: () => {
         requestIntent({ kind: "action", action: local.tools.proxyRunning ? "proxy-stop" : "proxy-start" });
-        navigate({ view: "domains", section: "proxy" });
+        navigate({ view: "domains", section: "proxy", machine: local.machine.id });
       },
     },
     {
@@ -118,7 +119,7 @@ export function portlessCommands(ctx: CommandContext): Command[] {
       searchOnly: true,
       run: () => {
         requestIntent({ kind: "action", action: "trust" });
-        navigate({ view: "domains", section: "certificates" });
+        navigate({ view: "domains", section: "certificates", machine: local.machine.id });
       },
     },
   );
@@ -134,7 +135,7 @@ export function portlessCommands(ctx: CommandContext): Command[] {
       searchOnly: true,
       run: () => {
         requestIntent({ kind: "new-alias", port: p.port, name: suggestName(p.process) });
-        navigate({ view: "domains", section: "aliases" });
+        navigate({ view: "domains", section: "aliases", machine: local.machine.id });
       },
     });
   }

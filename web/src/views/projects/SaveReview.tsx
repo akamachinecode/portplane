@@ -2,12 +2,12 @@ import { useCallback, useEffect, useState } from "react";
 import type { EditResult, Reload, ReloadPlan } from "../../api/dekit";
 import { ApiError, errorText } from "../../api/errors";
 import { useApp } from "../../components/AppContext";
+import { useScopedMachine } from "../../components/MachineScope";
 import { Dialog } from "../../components/Dialog";
 import { FileDiff } from "../../components/FileDiff";
 import { Icon, Spinner } from "../../components/Icon";
 import { ErrorState, LoadingState } from "../../components/States";
 import { changeText } from "../../lib/dekit/why";
-import { useShell } from "../../shell/ShellContext";
 
 // Saving config (plan §4.4): 1. the file's diff; 2. what the running
 // runner would change (dekit reload's plan); 3. "Apply and restart the
@@ -76,8 +76,7 @@ export function runningChanged(plan: ReloadPlan | undefined, alive: Set<string>)
 }
 
 function useAlive(runner: string): Set<string> {
-  const { snapshot } = useShell();
-  const ms = snapshot?.machines.find((m) => m.machine.local);
+  const ms = useScopedMachine();
   return new Set((ms?.apps ?? []).filter((a) => a.runner === runner && (a.state === "on" || a.state === "starting")).map((a) => a.task));
 }
 

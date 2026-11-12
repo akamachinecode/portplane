@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useApp } from "../../components/AppContext";
 import { Icon, Spinner } from "../../components/Icon";
+import { useMachineScope } from "../../components/MachineScope";
 import { isMac } from "../../lib/keyboard";
 import { navigate } from "../../lib/router";
 import { useShell } from "../../shell/ShellContext";
@@ -13,17 +14,43 @@ export function DoneStep() {
   const { info } = useApp();
   const { updatePreferences } = useShell();
   const { checks } = useOnboarding();
+  const scope = useMachineScope();
   const [leaving, setLeaving] = useState(false);
   const mac = isMac(info?.os);
   const tray = checks.items.tray;
   const gnomeHint = tray?.problem?.includes("AppIndicator") ? tray : undefined;
 
   const finish = async () => {
+    if (scope.remote) {
+      navigate({ view: "apps" });
+      return;
+    }
     setLeaving(true);
     const ok = await updatePreferences((p) => ({ ...p, onboarding: { ...p.onboarding, completed: true, skipped: false, step: "done", done: [...new Set([...p.onboarding.done, "done"])] } }));
     setLeaving(false);
     if (ok) navigate({ view: "apps" });
   };
+
+  if (scope.remote) {
+    const name = scope.ms?.machine.name ?? scope.id;
+    return (
+      <StepLayout
+        icon="checkCircle"
+        title={`${name} is set up`}
+        lead={`Portplane watches ${name}'s folders and shows its apps next to yours. They open here at https://<app>.${scope.id}.localhost, through SSH.`}
+        footer={
+          <StepFooter>
+            <button type="button" className="btn btn-primary" onClick={() => void finish()} autoFocus>
+              Go to the apps
+              <Icon name="arrowRight" size={14} />
+            </button>
+          </StepFooter>
+        }
+      >
+        <p className="muted">Its runners, its dekit config and its portless proxy are in Runners, Projects and Domains: pick {name} at the top of each.</p>
+      </StepLayout>
+    );
+  }
 
   return (
     <StepLayout

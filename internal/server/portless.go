@@ -143,6 +143,7 @@ func PortlessHandlers(d PortlessDeps) map[string]http.HandlerFunc {
 		"DELETE /api/portless/aliases/{name}":      p.removeAlias,
 		"GET /api/portless/certificates":           p.certificates,
 		"POST /api/portless/certificates/export":   p.exportCA,
+		"GET /api/portless/certificates/ca.pem":    p.caPEM,
 		"GET /api/portless/hosts":                  p.hosts,
 		"POST /api/portless/actions/{action}/plan": p.plan,
 		"POST /api/portless/actions/{action}":      p.run,
@@ -160,7 +161,7 @@ func PortlessHandlers(d PortlessDeps) map[string]http.HandlerFunc {
 	return routes
 }
 
-var errNoPortless = errors.New("portless isn't installed on this computer: install it from Settings → Tools or the welcome screen")
+var errNoPortless = errors.New("portless isn't installed on this machine: install it from Settings → Tools or the welcome screen")
 
 func (p *portlessAPI) needPortless(w http.ResponseWriter) bool {
 	if p.d.Client == nil || !p.d.Client.Available() {
@@ -650,6 +651,23 @@ func (p *portlessAPI) exportCA(w http.ResponseWriter, r *http.Request) {
 		revealed = p.d.Reveal(dir) == nil
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"path": path, "revealed": revealed})
+}
+
+// caPEM answers with the CA certificate itself. Portplane reads a remote
+// machine's this way to save it on this computer (ADR-0026).
+func (p *portlessAPI) caPEM(w http.ResponseWriter, _ *http.Request) {
+	if !p.needPortless(w) {
+		return
+	}
+	ca := p.d.Client.CA()
+	b, err := os.ReadFile(ca.Path)
+	if !ca.Exists || err != nil {
+		writeError(w, http.StatusNotFound, errors.New("portless has no certificate yet: start the proxy with HTTPS or trust it first"))
+		return
+	}
+	w.Header().Set("Content-Type", "application/x-pem-file")
+	w.Header().Set("Cache-Control", "no-store")
+	_, _ = w.Write(b)
 }
 
 // ---- hosts ----

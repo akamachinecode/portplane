@@ -14,6 +14,7 @@ import (
 
 	"github.com/hashicorp/yamux"
 
+	"github.com/akamachinecode/portplane/internal/jobs"
 	"github.com/akamachinecode/portplane/internal/model"
 )
 
@@ -47,7 +48,8 @@ type Agent struct {
 	watchers map[chan model.MachineSnapshot]struct{}
 	interval time.Duration
 	hello    Hello
-	warning  string // shown on the machine while online (missing folders)
+	warning  string        // shown on the machine while online (missing folders)
+	jobs     *jobs.Manager // where the machine's jobs are mirrored (MirrorJobs)
 
 	wmu    sync.Mutex
 	closed chan struct{}
@@ -100,6 +102,7 @@ func (a *Agent) loop() {
 	for {
 		started := time.Now()
 		err := a.session()
+		a.abandonJobs()
 		select {
 		case <-a.closed:
 			return
@@ -183,7 +186,7 @@ func (a *Agent) session() error {
 
 	hctx, hcancel := context.WithTimeout(live, 20*time.Second)
 	var hello Hello
-	err = a.call(hctx, "hello", Hello{Protocol: Protocol}, &hello)
+	err = a.call(hctx, "hello", Hello{Protocol: Protocol, Machine: a.id}, &hello)
 	hcancel()
 	if err != nil {
 		// The cached start command may be stale (binary removed): install
@@ -216,6 +219,8 @@ func (a *Agent) session() error {
 	if err := a.call(live, "watch", nil, nil); err != nil {
 		return fail(err)
 	}
+	// The machine's jobs follow (an older agent has none).
+	_ = a.call(live, "watchJobs", nil, nil)
 	select {
 	case err := <-readErr:
 		return err
@@ -241,6 +246,13 @@ func (a *Agent) read(ctl net.Conn) error {
 			a.mu.Unlock()
 			if ch != nil {
 				ch <- m
+			}
+			continue
+		}
+		if m.Method == "job" {
+			var j jobs.Job
+			if json.Unmarshal(m.Params, &j) == nil {
+				a.mirrorJob(j)
 			}
 			continue
 		}

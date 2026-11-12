@@ -1,0 +1,51 @@
+/* The machine picker (ADR-0026): a labelled select in a view's header. */
+
+.machine-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  color: var(--text-2);
+  font-size: var(--text-xs);
+}
+
+.machine-picker-label {
+  white-space: nowrap;
+}
+
+.machine-picker-select {
+  max-width: 220px;
+  height: var(--control-h);
+  padding: 0 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.machine-picker-select:hover {
+  background: var(--surface-2);
+}
+
+.machine-picker-select:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+/* A command that runs on another machine over SSH, with its note. */
+.remote-command-note {
+  margin: 0;
+  color: var(--text-2);
+  font-size: var(--text-sm);
+}
+
+@media (max-width: 760px) {
+  .machine-picker-select {
+    max-width: 160px;
+  }
+}

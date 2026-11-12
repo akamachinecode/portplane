@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType } from "react";
 import type { Job } from "../api/jobs";
+import { LOCAL_MACHINE } from "../api/machine";
 import { useApp } from "../components/AppContext";
 import { Icon, Spinner } from "../components/Icon";
+import { MachineScope, RemoteStatusBanner, useMachineScope } from "../components/MachineScope";
 import { useSetupProposal } from "../hooks/useSetupProposal";
 import { NO_EDITS, type SetupEdits } from "../lib/setup";
 import { navigate } from "../lib/router";
@@ -16,7 +18,7 @@ import { InstallStep } from "./onboarding/InstallStep";
 import { ProxyStep } from "./onboarding/ProxyStep";
 import { ReviewStep } from "./onboarding/ReviewStep";
 import { StartStep } from "./onboarding/StartStep";
-import { flowOf, nextStep, parseStep, progressOf, reached, resumeStep, STEPS, stepIndex, type StepId } from "./onboarding/steps";
+import { flowOf, nextStep, parseStep, reached, resumeStep, STEPS, stepIndex, type StepId } from "./onboarding/steps";
 import { WelcomeStep } from "./onboarding/WelcomeStep";
 import "./OnboardingView.css";
 
@@ -47,16 +49,44 @@ function ScanDriver({ folder, edits, onState }: { folder: string; edits: SetupEd
  * The guided setup (plan §3), full window: from a computer without dekit,
  * portless or Node.js to the first app at https://<name>.localhost. The
  * step is in the URL (#/onboarding/<step>) and the progress in the
- * preferences, so it resumes where it was left.
+ * preferences, so it resumes where it was left. On a machine over SSH
+ * (#/setup/<machine>/<step>, ADR-0026) the same steps act on that machine:
+ * its tools, its folders, its apps; its progress is not saved.
  */
 export function OnboardingView() {
+  const { route } = useShell();
+  const machine = (route.view === "onboarding" && route.machine) || LOCAL_MACHINE;
+  return (
+    <MachineScope machine={machine}>
+      <OnboardingFlow key={machine} />
+    </MachineScope>
+  );
+}
+
+// A remote machine's setup is not saved in the preferences (they are this
+// computer's): how far it got is kept for this session only.
+const remoteFurthest = new Map<string, number>();
+
+/** A step's label in the rail and the header, naming a remote machine. */
+function labelOf(step: StepId, remote: string | null): string {
+  if (remote && step === "check") return `Check ${remote}`;
+  return STEPS[stepIndex(step)].label;
+}
+
+function OnboardingFlow() {
   const { api, toast } = useApp();
-  const { route, preferences, updatePreferences } = useShell();
+  const { route, preferences, updatePreferences: savePreferences } = useShell();
+  const scope = useMachineScope();
+  const remote = scope.remote ? (scope.ms?.machine.name ?? scope.id) : null;
+  const machineId = scope.remote ? scope.id : undefined;
+  // Progress is this computer's: a remote machine's setup is not saved.
+  const updatePreferences = useCallback<typeof savePreferences>((fn) => (scope.remote ? Promise.resolve(true) : savePreferences(fn)), [scope.remote, savePreferences]);
   const prefs = preferences.status === "ok" ? preferences.value : null;
   const routeStep = route.view === "onboarding" ? route.step : undefined;
   const step = parseStep(routeStep);
   const checks = useChecks(api);
-  const [browsersNeeded, setBrowsersNeeded] = useState<boolean | null>(null);
+  // A remote machine's apps open in this computer's browsers.
+  const [browsersNeeded, setBrowsersNeeded] = useState<boolean | null>(scope.remote ? false : null);
   const [choices, setChoices] = useState<Record<string, string>>({});
   const [folders, setFolders] = useState<string[] | null>(null);
   const [edits, setAllEdits] = useState<Record<string, SetupEdits>>({});
@@ -68,11 +98,17 @@ export function OnboardingView() {
   // Resume where the user left off.
   const resumed = useRef(false);
   useEffect(() => {
-    if (resumed.current || !prefs) return;
+    if (resumed.current) return;
+    if (machineId) {
+      resumed.current = true;
+      if (!routeStep) navigate({ view: "onboarding", machine: machineId, step: "check" }, { replace: true });
+      return;
+    }
+    if (!prefs) return;
     resumed.current = true;
     setChoices(prefs.onboarding.choices ?? {});
     if (!routeStep) navigate({ view: "onboarding", step: resumeStep(prefs.onboarding) }, { replace: true });
-  }, [prefs, routeStep]);
+  }, [prefs, routeStep, machineId]);
 
   // The check runs once, in the background, from the start: by the time
   // the user clicks Start, most answers are in.
@@ -92,14 +128,20 @@ export function OnboardingView() {
     };
   }, [api]);
 
-  const flow = useMemo(() => flowOf(checks.items, browsersNeeded), [checks.items, browsersNeeded]);
+  const flow = useMemo(() => flowOf(checks.items, scope.remote ? false : browsersNeeded), [checks.items, browsersNeeded, scope.remote]);
+
+  // A remote machine's apps open in this computer's browsers, which this
+  // computer's own setup covers: its setup has no Browser trust step.
+  const steps = useMemo(() => (scope.remote ? STEPS.filter((s) => s.id !== "browsers") : STEPS), [scope.remote]);
+  const index = Math.max(0, steps.findIndex((s) => s.id === step));
 
   const go = useCallback(
     (to: StepId) => {
-      navigate({ view: "onboarding", step: to });
+      if (machineId) remoteFurthest.set(machineId, Math.max(remoteFurthest.get(machineId) ?? 0, stepIndex(to)));
+      navigate({ view: "onboarding", step: to, machine: machineId });
       void updatePreferences((p) => ({ ...p, onboarding: reached(p.onboarding, to) }));
     },
-    [updatePreferences],
+    [updatePreferences, machineId],
   );
 
   const choose = useCallback(
@@ -121,7 +163,7 @@ export function OnboardingView() {
       step,
       go,
       next: () => go(nextStep(step, flow)),
-      back: () => go(STEPS[Math.max(0, stepIndex(step) - 1)].id),
+      back: () => go(steps[Math.max(0, index - 1)].id),
       flow,
       checks,
       setBrowsersNeeded,
@@ -137,10 +179,14 @@ export function OnboardingView() {
       jobs,
       trackJob,
     }),
-    [step, go, flow, checks, choices, choose, folders, edits, setEdits, scans, roots, jobs, trackJob],
+    [step, steps, index, go, flow, checks, choices, choose, folders, edits, setEdits, scans, roots, jobs, trackJob],
   );
 
   const skip = async () => {
+    if (scope.remote) {
+      navigate({ view: "machines" });
+      return;
+    }
     setLeaving(true);
     const ok = await updatePreferences((p) => ({ ...p, onboarding: { ...p.onboarding, skipped: true, step } }));
     setLeaving(false);
@@ -151,8 +197,7 @@ export function OnboardingView() {
   };
 
   const View = STEP_VIEWS[step];
-  const index = stepIndex(step);
-  const done = new Set(prefs?.onboarding.done ?? []);
+  const done = new Set<string>(machineId ? STEPS.filter((_, i) => i < (remoteFurthest.get(machineId) ?? 0)).map((s) => s.id) : (prefs?.onboarding.done ?? []));
   const scanning = step === "apps" || step === "review";
 
   return (
@@ -160,15 +205,15 @@ export function OnboardingView() {
       <main className="onboarding" id="main">
         <header className="ob-top">
           <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="" width={24} height={24} className="ob-top-mark" />
-          <span className="ob-top-name">Set up Portplane</span>
+          <span className="ob-top-name">{remote ? `Set up ${remote}` : "Set up Portplane"}</span>
           <span className="ob-top-step">
-            Step {index + 1} of {STEPS.length}
-            <span className="ob-top-step-label"> · {STEPS[index].label}</span>
+            Step {index + 1} of {steps.length}
+            <span className="ob-top-step-label"> · {labelOf(step, remote)}</span>
           </span>
           {step !== "done" && (
             <button type="button" className="btn btn-ghost btn-sm" onClick={() => void skip()} disabled={leaving} aria-busy={leaving || undefined}>
               {leaving && <Spinner size={12} />}
-              Skip for now
+              {remote ? "Back to machines" : "Skip for now"}
             </button>
           )}
         </header>
@@ -177,16 +222,17 @@ export function OnboardingView() {
           role="progressbar"
           aria-label="Setup progress"
           aria-valuemin={0}
-          aria-valuemax={STEPS.length}
+          aria-valuemax={steps.length}
           aria-valuenow={index + 1}
-          aria-valuetext={`Step ${index + 1} of ${STEPS.length}: ${STEPS[index].label}`}
+          aria-valuetext={`Step ${index + 1} of ${steps.length}: ${labelOf(step, remote)}`}
         >
-          <span className="ob-progress-bar" style={{ width: `${Math.max(4, progressOf(step) * 100)}%` }} />
+          <span className="ob-progress-bar" style={{ width: `${Math.max(4, (index / (steps.length - 1)) * 100)}%` }} />
         </div>
+        <RemoteStatusBanner className="ob-remote-banner" />
         <div className="ob-body">
           <nav className="ob-rail" aria-label="Setup steps">
             <ol>
-              {STEPS.map((s, i) => {
+              {steps.map((s, i) => {
                 const current = s.id === step;
                 const reachable = i <= index || done.has(s.id);
                 const finished = done.has(s.id) && !current;
@@ -202,7 +248,7 @@ export function OnboardingView() {
                       <span className="ob-rail-dot" aria-hidden="true">
                         {finished ? <Icon name="check" size={11} /> : i + 1}
                       </span>
-                      <span className="ob-rail-label">{s.label}</span>
+                      <span className="ob-rail-label">{labelOf(s.id, remote)}</span>
                     </button>
                   </li>
                 );

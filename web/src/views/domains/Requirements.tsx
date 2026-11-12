@@ -5,12 +5,13 @@ import { useApp } from "../../components/AppContext";
 import { CommandLine } from "../../components/Controls";
 import { Icon, Spinner } from "../../components/Icon";
 import { usePlan } from "./ProxySection";
-import { sharingResource } from "./store";
+import { useMachineResources } from "./store";
 import "./Sharing.css";
 
 /** Pastes ngrok's authtoken; Portplane saves it with `ngrok config add-authtoken`. */
 function NgrokToken({ onSaved }: { onSaved?(o: SharingOverview): void }) {
   const { api, toast } = useApp();
+  const { put } = useMachineResources().sharing;
   const [token, setToken] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +21,7 @@ function NgrokToken({ onSaved }: { onSaved?(o: SharingOverview): void }) {
     setError(null);
     try {
       const o = await api.portlessNgrokAuthtoken(token.trim());
-      sharingResource.put(o);
+      put(o);
       setToken("");
       toast.info("Saved the ngrok authtoken");
       onSaved?.(o);

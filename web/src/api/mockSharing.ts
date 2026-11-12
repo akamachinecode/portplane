@@ -147,7 +147,7 @@ export function createMockSharing(ctx: MockContext, hooks: SharingHooks): MockSh
 
   const local = (): MachineSnapshot => ctx.snapshot().machines.find((m) => m.machine.local)!;
   const need = () => {
-    if (!hooks.installed()) throw new ApiError("portless isn't installed on this computer: install it from Settings → Tools or the welcome screen", 503);
+    if (!hooks.installed()) throw new ApiError("portless isn't installed on this machine: install it from Settings → Tools or the welcome screen", 503);
   };
   const appByHost = (host: string) => local().apps.find((a) => a.hostname === host);
 
@@ -161,12 +161,12 @@ export function createMockSharing(ctx: MockContext, hooks: SharingHooks): MockSh
     const out = [req("tailscale-installed", true, "Tailscale is installed"), req("tailscale-running", true, "Tailscale is connected"), req("tailscale-https", true, "Your tailnet issues HTTPS certificates")];
     out.push(req("tailscale-operator", tools.operator, "Tailscale lets your user share", { problem: "On Linux, Tailscale only lets the administrator, or the user set as its operator, share apps.", fix: "Make dev Tailscale's operator. It asks for your password once; Tailscale keeps the setting.", command: "sudo tailscale set --operator=dev", action: "tailscale-operator" }));
     if (funnel) {
-      out.push(req("tailscale-funnel", tools.funnel, "Your tailnet allows Funnel on this computer", { problem: "Your tailnet's policy doesn't let this computer use Funnel, which is what makes a Tailscale address public.", fix: "An admin of your tailnet turns Funnel on for this computer. The page explains how and can do it for you.", url: `https://login.tailscale.com/f/funnel?node=${NODE_ID}` }));
+      out.push(req("tailscale-funnel", tools.funnel, "Your tailnet allows Funnel on this machine", { problem: "Your tailnet's policy doesn't let this machine use Funnel, which is what makes a Tailscale address public.", fix: "An admin of your tailnet turns Funnel on for this machine. The page explains how and can do it for you.", url: `https://login.tailscale.com/f/funnel?node=${NODE_ID}` }));
     }
     return out;
   };
   const providers = (): ShareProvider[] => {
-    const where = tools.tailscale === "ready" ? `https://${TAILNET}` : "https://<this computer>.<your tailnet>.ts.net";
+    const where = tools.tailscale === "ready" ? `https://${TAILNET}` : "https://<this machine>.<your tailnet>.ts.net";
     const list: ShareProvider[] = [
       { kind: "tailscale", label: "Your tailnet", public: false, ready: false, where, requirements: tailscaleReqs(false), notes: ["Only devices signed in to your tailnet can open it. Each shared app takes the next free HTTPS port: 443, then 8443 and up."] },
       { kind: "funnel", label: "Public, with Tailscale Funnel", public: true, ready: false, where, requirements: tailscaleReqs(true), notes: ["Anyone on the internet with the address can open it. Funnel offers three ports (443, 8443 and 10000), so at most three apps at once."] },
@@ -282,7 +282,7 @@ export function createMockSharing(ctx: MockContext, hooks: SharingHooks): MockSh
     if (on === info.on.includes(kind)) return { ...pv, problem: on ? `${app.label} is already shared with ${label}.` : `${app.label} isn't shared with ${label}.` };
     if (on) {
       pv.missing = (providers().find((p) => p.kind === kind)?.requirements ?? []).filter((r) => !r.ok);
-      if (pv.missing.length) return { ...pv, problem: `This computer isn't ready to share with ${label} yet. Fix what's missing first.` };
+      if (pv.missing.length) return { ...pv, problem: `This machine isn't ready to share with ${label} yet. Fix what's missing first.` };
       if (kind === "tailscale" && info.on.includes("funnel")) pv.replaces = "funnel";
       if (kind === "funnel" && info.on.includes("tailscale")) pv.replaces = "tailscale";
     }
@@ -511,10 +511,10 @@ export function createMockSharing(ctx: MockContext, hooks: SharingHooks): MockSh
       { ip: "10.0.0.5", interface: "enp3s0", default: false },
     ];
     const requirements = tools.avahi
-      ? [req("mdns-tool", true, "avahi-publish-address is installed"), req("avahi-daemon", true, "The Avahi service is running"), req("lan-address", true, "This computer is on a network")]
+      ? [req("mdns-tool", true, "avahi-publish-address is installed"), req("avahi-daemon", true, "The Avahi service is running"), req("lan-address", true, "This machine is on a network")]
       : [
           req("mdns-tool", false, "avahi-publish-address is installed", { problem: "portless publishes .local names with avahi-publish-address, from the avahi-tools package, which isn't installed.", fix: "Install it, then check again.", command: "sudo dnf install avahi-tools" }),
-          req("lan-address", true, "This computer is on a network"),
+          req("lan-address", true, "This machine is on a network"),
         ];
     const proxy = hooks.proxy();
     const seen = new Set<string>();

@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import type { MachineSnapshot } from "../api/types";
 import { inferHome } from "../lib/format";
+import { navigate } from "../lib/router";
 import type { AppEntry, ProjectGroup } from "../views/apps/model";
 import { useApp } from "./AppContext";
 import type { RowExtras } from "./AppRow";
@@ -87,6 +88,7 @@ export function MachineSection({ ms, projects, filtering, renderProjects }: Mach
             <Menu
               label={`Actions for ${machine.name}`}
               items={[
+                ...(machine.status === "online" ? [{ label: "Set up…", icon: "wand" as const, onSelect: () => navigate({ view: "onboarding", machine: machine.id }) }] : []),
                 { label: "Edit machine…", icon: "pencil", onSelect: () => openEditMachine(machine.id) },
                 { label: "Remove machine…", icon: "trash", onSelect: () => openRemoveMachine(machine) },
               ]}

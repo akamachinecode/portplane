@@ -50,6 +50,9 @@ type Job struct {
 	Privileged bool       `json:"privileged,omitempty"`
 	StartedAt  time.Time  `json:"startedAt"`
 	EndedAt    *time.Time `json:"endedAt,omitempty"`
+
+	// Machine is the machine the job runs on; empty for this computer.
+	Machine string `json:"machine,omitempty"`
 }
 
 // Done reports whether the job has finished.
@@ -73,6 +76,7 @@ type Func func(ctx context.Context, r *Run) error
 // Manager keeps the jobs of this Portplane run.
 type Manager struct {
 	mu      sync.Mutex
+	machine string // stamped on new jobs (a remote agent's own manager)
 	jobs    map[string]*entry
 	subs    map[chan Job]struct{}
 	keep    time.Duration
@@ -83,6 +87,7 @@ type Manager struct {
 type entry struct {
 	job     Job
 	key     string
+	mirror  bool // runs on another machine; Mirror keeps it current
 	cancel  context.CancelFunc
 	done    chan struct{}
 	partial []byte // output not ended by a newline yet
@@ -129,8 +134,12 @@ func (m *Manager) Start(spec Spec, fn Func) Job {
 			Steps:      make([]Step, len(spec.Steps)),
 			Output:     []string{},
 			Privileged: spec.Privileged,
+			Machine:    m.machine,
 			StartedAt:  m.now(),
 		},
+	}
+	if m.machine != "" {
+		e.job.ID = m.machine + ":" + e.job.ID
 	}
 	for i, s := range spec.Steps {
 		e.job.Steps[i] = Step{Name: s, State: Pending}
@@ -256,6 +265,81 @@ func (m *Manager) Cancel(id string) error {
 	}
 	e.cancel()
 	return nil
+}
+
+// SetMachine makes the manager stamp new jobs with a machine's id and
+// start their ids with "<machine>:". A remote agent does this with the id
+// Portplane knows it by, so its jobs never take the id of a local one.
+func (m *Manager) SetMachine(id string) {
+	m.mu.Lock()
+	m.machine = id
+	m.mu.Unlock()
+}
+
+// Mirror adds or updates a job that runs on another machine, so the UI
+// follows it like a local one (ADR-0026). cancel asks that machine to stop
+// it. A mirror never replaces a local job, and a finished one stays
+// finished.
+func (m *Manager) Mirror(j Job, cancel func()) {
+	if j.ID == "" {
+		return
+	}
+	if cancel == nil {
+		cancel = func() {}
+	}
+	j = j.clone()
+	if j.Steps == nil {
+		j.Steps = []Step{}
+	}
+	m.mu.Lock()
+	e, ok := m.jobs[j.ID]
+	if ok && (!e.mirror || e.job.Done()) {
+		m.mu.Unlock()
+		return
+	}
+	if !ok {
+		e = &entry{mirror: true, done: make(chan struct{})}
+		m.jobs[j.ID] = e
+	}
+	e.cancel = context.CancelFunc(cancel)
+	e.job = j
+	if j.Done() {
+		close(e.done)
+	}
+	m.prune()
+	c := e.job.clone()
+	m.mu.Unlock()
+	m.publish(c)
+}
+
+// Abandon fails the mirrored jobs of a machine that are still running,
+// with reason: the connection to it was lost, so their end never arrives.
+func (m *Manager) Abandon(machine, reason string) {
+	m.mu.Lock()
+	var changed []Job
+	for _, e := range m.jobs {
+		if !e.mirror || e.job.Machine != machine || e.job.Done() {
+			continue
+		}
+		end := m.now()
+		e.job.EndedAt = &end
+		e.job.State = Failed
+		e.job.Error = reason
+		for i := range e.job.Steps {
+			switch e.job.Steps[i].State {
+			case Running:
+				e.job.Steps[i].State = Failed
+			case Pending:
+				e.job.Steps[i].State = Skipped
+			}
+		}
+		close(e.done)
+		changed = append(changed, e.job.clone())
+	}
+	m.mu.Unlock()
+	for _, j := range changed {
+		m.publish(j)
+	}
 }
 
 // Wait blocks until the job ends or ctx is done, and returns it.

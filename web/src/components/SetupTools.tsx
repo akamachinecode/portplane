@@ -2,11 +2,13 @@ import type { Requirement, SetupCheck } from "../api/types";
 import { missingRequirements, privilegeLabel } from "../lib/setup";
 import { useApp } from "./AppContext";
 import { CommandLine } from "./Controls";
+import { useRemoteCommand } from "./MachineScope";
 import { Icon, Spinner } from "./Icon";
 
 export type CheckLoad = { status: "loading" } | { status: "error"; message: string } | { status: "ok"; check: SetupCheck };
 
 function RequirementRow({ req, os }: { req: Requirement; os: string | undefined }) {
+  const command = useRemoteCommand();
   return (
     <li className={`req${req.ok ? " req-ok" : " req-missing"}`}>
       <span className="req-icon">
@@ -29,7 +31,7 @@ function RequirementRow({ req, os }: { req: Requirement; os: string | undefined 
         {!req.ok && req.commands && req.commands.length > 0 && (
           <div className="req-commands">
             {req.commands.map((c) => (
-              <CommandLine key={c} command={c} />
+              <CommandLine key={c} command={command(c)} />
             ))}
           </div>
         )}

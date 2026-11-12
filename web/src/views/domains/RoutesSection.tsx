@@ -13,13 +13,14 @@ import { useNow } from "../../hooks/useNow";
 import { isUserAlias, KIND_LABELS, routeAge, sortRoutes } from "../../lib/portless";
 import { appRoute, href } from "../../lib/router";
 import { isPublic, SHARE_NAMES } from "../../lib/sharing";
-import { useShell } from "../../shell/ShellContext";
 import { AliasDialog, type AliasDraft } from "./AliasDialog";
 import { PlanDialog } from "./PlanDialog";
 import { StatusGate } from "./ProxySection";
 import { RenameDialog } from "./RenameDialog";
 import { ShareAppDialog } from "./ShareControls";
-import { routesResource, useRoutes, valueOf } from "./store";
+import { useMachineResources, useRoutes, valueOf } from "./store";
+import { useMachineScope } from "../../components/MachineScope";
+import { openResolved } from "../../lib/popup";
 
 /** What prune will remove and stop, read just before it runs. */
 export function StaleList({ force }: { force: boolean }) {
@@ -86,9 +87,35 @@ function SharedLinks({ r }: { r: RouteView }) {
   );
 }
 
+/**
+ * Opens a route of a machine over SSH from this computer (ADR-0016): an
+ * app's own tunnelled address when it has one, else a tunnel to the port.
+ */
+function RemoteRouteOpen({ r, app }: { r: RouteView; app: App | undefined }) {
+  const { api, toast } = useApp();
+  const { id, ms } = useMachineScope();
+  const name = ms?.machine.name ?? id;
+  const [busy, setBusy] = useState(false);
+  if (app?.remoteUrl) {
+    return (
+      <a className="icon-btn" href={app.remoteUrl} target="_blank" rel="noopener" aria-label={`Open ${r.hostname} through Portplane`} title={`Open ${app.remoteUrl}`}>
+        <Icon name="open" />
+      </a>
+    );
+  }
+  const open = () => {
+    if (busy) return;
+    setBusy(true);
+    openResolved(() => api.openPort(id, r.port), { open: () => window.open("", "_blank"), openElsewhere: (url) => api.open("local", [url]) }, `Opening port ${r.port} on ${name}…`)
+      .catch((err: unknown) => toast.error(`Couldn't open port ${r.port} on ${name}: ${errorText(err)}`))
+      .finally(() => setBusy(false));
+  };
+  return <IconButton icon="open" label={`Open port ${r.port} on ${name} through SSH`} onClick={open} />;
+}
+
 function Table({ routes }: { routes: RouteView[] }) {
   const ctx = useApp();
-  const { snapshot } = useShell();
+  const { put } = useMachineResources().routes;
   const now = useNow(true, 30_000);
   const [plan, setPlan] = useState<"prune" | "prune-force" | null>(null);
   const [rename, setRename] = useState<{ appId: string; machine: string; route?: string; label: string; runner?: string } | null>(null);
@@ -96,7 +123,11 @@ function Table({ routes }: { routes: RouteView[] }) {
   const [alias, setAlias] = useState<AliasDraft | null>(null);
   const sorted = useMemo(() => sortRoutes(routes), [routes]);
   const stale = routes.filter((r) => !r.alive);
-  const local = snapshot?.machines.find((m) => m.machine.local);
+  const scope = useMachineScope();
+  const local = scope.ms;
+  // A remote machine's names point at its own loopback: they open here
+  // through Portplane's tunnel, never as they are (ADR-0016).
+  const remote = scope.remote;
 
   const [removing, setRemoving] = useState<RouteView | null>(null);
   const [busy, setBusy] = useState(false);
@@ -106,7 +137,7 @@ function Table({ routes }: { routes: RouteView[] }) {
     setBusy(true);
     setRemoveError(null);
     try {
-      routesResource.put(await ctx.api.portlessRemoveAlias(removing.hostname));
+      put(await ctx.api.portlessRemoveAlias(removing.hostname));
       ctx.toast.info(`Removed ${removing.hostname}`);
       setRemoving(null);
     } catch (err) {
@@ -159,15 +190,16 @@ function Table({ routes }: { routes: RouteView[] }) {
           <tbody>
             {sorted.map((r) => {
               const app = r.owner?.kind === "app" && r.owner.appId ? local?.apps.find((a) => a.id === r.owner!.appId) : undefined;
+              const copyUrl = remote && app?.remoteUrl ? app.remoteUrl : r.url;
               return (
                 <tr key={r.hostname} className={r.alive ? undefined : "is-stale"}>
                   <td>
-                    {r.alive ? (
+                    {r.alive && !remote ? (
                       <a className="addr" href={r.url} target="_blank" rel="noopener">
                         {r.hostname}
                       </a>
                     ) : (
-                      <span className="addr addr-idle">{r.hostname}</span>
+                      <span className={r.alive ? "addr" : "addr addr-idle"}>{r.hostname}</span>
                     )}
                     <SharedLinks r={r} />
                   </td>
@@ -191,8 +223,16 @@ function Table({ routes }: { routes: RouteView[] }) {
                   </td>
                   <td className="row-actions-cell">
                     <span className="table-actions">
-                      {r.alive ? <a className="icon-btn" href={r.url} target="_blank" rel="noopener" aria-label={`Open ${r.hostname}`} title={`Open ${r.hostname}`}><Icon name="open" /></a> : <IconSlot />}
-                      <IconButton icon="copy" label={`Copy ${r.url}`} onClick={() => void copyWithToast(ctx, r.url, "the URL")} />
+                      {!r.alive ? (
+                        <IconSlot />
+                      ) : remote ? (
+                        <RemoteRouteOpen r={r} app={app} />
+                      ) : (
+                        <a className="icon-btn" href={r.url} target="_blank" rel="noopener" aria-label={`Open ${r.hostname}`} title={`Open ${r.hostname}`}>
+                          <Icon name="open" />
+                        </a>
+                      )}
+                      <IconButton icon="copy" label={`Copy ${copyUrl}`} onClick={() => void copyWithToast(ctx, copyUrl, "the URL")} />
                       {app && app.kind !== "job" ? <IconButton icon="share" label={`Share ${app.label}`} onClick={() => setShare(app)} /> : <IconSlot />}
                       {app ? (
                         <IconButton icon="pencil" label={`Change the name of ${app.label}`} onClick={() => setRename({ appId: app.id, machine: local!.machine.id, label: app.label, runner: app.runner })} />

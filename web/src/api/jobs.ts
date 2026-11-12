@@ -28,6 +28,8 @@ export interface Job {
   privileged?: boolean;
   startedAt: string;
   endedAt?: string;
+  /** The machine it runs on (ADR-0026); absent for this computer. */
+  machine?: string;
 }
 
 /** How many jobs the UI keeps; the server keeps its own recent list. */

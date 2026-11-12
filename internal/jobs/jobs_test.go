@@ -161,3 +161,73 @@ func TestStripANSI(t *testing.T) {
 		}
 	}
 }
+
+func TestMachineStampsJobs(t *testing.T) {
+	m := NewManager()
+	m.SetMachine("box")
+	j := m.Start(Spec{Title: "Upgrade"}, func(context.Context, *Run) error { return nil })
+	if !strings.HasPrefix(j.ID, "box:") || j.Machine != "box" {
+		t.Fatalf("%+v", j)
+	}
+	if got := wait(t, m, j.ID); got.Machine != "box" {
+		t.Fatalf("%+v", got)
+	}
+}
+
+func TestMirror(t *testing.T) {
+	m := NewManager()
+	ctx, stop := context.WithCancel(context.Background())
+	defer stop()
+	updates := m.Subscribe(ctx)
+	local := m.Start(Spec{Title: "Local", Steps: []string{"A"}}, func(ctx context.Context, _ *Run) error {
+		<-ctx.Done()
+		return ctx.Err()
+	})
+	cancelled := make(chan struct{}, 1)
+	running := Job{ID: "box:1", Title: "Install dekit", State: Running, Machine: "box", Steps: []Step{{Name: "Download", State: Running}, {Name: "Install", State: Pending}}, Output: []string{"downloading"}}
+	m.Mirror(running, func() { cancelled <- struct{}{} })
+	if j, ok := m.Get("box:1"); !ok || j.State != Running || j.Machine != "box" {
+		t.Fatalf("mirrored: %+v %v", j, ok)
+	}
+	// A mirror never replaces a local job.
+	m.Mirror(Job{ID: local.ID, State: Succeeded}, nil)
+	if j, _ := m.Get(local.ID); j.State != Running {
+		t.Fatalf("a remote job replaced a local one: %+v", j)
+	}
+	// Cancelling asks the machine.
+	if err := m.Cancel("box:1"); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-cancelled:
+	case <-time.After(time.Second):
+		t.Fatal("cancel did not reach the machine")
+	}
+	// The connection drops: the job ends as failed, and stays so.
+	m.Abandon("box", "The connection to box dropped.")
+	j, _ := m.Get("box:1")
+	if j.State != Failed || j.Error != "The connection to box dropped." || j.Steps[0].State != Failed || j.Steps[1].State != Skipped || j.EndedAt == nil {
+		t.Fatalf("abandoned: %+v", j)
+	}
+	m.Mirror(Job{ID: "box:1", State: Succeeded, Machine: "box"}, nil)
+	if j, _ := m.Get("box:1"); j.State != Failed {
+		t.Fatalf("a finished job changed: %+v", j)
+	}
+	if got, err := m.Wait(ctx, "box:1"); err != nil || got.State != Failed {
+		t.Fatalf("wait: %+v %v", got, err)
+	}
+	// Subscribers see the remote job like a local one (the latest copy).
+	seen := map[State]bool{}
+	timeout := time.After(time.Second)
+	for !seen[Failed] {
+		select {
+		case u := <-updates:
+			if u.ID == "box:1" {
+				seen[u.State] = true
+			}
+		case <-timeout:
+			t.Fatalf("updates: %v", seen)
+		}
+	}
+	_ = m.Cancel(local.ID)
+}

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { App, AppProposal, MachineSnapshot, Proposal } from "../../api/types";
 import { browsersNeedAction, folderRows, hasFixedPorts, missingManagers, proxyOptionsFor } from "./helpers";
 import { setupProblems } from "./problems";
@@ -154,8 +154,8 @@ describe("helpers", () => {
 });
 
 describe("setupProblems", () => {
-  const ms = (tools: MachineSnapshot["tools"], local = true): MachineSnapshot => ({
-    machine: { id: local ? "local" : "box", name: "x", local, status: "online" },
+  const ms = (tools: MachineSnapshot["tools"], local = true, status: MachineSnapshot["machine"]["status"] = "online"): MachineSnapshot => ({
+    machine: { id: local ? "local" : "box", name: local ? "x" : "box", local, status },
     tools,
     folders: [],
     runners: [],
@@ -173,6 +173,23 @@ describe("setupProblems", () => {
     ]);
     const down = setupProblems(ms({ dekit: "0.10.3", portless: "0.16.0", proxyRunning: false, proxyHttps: false }));
     expect(down).toEqual([]);
-    expect(setupProblems(ms({ proxyRunning: false, proxyHttps: false }, false))).toEqual([]);
+  });
+
+  it("offers the installs on a machine over SSH through its own setup (ADR-0026)", () => {
+    const box = setupProblems(ms({ proxyRunning: false, proxyHttps: false }, false));
+    expect(box.map((p) => [p.id, p.title])).toEqual([
+      ["no-dekit|box", "dekit isn't installed on box"],
+      ["no-portless|box", "portless isn't installed on box"],
+    ]);
+    expect(box[0].detail).toContain("into your home folder there, without a password");
+    const location = { hash: "" };
+    vi.stubGlobal("window", { location, history: { state: null, replaceState() {} }, dispatchEvent() {} });
+    try {
+      box[0].fix!.run({} as never);
+      expect(location.hash).toBe("#/setup/box/install");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+    expect(setupProblems(ms({ proxyRunning: false, proxyHttps: false }, false, "offline"))).toEqual([]);
   });
 });

@@ -3,6 +3,7 @@ import type { Job } from "./jobs";
 import { createMockApi, type Scenario } from "./mock";
 import type { Snapshot } from "./types";
 import { portlessProblems } from "../views/domains/problems";
+import { resourcesOf } from "../views/domains/store";
 
 // The `?mock` portless center behaves like the real one: actions change
 // its state after a job, aliases show up in the snapshot, renames change
@@ -122,5 +123,23 @@ describe("mock portless", () => {
     // The service status is not loaded here, so the fix is the guided
     // setup's proxy step; with the service installed it starts the proxy.
     expect(problems.find((p) => p.id === "proxy-down|local")?.fix?.label).toBe("Set up the proxy");
+  });
+
+  it("feeds the Health view with a remote machine's problems, under its id (ADR-0026)", async () => {
+    const api = createMockApi("default");
+    let snap: Snapshot | null = null;
+    api.subscribe({ onSnapshot: (s) => (snap = s), onStatus: () => {} });
+    await vi.advanceTimersByTimeAsync(300);
+    const box = api.forMachine("box");
+    const res = resourcesOf("box");
+    await settle(Promise.all([res.status.load(box), res.certificates.load(box)]));
+    const problems = portlessProblems(snap!).filter((p) => p.machine?.id === "box");
+    // box's CA isn't trusted there: worth knowing, but its apps open here
+    // with this computer's certificate.
+    const ca = problems.find((p) => p.id === "portless-ca-untrusted|box");
+    expect(ca?.severity).toBe("info");
+    expect(ca?.title).toBe("box doesn't trust its own local certificate");
+    expect(ca?.link?.route).toEqual({ view: "domains", section: "certificates", machine: "box" });
+    expect(problems.every((p) => !p.id.endsWith("|local"))).toBe(true);
   });
 });

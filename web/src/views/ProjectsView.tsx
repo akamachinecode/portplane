@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import type { App, MachineSnapshot, Project, Runner, Snapshot } from "../api/types";
 import { appKey, runnerKey, startRunner } from "../components/appActions";
 import { useApp } from "../components/AppContext";
+import { MachineScope } from "../components/MachineScope";
 import { Icon, Spinner } from "../components/Icon";
 import { EmptyState } from "../components/States";
 import { StateDot } from "../components/StateDot";
@@ -149,29 +150,32 @@ function ProjectBlocks({ ms, projects }: { ms: MachineSnapshot; projects: Projec
   );
 }
 
-/** This computer's own runner (machine-wide tasks), at #/projects/local/host. */
-function HostDetail() {
+/** A machine's own runner (machine-wide tasks), at #/projects/<machine>/host. */
+function HostDetail({ ms }: { ms: MachineSnapshot }) {
+  const name = ms.machine.local ? "This computer" : ms.machine.name;
   return (
-    <section className="runner-detail" aria-labelledby="runner-detail-title">
-      <a className="back-link" href={href({ view: "projects" })}>
-        <Icon name="chevronLeft" size={14} />
-        All projects
-      </a>
-      <header className="runner-detail-head">
-        <div>
-          <h2 className="runner-detail-title" id="runner-detail-title">
-            This computer
-          </h2>
-          <p className="runner-detail-path mono">~/.config/dekit/host/dekit.yaml</p>
-        </div>
-        <a className="btn" href={href({ view: "runners" })}>
-          <Icon name="layers" size={14} />
-          Runner
+    <MachineScope machine={ms.machine.id}>
+      <section className="runner-detail" aria-labelledby="runner-detail-title">
+        <a className="back-link" href={href({ view: "projects" })}>
+          <Icon name="chevronLeft" size={14} />
+          All projects
         </a>
-      </header>
-      <p className="runner-detail-status">Tasks that are yours rather than a project's, such as a database you always want up.</p>
-      <ProjectEditor runner="host" up />
-    </section>
+        <header className="runner-detail-head">
+          <div>
+            <h2 className="runner-detail-title" id="runner-detail-title">
+              {name}
+            </h2>
+            <p className="runner-detail-path mono">~/.config/dekit/host/dekit.yaml{ms.machine.local ? "" : ` on ${ms.machine.name}`}</p>
+          </div>
+          <a className="btn" href={href({ view: "runners", machine: ms.machine.id })}>
+            <Icon name="layers" size={14} />
+            Runner
+          </a>
+        </header>
+        <p className="runner-detail-status">Tasks that are yours rather than a project's, such as a database you always want up.</p>
+        <ProjectEditor runner="host" up />
+      </section>
+    </MachineScope>
   );
 }
 
@@ -179,50 +183,54 @@ function RunnerDetail({ entry }: { entry: RunnerEntry }) {
   const ctx = useApp();
   const { ms, runner, projects } = entry;
   const local = ms.machine.local;
+  // Any machine Portplane reaches: a remote one's config travels over SSH (ADR-0026).
+  const reachable = local || ms.machine.status === "online";
   const busy = ctx.pending.has(runnerKey(ms.machine.id, runner.root));
   return (
-    <section className="runner-detail" aria-labelledby="runner-detail-title">
-      <a className="back-link" href={href({ view: "projects" })}>
-        <Icon name="chevronLeft" size={14} />
-        All projects
-      </a>
-      <header className="runner-detail-head">
-        <div>
-          <h2 className="runner-detail-title" id="runner-detail-title">
-            {folderName(runner.root)}
-          </h2>
-          <p className="runner-detail-path mono">{shortenPath(runner.root, entry.home)}</p>
-        </div>
-        <div className="runner-detail-actions">
-          {!runner.up && ms.tools.dekit && (
-            <button type="button" className="btn btn-primary" aria-busy={busy || undefined} disabled={busy} onClick={() => void startRunner(ctx, ms.machine.id, runner.root)}>
-              {busy ? <Spinner /> : <Icon name="play" size={13} />}
-              Start runner
-            </button>
-          )}
-          {local && (
-            <button type="button" className="btn" onClick={() => void ctx.pending.run(`reveal|${runner.root}`, null, () => ctx.api.reveal(ms.machine.id, runner.root))}>
-              <Icon name="folder" size={14} />
-              Reveal folder
-            </button>
-          )}
-        </div>
-      </header>
-      <p className="runner-detail-status">
-        <StateDot state={runner.up ? "on" : "off"} />
-        {runner.up ? "dekit is running for this folder" : "dekit isn't running for this folder: its apps can't start until it is"}
-        {runner.error && <span className="runner-error"> · {runner.error}</span>}
-      </p>
+    <MachineScope machine={ms.machine.id}>
+      <section className="runner-detail" aria-labelledby="runner-detail-title">
+        <a className="back-link" href={href({ view: "projects" })}>
+          <Icon name="chevronLeft" size={14} />
+          All projects
+        </a>
+        <header className="runner-detail-head">
+          <div>
+            <h2 className="runner-detail-title" id="runner-detail-title">
+              {folderName(runner.root)}
+            </h2>
+            <p className="runner-detail-path mono">{shortenPath(runner.root, entry.home)}</p>
+          </div>
+          <div className="runner-detail-actions">
+            {!runner.up && ms.tools.dekit && (
+              <button type="button" className="btn btn-primary" aria-busy={busy || undefined} disabled={busy} onClick={() => void startRunner(ctx, ms.machine.id, runner.root)}>
+                {busy ? <Spinner /> : <Icon name="play" size={13} />}
+                Start runner
+              </button>
+            )}
+            {local && (
+              <button type="button" className="btn" onClick={() => void ctx.pending.run(`reveal|${runner.root}`, null, () => ctx.api.reveal(ms.machine.id, runner.root))}>
+                <Icon name="folder" size={14} />
+                Reveal folder
+              </button>
+            )}
+          </div>
+        </header>
+        <p className="runner-detail-status">
+          <StateDot state={runner.up ? "on" : "off"} />
+          {runner.up ? "dekit is running for this folder" : "dekit isn't running for this folder: its apps can't start until it is"}
+          {runner.error && <span className="runner-error"> · {runner.error}</span>}
+        </p>
 
-      {local && ms.tools.dekit ? (
-        <ProjectEditor runner={runner.root} up={runner.up} os={ms.machine.os} apps={<ProjectBlocks ms={ms} projects={projects} />} />
-      ) : (
-        <>
-          <ProjectBlocks ms={ms} projects={projects} />
-          {!local && <p className="muted config-note">Editing the configuration of {ms.machine.name}'s projects comes later: edit its dekit.yaml there and Portplane picks up the change.</p>}
-        </>
-      )}
-    </section>
+        {reachable && ms.tools.dekit ? (
+          <ProjectEditor runner={runner.root} up={runner.up} os={ms.machine.os} apps={<ProjectBlocks ms={ms} projects={projects} />} />
+        ) : (
+          <>
+            <ProjectBlocks ms={ms} projects={projects} />
+            {!reachable && <p className="muted config-note">{ms.machine.name} is offline: its configuration shows here again once Portplane reaches it.</p>}
+          </>
+        )}
+      </section>
+    </MachineScope>
   );
 }
 
@@ -234,8 +242,10 @@ function Body({ snapshot }: { snapshot: Snapshot }) {
   const selected = sel && entries.find((e) => e.ms.machine.id === sel.machine && e.runner.root === sel.root);
   const multiMachine = new Set(entries.map((e) => e.ms.machine.id)).size > 1;
   const dialog = useProjectDialog();
-  const localMs = snapshot.machines.find((m) => m.machine.local);
-  const host = sel?.machine === "local" && sel.root === "host" && !!localMs?.tools.dekit;
+  // Every machine with dekit has its own runner for machine-wide tasks.
+  const hostMachines = snapshot.machines.filter((m) => !!m.tools.dekit && (m.machine.local || m.machine.status === "online"));
+  const hostMs = sel?.root === "host" ? hostMachines.find((m) => m.machine.id === sel.machine) : undefined;
+  const host = !!hostMs;
 
   if (entries.length === 0 && !host) {
     const local = snapshot.machines.find((m) => m.machine.local);
@@ -262,21 +272,21 @@ function Body({ snapshot }: { snapshot: Snapshot }) {
         {entries.map((e) => (
           <RunnerLink key={`${e.ms.machine.id}|${e.runner.root}`} entry={e} current={selected === e} multiMachine={multiMachine} />
         ))}
-        {localMs?.tools.dekit && (
-          <li>
-            <a className="runner-link" href={href({ view: "projects", runner: { machine: "local", root: "host" } })} aria-current={host ? "page" : undefined}>
-              <Icon name="monitor" size={14} />
+        {hostMachines.map((m) => (
+          <li key={`host|${m.machine.id}`}>
+            <a className="runner-link" href={href({ view: "projects", runner: { machine: m.machine.id, root: "host" } })} aria-current={hostMs === m ? "page" : undefined}>
+              <Icon name={m.machine.local ? "monitor" : "machine"} size={14} />
               <span className="runner-link-text">
-                <span className="runner-link-name">This computer</span>
+                <span className="runner-link-name">{m.machine.local ? "This computer" : m.machine.name}</span>
                 <span className="runner-link-path mono">machine-wide tasks</span>
               </span>
             </a>
           </li>
-        )}
+        ))}
       </ul>
       <div className="projects-detail">
-        {host ? (
-          <HostDetail />
+        {hostMs ? (
+          <HostDetail ms={hostMs} />
         ) : selected ? (
           <RunnerDetail entry={selected} />
         ) : sel ? (

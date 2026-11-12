@@ -1187,3 +1187,10 @@
     transition: none;
   }
 }
+
+/* A machine over SSH that is offline or runs an older agent (ADR-0026). */
+.ob-remote-banner {
+  width: min(100%, 1012px);
+  margin: var(--space-4) auto 0;
+  padding: 0 var(--space-5);
+}

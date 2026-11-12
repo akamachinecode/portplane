@@ -46,6 +46,12 @@
 
 **A remote machine stays offline.** Check `ssh <host> true` works without a prompt: Portplane runs ssh with `BatchMode=yes`, so passwords and host-key questions fail. The error under the machine's name is ssh's own message.
 
+**"Update the agent on <machine>".** That machine runs a Portplane agent older than this Portplane, which can't run setup, dekit or portless from here. Click **Update the agent** (in the banner or in Health): Portplane uploads its own agent over SSH and reconnects. If it keeps asking, the machine's agent comes from another build: run the same Portplane version on both ends.
+
+**A step on a remote machine shows an `ssh -t … 'sudo …'` command instead of asking for a password.** Nobody sits at that machine's screen to answer a password dialog, and Portplane never sends a password anywhere. Paste the command into a terminal on this computer: it opens SSH to the machine, where sudo asks for your password. Then click **Check again**.
+
+**"This machine has no desktop to open the file on".** On a machine over SSH, edit dekit and portless config in Portplane (the task form or the YAML tab), or over SSH. Exported certificates of a remote machine are saved on this computer, in Downloads, as `portless-ca-<machine>.pem`.
+
 **A remote app opens but logins or cookies break.** Cookies set for a parent domain on the remote machine (`shop.localhost`) do not apply under `shop.<machine>.localhost`; see [ADR-0016](adr/0016-remote-urls.md).
 
 **No tray icon on Linux.** Your desktop needs a StatusNotifier host; on GNOME install the AppIndicator extension (on Fedora, `sudo dnf install gnome-shell-extension-appindicator`, then log out and in; Ubuntu ships it). Portplane works without it, and closing its window then quits it.

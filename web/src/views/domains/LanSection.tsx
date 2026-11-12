@@ -31,7 +31,7 @@ function AddressChoice({ view, choice, onChange }: { view: LanView; choice: LanC
       <label className="lan-option">
         <input type="radio" name={name} checked={choice.mode === "follow"} onChange={() => onChange({ mode: "follow" })} />
         <span>
-          <span className="lan-option-title">Follow this computer's address</span>
+          <span className="lan-option-title">Follow this machine's address</span>
           <span className="lan-option-desc">{followed ? `${followed.ip} on ${followed.interface} now; portless follows it when you change networks.` : "portless picks the address of your current network."}</span>
         </span>
       </label>
@@ -95,12 +95,12 @@ function Mode({ view, status }: { view: LanView; status: PortlessStatus }) {
   return (
     <SettingsGroup
       title="LAN mode"
-      description="Opens your apps from phones, tablets and other computers on the same Wi-Fi. portless publishes each app as name.local over mDNS (Bonjour), and the proxy answers on your network address as well as on this computer."
+      description="Opens your apps from phones, tablets and other computers on the same Wi-Fi. portless publishes each app as name.local over mDNS (Bonjour), and the proxy answers on your network address as well as on this machine."
     >
       <SettingRow label="State">
         <span className="inline-state">
           <StateDot state={view.enabled ? (view.responding ? "on" : "failed") : "off"} />
-          {view.enabled ? (view.responding ? `On at ${view.ip ?? "this computer's address"}` : "On, but the proxy isn't running") : "Off: your apps answer this computer only"}
+          {view.enabled ? (view.responding ? `On at ${view.ip ?? "this machine's address"}` : "On, but the proxy isn't running") : "Off: your apps answer this machine only"}
         </span>
       </SettingRow>
       <Requirements reqs={view.requirements} />
@@ -172,7 +172,7 @@ function QrDialog({ app, onClose }: { app: LanApp; onClose(): void }) {
           <span className="mono">{app.url}</span>
           <IconButton icon="copy" label={`Copy ${app.url}`} onClick={() => void copyWithToast(ctx, app.url, "the URL")} />
         </p>
-        <p className="muted qr-hint">Point the phone's camera at the code. The phone has to be on the same Wi-Fi as this computer and trust portless's certificate (Domains → LAN mode → Open on a phone).</p>
+        <p className="muted qr-hint">Point the phone's camera at the code. The phone has to be on the same Wi-Fi as this machine and trust portless's certificate (Domains → LAN mode → Open on a phone).</p>
       </div>
     </Dialog>
   );
@@ -263,7 +263,7 @@ function Phone({ view }: { view: LanView }) {
   return (
     <SettingsGroup
       title="Open on a phone"
-      description="A phone opens your apps over HTTPS once it trusts portless's local certificate, the same one this computer trusts. Nothing here goes through the internet: the file stays on your computer until you move it, and the QR code holds only the app's .local address."
+      description="A phone opens your apps over HTTPS once it trusts portless's local certificate, the same one this machine trusts. Nothing here goes through the internet: the file stays on your computer until you move it, and the QR code holds only the app's .local address."
     >
       <div className="phone">
         <ol className="phone-steps">
@@ -354,7 +354,7 @@ export function LanSection() {
   return (
     <StatusGate>
       {(status) => {
-        if (!view) return state.status === "error" ? <ErrorState title="Couldn't read LAN mode" message={state.error} onRetry={() => void reload()} /> : <LoadingState label="Checking this computer's network…" />;
+        if (!view) return state.status === "error" ? <ErrorState title="Couldn't read LAN mode" message={state.error} onRetry={() => void reload()} /> : <LoadingState label="Checking this machine's network…" />;
         return (
           <>
             <div className="section-bar">

@@ -279,7 +279,7 @@ function Options({ status, plan }: { status: PortlessStatus; plan: (a: PortlessA
         <Switch checked={o.wildcard} onChange={(wildcard) => set({ wildcard })} label="Wildcard subdomains" description="An address no app registered falls back to its closest parent: feature.web.localhost opens web.localhost." />
         <Switch checked={o.lan} onChange={(lan) => set({ lan, lanIp: lan ? o.lanIp : undefined })} label="Share on your network (LAN)" description="Publishes every app as name.local over mDNS, so phones and other computers on your Wi-Fi can open it. Domains switch to .local." />
         {o.lan && (
-          <Field label="LAN address" htmlFor={ids.ip} error={problems.lanIp} hint="Leave it empty to follow this computer's address as it changes.">
+          <Field label="LAN address" htmlFor={ids.ip} error={problems.lanIp} hint="Leave it empty to follow this machine's address as it changes.">
             <input id={ids.ip} className="input mono" value={o.lanIp ?? ""} placeholder="192.168.1.20" onChange={(e) => set({ lanIp: e.target.value })} aria-invalid={problems.lanIp ? true : undefined} />
           </Field>
         )}

@@ -2,6 +2,7 @@ import { createDekitHttp, type DekitApi } from "./dekit";
 import { connectFeed, type FeedHandlers } from "./events";
 import { createHttp, seg, type FetchLike } from "./http";
 import type { Job } from "./jobs";
+import { clearAgentOutdated, createMachineHttp, machineScoper } from "./machine";
 import { createPolishHttp, type PolishApi } from "./polish";
 import { createPortlessHttp, type PortlessApi } from "./portless";
 import { createToolsHttp, type ToolsApi } from "./tools";
@@ -81,6 +82,15 @@ export interface Api extends PortlessApi, DekitApi, ToolsApi, PolishApi {
 
   /** Streams snapshots and job events until the returned function is called. */
   subscribe(handlers: FeedHandlers): () => void;
+
+  /**
+   * The same Api acting on one machine (ADR-0026): setup, dekit and
+   * portless go to that machine, everything else is unchanged. "local" is
+   * this Api; the same machine always gives the same object.
+   */
+  forMachine(machine: string): Api;
+  /** Uploads the machine's agent again and reconnects (one older than this Portplane). */
+  updateAgent(machine: string): Promise<void>;
 }
 
 export function createHttpApi(token: string | null, fetchImpl?: FetchLike): Api {
@@ -134,7 +144,16 @@ export function createHttpApi(token: string | null, fetchImpl?: FetchLike): Api 
         fetchSnapshot: () => api.snapshot(),
         ...handlers,
       }),
+    forMachine: (machine) => forMachine(machine),
+    async updateAgent(machine) {
+      await none("POST", `/api/m/${seg(machine)}/agent/update`, {});
+      clearAgentOutdated(machine);
+    },
   };
+  const forMachine = machineScoper(
+    () => api,
+    (machine) => createMachineHttp(h, api, machine),
+  );
   return api;
 }
 

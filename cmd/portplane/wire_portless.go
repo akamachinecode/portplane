@@ -17,6 +17,14 @@ import (
 // portlessHandlers serves the portless center: proxy, routes, aliases, names, certificates, hosts, doctor (M5.2, ADR-0023),
 // and sharing, compose projects and LAN mode (M5.6).
 func portlessHandlers(d deps) map[string]http.HandlerFunc {
+	reveal, downloads := desktop.Reveal, downloadsDir
+	machines := func() []model.MachineSnapshot { return nil }
+	if d.headless { // Portplane saves a remote machine's CA on its own computer
+		reveal, downloads = nil, nil
+	}
+	if d.hub != nil { // a remote machine's agent has no hub: only itself
+		machines = func() []model.MachineSnapshot { return d.hub.Snapshot().Machines }
+	}
 	return server.PortlessHandlers(server.PortlessDeps{
 		Client: d.portless,
 		Jobs:   d.jobs,
@@ -24,7 +32,7 @@ func portlessHandlers(d deps) map[string]http.HandlerFunc {
 			s, _ := d.local.Snapshot(ctx)
 			return s
 		},
-		Machines: func() []model.MachineSnapshot { return d.hub.Snapshot().Machines },
+		Machines: machines,
 		Config:   dekit.LoadConfig,
 		Reload:   d.dekit.Reload,
 		Restart: func(ctx context.Context, root, task string) error {
@@ -39,8 +47,8 @@ func portlessHandlers(d deps) map[string]http.HandlerFunc {
 			envpath.Refresh()
 			d.local.RefreshTools()
 		},
-		Reveal:    desktop.Reveal,
-		Downloads: downloadsDir,
+		Reveal:    reveal,
+		Downloads: downloads,
 	})
 }
 

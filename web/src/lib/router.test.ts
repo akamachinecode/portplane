@@ -12,6 +12,17 @@ describe("parseRoute", () => {
     expect(parseRoute("#/health")).toEqual({ view: "health" });
     expect(parseRoute("#/onboarding")).toEqual({ view: "onboarding" });
     expect(parseRoute("#/onboarding/folders")).toEqual({ view: "onboarding", step: "folders" });
+    expect(parseRoute("#/setup/box/check")).toEqual({ view: "onboarding", machine: "box", step: "check" });
+    expect(parseRoute("#/setup/box")).toEqual({ view: "onboarding", machine: "box" });
+    expect(parseRoute("#/setup")).toEqual({ view: "apps" });
+    expect(parseRoute("#/setup/local/check")).toEqual({ view: "apps" });
+    expect(href({ view: "onboarding", machine: "local", step: "check" })).toBe("#/onboarding/check");
+    expect(parseRoute("#/runners/box")).toEqual({ view: "runners", machine: "box" });
+    expect(parseRoute("#/runners/box/x")).toEqual({ view: "apps" });
+    expect(parseRoute("#/domains/routes/box")).toEqual({ view: "domains", section: "routes", machine: "box" });
+    expect(parseRoute("#/domains/nope/box")).toEqual({ view: "apps" });
+    expect(parseRoute("#/domains/routes/box/x")).toEqual({ view: "apps" });
+    expect(href({ view: "domains", section: "proxy", machine: "box" })).toBe("#/domains/proxy/box");
   });
 
   it("gives domains and settings their default section", () => {
@@ -89,6 +100,12 @@ describe("href", () => {
       { view: "settings", section: "advanced" },
       { view: "onboarding" },
       { view: "onboarding", step: "tools" },
+      { view: "onboarding", machine: "box" },
+      { view: "runners", machine: "box" },
+      { view: "runners", machine: "local" },
+      { view: "domains", section: "proxy", machine: "box" },
+      { view: "domains", section: "certificates", machine: "my box" },
+      { view: "onboarding", machine: "box", step: "check" },
     ];
     for (const r of routes) expect(parseRoute(href(r))).toEqual(r);
   });

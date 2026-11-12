@@ -10,8 +10,8 @@ export interface AppCtx {
   toast: Toaster;
   pending: Pending;
   openSettings(): void;
-  /** Opens setup for a watched folder on this computer. */
-  openSetup(folder: string): void;
+  /** Opens setup for a watched folder, on this computer unless machine says another (ADR-0026). */
+  openSetup(folder: string, machine?: string): void;
   openAddMachine(): void;
   openEditMachine(id: string): void;
   openRemoveMachine(machine: Machine): void;

@@ -155,6 +155,37 @@ function actionCommands(ctx: CommandContext): Command[] {
     const m = ms.machine;
     out.push(
       { id: `machines.edit.${m.id}`, title: `Edit ${m.name}`, group: "Machines", icon: "pencil", searchOnly: true, run: (c) => c.openEditMachine(m.id) },
+      ...(m.status === "online"
+        ? [
+            {
+              id: `machines.setup.${m.id}`,
+              title: `Set up ${m.name}`,
+              group: "Machines",
+              icon: "wand" as const,
+              keywords: ["install", "dekit", "portless", "proxy", "onboarding"],
+              searchOnly: true,
+              run: () => navigate({ view: "onboarding", machine: m.id }),
+            },
+            {
+              id: `machines.runners.${m.id}`,
+              title: `Runners on ${m.name}`,
+              group: "Go to",
+              icon: "layers" as const,
+              keywords: ["dekit"],
+              searchOnly: true,
+              run: () => navigate({ view: "runners", machine: m.id }),
+            },
+            {
+              id: `machines.domains.${m.id}`,
+              title: `Domains on ${m.name}`,
+              group: "Go to",
+              icon: "globe" as const,
+              keywords: ["portless", "proxy", "routes"],
+              searchOnly: true,
+              run: () => navigate({ view: "domains", section: "proxy", machine: m.id }),
+            },
+          ]
+        : []),
       { id: `machines.remove.${m.id}`, title: `Remove ${m.name}`, group: "Machines", icon: "trash", searchOnly: true, run: (c) => c.openRemoveMachine(m) },
     );
   }

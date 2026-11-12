@@ -40,15 +40,22 @@ func toolsHandlers(d deps) map[string]http.HandlerFunc {
 	in.UsePrivateNode(ictx)
 	cancel()
 
+	browsers := func(ctx context.Context, ca portless.CA) browsertrust.Report {
+		return browsertrust.Discover(ctx, browsertrust.LocalEnv(runtime.GOOS), ca.Path, ca.Trusted)
+	}
+	trayVisible := tray.Visible
+	if d.headless {
+		// A remote machine's apps open in this computer's browsers, through
+		// Portplane (ADR-0016); it has no tray either.
+		browsers, trayVisible = nil, nil
+	}
 	sys := &setup.System{
 		GOOS: runtime.GOOS, Installer: in, Portless: d.portless,
-		Version: setup.VersionOf,
-		Browsers: func(ctx context.Context, ca portless.CA) browsertrust.Report {
-			return browsertrust.Discover(ctx, browsertrust.LocalEnv(runtime.GOOS), ca.Path, ca.Trusted)
-		},
+		Version:           setup.VersionOf,
+		Browsers:          browsers,
 		OS:                osinfo.System{},
 		AnswersAsPortless: setup.AnswersAsPortless,
-		Tray:              tray.Visible,
+		Tray:              trayVisible,
 		HostsFile:         hostsFile(),
 	}
 	return server.ToolsHandlers(server.ToolsDeps{
@@ -79,10 +86,15 @@ func toolsHandlers(d deps) map[string]http.HandlerFunc {
 			return verifyProxy(ctx, d, o, p)
 		},
 		Browsers: func(ctx context.Context) browsertrust.Report {
-			ca := d.portless.CA()
-			return browsertrust.Discover(ctx, browsertrust.LocalEnv(runtime.GOOS), ca.Path, ca.Trusted)
+			if browsers == nil {
+				return browsertrust.Report{Browsers: []browsertrust.Browser{}}
+			}
+			return browsers(ctx, d.portless.CA())
 		},
 		TrustBrowser: func(ctx context.Context, browser, profile string, out io.Writer) (browsertrust.Profile, error) {
+			if d.headless {
+				return browsertrust.Profile{}, errors.New("browsers on this computer open a remote machine's apps: trust the certificate here")
+			}
 			ca := d.portless.CA()
 			return browsertrust.Add(ctx, browsertrust.LocalEnv(runtime.GOOS), ca.Path, ca.Trusted, browser, profile, out)
 		},
@@ -194,6 +206,11 @@ func verifyProxy(ctx context.Context, d deps, o portless.ProxyOptions, p install
 		p.Logf("Your system doesn't trust the local certificate yet: browsers will warn until it does.")
 	}
 
+	if d.headless { // no Portplane window on a remote machine
+		p.Skip("Open https://portplane.localhost")
+		res.Loads = res.CATrusted
+		return res, nil
+	}
 	p.Step("Open https://portplane.localhost")
 	if port := loopbackPort(d.rawURL); port > 0 {
 		actx, cancel := context.WithTimeout(ctx, 15*time.Second)

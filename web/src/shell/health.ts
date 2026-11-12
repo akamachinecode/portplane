@@ -37,9 +37,12 @@ export type ProblemSource = (snapshot: Snapshot) => Problem[];
 
 const SEVERITY_ORDER: Record<Severity, number> = { error: 0, warning: 1, info: 2 };
 
-/** Setup explains how to install each tool; without a folder to set up, Folders comes first. */
+/**
+ * Setup explains how to install each tool; without a folder to set up,
+ * Folders comes first. A machine over SSH has its own guided setup.
+ */
 function setupFix(ms: MachineSnapshot, label: string): ProblemFix | undefined {
-  if (!ms.machine.local) return undefined;
+  if (!ms.machine.local) return { label, run: () => navigate({ view: "onboarding", machine: ms.machine.id }) };
   const folder = ms.folders[0];
   return {
     label,

@@ -1,7 +1,8 @@
 import type { Api, PickResult } from "./client";
 import { ApiError } from "./errors";
 import type { FeedHandlers } from "./events";
-import type { MockContext } from "./mockContext";
+import { clearAgentOutdated, LOCAL_MACHINE, machineScoper, type MachineParts } from "./machine";
+import { MOCK_REMOTE_ROOT, scopeMockContext, type MockContext } from "./mockContext";
 import { createMockDekit } from "./mockDekit";
 import { createMockJobs, demoJob } from "./mockJobs";
 import { createMockPolish } from "./mockPolish";
@@ -44,6 +45,12 @@ import type {
 //   tailnet    every way to share ready, apps shared on the tailnet and Funnel
 //   bare       no Tailscale, ngrok, cloudflared, Docker or Avahi
 //   compose    Docker Compose projects: running, stopped and brought down
+//
+//   oldagent   like default, but the remote machine runs an agent older
+//              than this Portplane (ADR-0026: "Update the agent")
+//
+// The remote machine (box) has its own setup, dekit and portless state,
+// reached through api.forMachine("box") like the real /api/m/box/….
 
 export type Scenario =
   | "default"
@@ -57,7 +64,11 @@ export type Scenario =
   | "many"
   | "tailnet"
   | "bare"
-  | "compose";
+  | "compose"
+  | "oldagent";
+
+/** The agent version ?mock=oldagent gives the remote machine: one from before the machine API. */
+export const MOCK_OLD_AGENT = "0.2.0";
 
 /** Scenarios that start on the guided setup, with no folders. */
 export const FIRST_RUN: readonly Scenario[] = ["nofolders", "fresh", "node20", "nopassword"];
@@ -158,7 +169,7 @@ export function groupForMock(apps: App[]): MachineSnapshot["projects"] {
   return projects.map(({ order: _order, ...p }) => p);
 }
 
-const REMOTE_ROOT = "/home/dev/src";
+const REMOTE_ROOT = MOCK_REMOTE_ROOT;
 
 function remoteApp(p: Partial<App> & Pick<App, "task" | "label" | "state" | "order">): App {
   return { id: `${REMOTE_ROOT}#${p.task}`, runner: REMOTE_ROOT, kind: "service", project: "shop", ...p };
@@ -246,6 +257,11 @@ export function mockSnapshot(scenario: Scenario = "default"): Snapshot {
     ms.tools = { dekit: "0.10.3", portless: "0.16.0", proxyRunning: false, proxyHttps: false };
   }
   if (scenario === "default") return { machines: [ms, mockRemote(), mockOffline()], version: 1 };
+  if (scenario === "oldagent") {
+    const box = mockRemote();
+    box.machine.agent = MOCK_OLD_AGENT;
+    return { machines: [ms, box, mockOffline()], version: 1 };
+  }
   return { machines: [ms], version: 1 };
 }
 
@@ -297,7 +313,7 @@ export function mockPreferences(scenario: Scenario): Preferences {
 export function createMockApi(scenario: Scenario = "default"): Api & MockControls {
   let snapshot = mockSnapshot(scenario);
   let folders = [...snapshot.machines[0].folders];
-  let machines: MachineSettings[] = scenario === "default" ? structuredClone(MOCK_MACHINES) : [];
+  let machines: MachineSettings[] = scenario === "default" || scenario === "oldagent" ? structuredClone(MOCK_MACHINES) : [];
   let autostart = false;
   let preferences = mockPreferences(scenario);
   const jobs = createMockJobs();
@@ -361,7 +377,7 @@ export function createMockApi(scenario: Scenario = "default"): Api & MockControl
   const ctx: MockContext = { scenario, snapshot: () => snapshot, update, delay, later, jobs };
   const tools = createMockTools(ctx);
 
-  return {
+  const api: Api & MockControls = {
     ...createMockPortless(ctx),
     ...createMockDekit(ctx),
     ...tools,
@@ -559,5 +575,67 @@ export function createMockApi(scenario: Scenario = "default"): Api & MockControl
         listeners.delete(handlers);
       };
     },
+
+    forMachine: (machine) => forMachine(machine),
+    async updateAgent(id) {
+      await delay(undefined, 300);
+      const ms = machineSnap(id);
+      if (!ms) throw machineError(id);
+      if (ms.machine.local) throw new ApiError("this computer runs Portplane itself: there is no agent to update", 400);
+      update((m) => (m.machine = { ...m.machine, status: "connecting" }), id);
+      clearAgentOutdated(id);
+      later(1800, () => update((m) => (m.machine = { ...m.machine, status: "online", agent: "0.0.0-mock", error: undefined }), id));
+    },
   };
+
+  // A machine over SSH (ADR-0026): its own portless, dekit, tools and
+  // setup, on a context that shows it as the local machine.
+  const machineParts = (id: string): MachineParts => {
+    const name = machineSnap(id)?.machine.name ?? id;
+    const sctx = scopeMockContext(ctx, id, name);
+    const mtools = createMockTools(sctx);
+    const msetup = createMockSetup("fresh", REMOTE_ROOT);
+    const watched = (folder: string) => {
+      if (!machineSnap(id)?.folders.includes(folder)) throw new ApiError("set up only folders Portplane watches: add it in Settings first", 400);
+    };
+    const parts: MachineParts = {
+      ...createMockPortless(sctx),
+      ...createMockDekit(sctx),
+      ...mtools,
+      setupCheck: () => delay(evaluateMachine(mtools.machine()), 350),
+      async setupScan(folder, overrides) {
+        await delay(undefined, 500);
+        watched(folder);
+        return folder === REMOTE_ROOT ? msetup.scan(folder, overrides) : otherFolderProposal(folder);
+      },
+      async setupApply(folder, digest, overrides) {
+        await delay(undefined, 600);
+        watched(folder);
+        if (folder !== REMOTE_ROOT) return { written: [], reloaded: false };
+        const { written, tasks } = msetup.apply(folder, digest, overrides);
+        update((ms) => (ms.apps = [...ms.apps, ...tasks.filter((t) => !ms.apps.some((a) => a.id === t.id))]), id);
+        return { written, reloaded: written.length > 0 };
+      },
+      settings: () => delay<Settings>({ folders: machines.find((m) => m.id === id)?.folders ?? [] }),
+      saveSettings: async (s) => ({ folders: (await api.updateMachine(id, { folders: s.folders })).folders }),
+      pickFolder: () => delay<PickResult>({ kind: "unsupported" }),
+    };
+    // Every call checks the machine first, like the server does.
+    const guarded: Record<string, unknown> = {};
+    for (const [k, fn] of Object.entries(parts)) {
+      guarded[k] =
+        typeof fn !== "function"
+          ? fn
+          : (...args: unknown[]) => {
+              const ms = machineSnap(id);
+              if (!ms) return Promise.reject(machineError(id));
+              if (ms.machine.status !== "online") return Promise.reject(new ApiError(`${ms.machine.name} is offline. Portplane reconnects on its own: try again once it's back`, 503));
+              if (ms.machine.agent === MOCK_OLD_AGENT) return Promise.reject(new ApiError(`Update the agent on ${ms.machine.name}: it is older than this Portplane and can't do this yet.`, 501));
+              return (fn as (...a: unknown[]) => unknown)(...args);
+            };
+    }
+    return guarded as MachineParts;
+  };
+  const forMachine = machineScoper(() => api, (id) => (id === LOCAL_MACHINE ? {} : machineParts(id)));
+  return api;
 }

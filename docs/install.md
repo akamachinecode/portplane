@@ -91,6 +91,10 @@ portplane autostart on                         # optional: start at login
 
 `portplane setup <folder>` finds the apps in a folder and proposes their dekit tasks.
 
+### Another machine over SSH
+
+Add it in **Machines → Add a machine** (any host your `ssh` reaches without a prompt). Then **Set up** on its card runs the same guided setup on that machine: the check, installing dekit, Node.js and portless into your home folder there (no password), its folders and apps. Steps that need an administrator there, such as the proxy service, show the command to paste into a terminal here, `ssh -t <machine> 'sudo portless service install'`, then **Check again**. Afterwards pick the machine at the top of **Runners** and **Domains**, or open one of its projects, to manage its dekit and portless from Portplane.
+
 Pin the apps you use most with the star on their row: they come first in the Apps view and get start and stop in the tray. Settings → General has the theme, notifications (failures only, at first) and **Check for updates**, which only goes online when you click it, or once a day if you turn that on.
 
 ## Uninstall
