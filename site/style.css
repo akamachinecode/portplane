@@ -158,6 +158,17 @@ a.layer:hover { border-color: var(--border-strong); }
 .copy:hover { color: var(--text); }
 .copy.done { color: var(--accent-text); }
 
+/* questions */
+.questions { padding-top: 72px; }
+.faq { margin-top: 24px; border-top: 1px solid var(--border); max-width: 760px; }
+.faq details { border-bottom: 1px solid var(--border); }
+.faq summary { display: flex; justify-content: space-between; gap: 16px; padding: 16px 0; font-weight: 510; list-style: none; cursor: pointer; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: "+"; color: var(--text-3); font-weight: 400; font-size: 1.25rem; line-height: 1; }
+.faq details[open] summary::after { content: "−"; }
+.faq p { margin: 0 0 16px; color: var(--text-2); max-width: 680px; }
+.faq p a { color: var(--text); }
+
 /* footer */
 footer { margin-top: 96px; border-top: 1px solid var(--border); }
 .foot { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; padding-top: 28px; padding-bottom: 40px; }

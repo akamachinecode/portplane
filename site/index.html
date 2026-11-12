@@ -168,6 +168,18 @@
         <p class="fine">The script checks the SHA-256 of what it downloads, and the signature too when <code>cosign</code> is installed. Then open Portplane: its guided setup installs <a href="https://dekit.run">dekit</a> and <a href="https://github.com/vercel-labs/portless">portless</a> for you. Details in <a href="docs/">the install guide</a>.</p>
       </div>
     </section>
+    <section id="questions" class="questions wrap">
+      <h2>Before you install</h2>
+      <div class="faq">
+        <details><summary>Does Portplane run my dev servers?</summary><p>No. <a href="https://dekit.run">dekit</a> runs and supervises them; Portplane shows them and starts, stops or restarts them through dekit. Without dekit or portless, it still lists the ports open on your machine and the folder each one serves.</p></details>
+        <details><summary>Do I have to install dekit and portless first?</summary><p>No. The guided setup installs dekit, portless and Node.js for you and sets up HTTPS and browser trust, on this computer and on the machines you reach over SSH.</p></details>
+        <details><summary>Does it open anything on my network?</summary><p>No. The UI lives on loopback, and other machines are reached only over SSH, with your keys. Others see an app only when you share it: with your tailnet, publicly with Tailscale Funnel, ngrok or Cloudflare, or on your Wi-Fi.</p></details>
+        <details><summary>What happens if I stop using Portplane?</summary><p>Nothing breaks. The config it writes is plain dekit YAML that you can keep using without Portplane.</p></details>
+        <details><summary>Does it work on Windows?</summary><p>Yes, as a beta until someone uses it every day: Windows 10 and 11, x64 and ARM64. macOS and Linux are fully supported.</p></details>
+        <details><summary>Is it really free?</summary><p>Yes. Portplane is open source under Apache-2.0, with no accounts, no cloud and no telemetry.</p></details>
+        <details><summary>How do I uninstall it?</summary><p>Run <code>portplane autostart off</code> if you turned it on, then remove the app and its settings and cache folders. The <a href="docs/#uninstall">install guide</a> lists them for each system.</p></details>
+      </div>
+    </section>
   </main>
 
   <footer>
