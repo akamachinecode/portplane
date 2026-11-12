@@ -17,20 +17,24 @@ const ExitUnavailable = 3
 
 // Operations from Portplane to the window.
 const (
-	OpPresent = "present" // bring the window to the front; Token is an XDG activation token
-	OpPick    = "pick"    // show the folder picker; the answer is OpPicked with the same ID
-	OpClose   = "close"   // close the window and exit
+	OpPresent  = "present"  // bring the window to the front; Token is an XDG activation token
+	OpPick     = "pick"     // show the folder picker; the answer is OpPicked with the same ID
+	OpSave     = "save"     // show the save dialog for a file named Path; the answer is OpSaved with the same ID
+	OpTheme    = "theme"    // follow Theme (system, light or dark): the title bar and the page's system colours
+	OpNavigate = "navigate" // show the UI at Path, a fragment such as "#/health"
+	OpClose    = "close"    // close the window and exit
 )
 
 // Operations from the window to Portplane.
 const (
 	OpReady  = "ready"  // the window is on screen
 	OpPicked = "picked" // the folder picker closed: Path, or empty when cancelled
+	OpSaved  = "saved"  // the save dialog closed: Path, or empty when cancelled
 	OpQuit   = "quit"   // the user chose Quit Portplane
 )
 
-// ErrPickerUnsupported is the Error of an OpPicked when the window's GTK has
-// no folder picker (before 4.10).
+// ErrPickerUnsupported is the Error of an OpPicked or OpSaved when the
+// window's GTK has no file dialog (before 4.10).
 const ErrPickerUnsupported = "unsupported"
 
 // Message is one line of the protocol.
@@ -39,5 +43,6 @@ type Message struct {
 	Token string `json:"token,omitempty"`
 	ID    int    `json:"id,omitempty"`
 	Path  string `json:"path,omitempty"`
+	Theme string `json:"theme,omitempty"`
 	Error string `json:"error,omitempty"`
 }

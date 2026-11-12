@@ -225,6 +225,31 @@ static void ppShow(const char *raw) {
 	});
 }
 
+// ppNavigate loads a route of the UI in the open window. Within the loaded
+// page only the fragment changes, so the page keeps its state.
+static void ppNavigate(const char *raw) {
+	NSURL *u = [NSURL URLWithString:[NSString stringWithUTF8String:raw]];
+	dispatch_async(dispatch_get_main_queue(), ^{
+		if (u != nil && ppWindow != nil && ppWindow.web != nil) {
+			[ppWindow.web loadRequest:[NSURLRequest requestWithURL:u]];
+		}
+	});
+}
+
+// ppSetTheme sets the app's appearance: 0 follows the system, 1 is light,
+// 2 is dark. The title bar and the page's prefers-color-scheme follow it.
+static void ppSetTheme(int theme) {
+	dispatch_async(dispatch_get_main_queue(), ^{
+		if (theme == 1) {
+			NSApp.appearance = [NSAppearance appearanceNamed:NSAppearanceNameAqua];
+		} else if (theme == 2) {
+			NSApp.appearance = [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
+		} else {
+			NSApp.appearance = nil;
+		}
+	});
+}
+
 // ppSetIcon gives a bare binary (no Portplane.app around it) the Portplane
 // icon in the Dock; inside the bundle, Info.plist names the .icns.
 static void ppSetIcon(const void *png, int n) {
@@ -320,6 +345,28 @@ func Close() {}
 func CanPick() bool { return false }
 
 func pickFolder(context.Context) (string, error) { return "", ErrNoWindow }
+
+// saveFile: the save dialog on macOS is the AppleScript one.
+func saveFile(context.Context, string) (string, error) { return "", ErrNoWindow }
+
+func setTheme(t string) {
+	code := 0
+	switch t {
+	case ThemeLight:
+		code = 1
+	case ThemeDark:
+		code = 2
+	}
+	C.ppSetTheme(C.int(code))
+}
+
+func navigate(fragment string) {
+	homeMu.Lock()
+	cs := C.CString(RouteURL(home, fragment))
+	homeMu.Unlock()
+	defer C.free(unsafe.Pointer(cs))
+	C.ppNavigate(cs)
+}
 
 // onQuit calls quit when the user chooses Quit Portplane in the window's
 // menu (Cmd-Q) or the app gets a Quit Apple event (the Dock's Quit, logout).

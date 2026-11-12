@@ -43,10 +43,12 @@ func fakeWindow(mode string) int {
 	for sc.Scan() {
 		var m Message
 		_ = json.Unmarshal(sc.Bytes(), &m)
-		_, _ = logf.WriteString(m.Op + " " + m.Token + "\n")
+		_, _ = logf.WriteString(m.Op + " " + m.Token + m.Theme + m.Path + "\n")
 		switch m.Op {
 		case OpPick:
 			_ = out.Encode(Message{Op: OpPicked, ID: m.ID, Path: "/home/you/code"})
+		case OpSave:
+			_ = out.Encode(Message{Op: OpSaved, ID: m.ID, Path: "/home/you/Desktop/" + m.Path})
 		case OpClose:
 			return 0
 		}
@@ -124,6 +126,21 @@ func TestShowPresentPickClose(t *testing.T) {
 	if err != nil || p != "/home/you/code" {
 		t.Fatalf("PickFolder: %q, %v", p, err)
 	}
+	p, err = SaveFile(context.Background(), "report.zip")
+	if err != nil || p != "/home/you/Desktop/report.zip" {
+		t.Fatalf("SaveFile: %q, %v", p, err)
+	}
+
+	SetTheme("dark")
+	Navigate("#/health")
+	Navigate(`#/"bad"`) // not a route: never sent
+	waitFor(t, "theme and route", func() bool {
+		l := readLog(t, log)
+		return strings.Contains(l, "theme dark") && strings.Contains(l, "navigate #/health")
+	})
+	if strings.Contains(readLog(t, log), "bad") {
+		t.Fatal("an invalid fragment reached the window")
+	}
 
 	Close()
 	if CanPick() {
@@ -135,6 +152,18 @@ func TestShowPresentPickClose(t *testing.T) {
 	if _, err := PickFolder(context.Background()); !errors.Is(err, ErrNoWindow) {
 		t.Fatalf("PickFolder with no window: %v, want ErrNoWindow", err)
 	}
+	if _, err := SaveFile(context.Background(), "x.zip"); !errors.Is(err, ErrNoWindow) {
+		t.Fatalf("SaveFile with no window: %v, want ErrNoWindow", err)
+	}
+
+	// The next window starts in the chosen theme.
+	if err := Show(""); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(readLog(t, log), "--theme dark") {
+		t.Fatalf("second window started with %q", readLog(t, log))
+	}
+	SetTheme("system")
 }
 
 func TestUnavailable(t *testing.T) {

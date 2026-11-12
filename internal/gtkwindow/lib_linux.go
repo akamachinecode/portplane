@@ -86,6 +86,9 @@ var (
 	gtk_file_dialog_select_folder_finish func(d, result uintptr, err *uintptr) uintptr
 	gtk_uri_launcher_new                 func(uri string) uintptr
 	gtk_uri_launcher_launch              func(l, parent, cancellable, cb, data uintptr)
+	gtk_file_dialog_set_initial_name     func(d uintptr, name string)
+	gtk_file_dialog_save                 func(d, parent, cancellable, cb, data uintptr)
+	gtk_file_dialog_save_finish          func(d, result uintptr, err *uintptr) uintptr
 )
 
 // WebKitGTK 6.0.
@@ -110,9 +113,17 @@ var (
 // libadwaita, when installed: the window and the page follow the desktop's
 // light or dark style. Nil when missing.
 var (
-	adw_init                      func()
-	adw_style_manager_get_default func() uintptr
-	adw_style_manager_get_dark    func(m uintptr) bool
+	adw_init                           func()
+	adw_style_manager_get_default      func() uintptr
+	adw_style_manager_get_dark         func(m uintptr) bool
+	adw_style_manager_set_color_scheme func(m uintptr, scheme int32)
+)
+
+// AdwColorScheme values.
+const (
+	adwColorSchemeDefault    = 0 // follow the desktop
+	adwColorSchemeForceLight = 1
+	adwColorSchemeForceDark  = 4
 )
 
 type gdkRGBA struct{ R, G, B, A float32 }
@@ -240,11 +251,16 @@ func load() error {
 	bindOptional(gtk, []binding{
 		{&gtk_uri_launcher_new, "gtk_uri_launcher_new"}, {&gtk_uri_launcher_launch, "gtk_uri_launcher_launch"},
 	})
+	bindOptional(gtk, []binding{
+		{&gtk_file_dialog_set_initial_name, "gtk_file_dialog_set_initial_name"},
+		{&gtk_file_dialog_save, "gtk_file_dialog_save"}, {&gtk_file_dialog_save_finish, "gtk_file_dialog_save_finish"},
+	})
 	if adw, err := open("libadwaita-1.so.0"); err == nil {
 		bindOptional(adw, []binding{
 			{&adw_init, "adw_init"}, {&adw_style_manager_get_default, "adw_style_manager_get_default"},
 			{&adw_style_manager_get_dark, "adw_style_manager_get_dark"},
 		})
+		bindOptional(adw, []binding{{&adw_style_manager_set_color_scheme, "adw_style_manager_set_color_scheme"}})
 	}
 	return nil
 }

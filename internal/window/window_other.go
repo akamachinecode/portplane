@@ -26,3 +26,9 @@ func Close() {}
 func CanPick() bool { return false }
 
 func pickFolder(context.Context) (string, error) { return "", ErrNoWindow }
+
+func saveFile(context.Context, string) (string, error) { return "", ErrNoWindow }
+
+func setTheme(string) {}
+
+func navigate(string) {}
