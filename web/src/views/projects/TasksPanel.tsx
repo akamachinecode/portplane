@@ -65,11 +65,42 @@ function NameDialog({ title, label, initial, taken, onClose, onSubmit }: { title
   );
 }
 
-export function TasksPanel({ runner, config, os, selected, onSelect, onSaved }: { runner: string; config: ProjectConfig; os?: string; selected: string | null; onSelect(path: string | null): void; onSaved(): void }) {
+/** A task or a folder entry that holds one of these tasks (a project's own, on its page). */
+export function inTasks(only: ReadonlySet<string> | undefined, t: Pick<TaskEntry, "path" | "folder">): boolean {
+  if (!only) return true;
+  if (only.has(t.path)) return true;
+  const prefix = t.path.replace(/\/$/, "") + "/";
+  return !!t.folder && [...only].some((x) => x.startsWith(prefix));
+}
+
+export function TasksPanel({
+  runner,
+  config,
+  os,
+  selected,
+  onSelect,
+  onSaved,
+  only,
+}: {
+  runner: string;
+  config: ProjectConfig;
+  os?: string;
+  selected: string | null;
+  onSelect(path: string | null): void;
+  onSaved(): void;
+  /** Show only these task paths (and the folder entries above them): one project's, on its page. */
+  only?: ReadonlySet<string>;
+}) {
   const { api } = useApp();
   const [naming, setNaming] = useState<{ entry: TaskEntry; mode: "rename" | "duplicate" } | null>(null);
   const [pending, setPending] = useState<Pending | null>(null);
-  const byFile = useMemo(() => config.files.map((f) => ({ file: f, tasks: config.tasks.filter((t) => t.file === f.path) })), [config]);
+  const byFile = useMemo(
+    () =>
+      config.files
+        .map((f) => ({ file: f, tasks: config.tasks.filter((t) => t.file === f.path && inTasks(only, t)) }))
+        .filter((g) => !only || g.tasks.length > 0),
+    [config, only],
+  );
   const entry = config.tasks.find((t) => t.path === selected && !t.folder) ?? null;
   useEffect(() => {
     if (selected && !config.tasks.some((t) => t.path === selected)) onSelect(null);

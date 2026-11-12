@@ -765,3 +765,89 @@
 .with-subnav-main .table-wrap {
   position: relative;
 }
+
+/* ---------- what the proxy does (ADR-0028) ---------- */
+
+.explainer {
+  margin-bottom: var(--section-gap);
+}
+
+.flow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-6);
+  margin: var(--space-3) 0 var(--space-4);
+  padding: var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  list-style: none;
+}
+
+.flow-step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.flow-step + .flow-step::before {
+  content: "→";
+  position: absolute;
+  top: 50%;
+  left: calc(-1 * var(--space-6) / 2);
+  color: var(--text-4);
+  transform: translate(-50%, -10%);
+}
+
+.flow-kicker {
+  color: var(--text-3);
+  font-size: 12px;
+}
+
+.flow-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  font-weight: var(--weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.flow-proxy .flow-value {
+  align-self: flex-start;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--surface-2);
+}
+
+.flow-proxy.is-up .flow-value {
+  background: var(--on-soft);
+  color: var(--on);
+}
+
+.flow-proxy.is-down .flow-value {
+  background: var(--err-soft);
+  color: var(--err);
+}
+
+.explainer-text {
+  max-width: 72ch;
+  color: var(--text-2);
+  font-size: var(--text-sm);
+  line-height: 1.65;
+}
+
+@media (max-width: 720px) {
+  .flow {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .flow-step + .flow-step::before {
+    content: "↓";
+    top: calc(-1 * var(--space-6) / 2);
+    left: 0;
+    transform: translate(0, -50%);
+  }
+}

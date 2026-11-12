@@ -16,6 +16,21 @@ type Preferences struct {
 	Onboarding    Onboarding    `json:"onboarding"`
 	// AppsLayout is how the Apps view lists apps: cards or table.
 	AppsLayout string `json:"appsLayout"`
+	// Icons are the icons the user chose for apps and projects (ADR-0030),
+	// keyed "project:<machine>|<name>" or "app:<machine>|<appId>". Anything
+	// without an entry shows the image found in its folder, or its initials.
+	Icons map[string]IconChoice `json:"icons,omitempty"`
+}
+
+// IconChoice is the icon the user picked for one app or project: its
+// initials (with their own letters and colour), or an image file on a
+// machine.
+type IconChoice struct {
+	Kind    string `json:"kind"`              // auto, initials or file
+	Text    string `json:"text,omitempty"`    // initials: up to 3 characters
+	Tint    int    `json:"tint,omitempty"`    // initials: 1–8, 0 for the name's own
+	Machine string `json:"machine,omitempty"` // file: the machine the file is on
+	Path    string `json:"path,omitempty"`    // file: an absolute path
 }
 
 // Notifications says which system notifications to show. Only failures
@@ -98,6 +113,37 @@ func (p Preferences) Validate() error {
 	}
 	if len(p.Favorites) > 500 {
 		return fmt.Errorf("too many favourites")
+	}
+	if len(p.Icons) > 2000 {
+		return fmt.Errorf("too many icons")
+	}
+	for key, c := range p.Icons {
+		if err := c.validate(key); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c IconChoice) validate(key string) error {
+	if !strings.HasPrefix(key, "project:") && !strings.HasPrefix(key, "app:") || len(key) > 2048 {
+		return fmt.Errorf("icon key %q must start with \"project:\" or \"app:\"", key)
+	}
+	switch c.Kind {
+	case "auto":
+	case "initials":
+		if n := len([]rune(c.Text)); n > 3 {
+			return fmt.Errorf("the initials of %s are %d characters long; 3 at most", key, n)
+		}
+		if c.Tint < 0 || c.Tint > 8 {
+			return fmt.Errorf("the colour of %s must be between 1 and 8", key)
+		}
+	case "file":
+		if c.Machine == "" || c.Path == "" || len(c.Path) > 4096 {
+			return fmt.Errorf("the icon of %s needs a machine and a path", key)
+		}
+	default:
+		return fmt.Errorf("icon kind must be auto, initials or file, not %q", c.Kind)
 	}
 	return nil
 }

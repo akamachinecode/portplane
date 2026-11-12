@@ -1,4 +1,5 @@
 // The base styles first, so each component's and view's own CSS comes after.
+import "./fonts.css";
 import "./styles.css";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";

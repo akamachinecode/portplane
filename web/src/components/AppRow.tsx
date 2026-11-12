@@ -11,7 +11,7 @@ import { ExcerptPanel } from "./ExcerptPanel";
 import { Icon } from "./Icon";
 import { IconButton, IconSlot } from "./IconButton";
 import { Menu, type MenuItem } from "./Menu";
-import { StateDot } from "./StateDot";
+import { AppIcon } from "./AppIcons";
 
 /** What the Apps view adds to a row: pinning, selection and the keyboard cursor. */
 export interface RowExtras {
@@ -203,7 +203,7 @@ function AppRowImpl({ app, ms, extras, variant = "list", showProject, placeCell,
         {extras && <td className="cell-check">{select}</td>}
         <td className="cell-name">
           <span className="cell-name-inner">
-            <StateDot state={app.state} />
+            <AppIcon ms={ms} app={app} size={22} state={app.state} />
             <span className="row-body">{name}</span>
           </span>
         </td>
@@ -229,7 +229,7 @@ function AppRowImpl({ app, ms, extras, variant = "list", showProject, placeCell,
     <li className={rowClass} data-app-key={extras?.entryKey}>
       <div className={extras ? "row-main has-check" : "row-main"}>
         {select}
-        <StateDot state={app.state} />
+        <AppIcon ms={ms} app={app} size={28} state={app.state} />
         <div className="row-body">
           {name}
           {addressLine}

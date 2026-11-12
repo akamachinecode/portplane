@@ -62,3 +62,70 @@
   color: var(--text-3);
   font-size: var(--text-xs);
 }
+
+/* ---------- the project's head and tabs (ADR-0028) ---------- */
+
+.project-hero {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin: var(--space-2) 0 var(--space-6);
+}
+
+.project-hero .entity-icon {
+  border-radius: 12px;
+}
+
+.project-hero-text {
+  min-width: 0;
+}
+
+.project-hero-name {
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-strong);
+  letter-spacing: -0.022em;
+  line-height: 1.2;
+}
+
+.project-hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 0;
+  margin-top: 6px;
+  color: var(--text-2);
+  font-size: var(--text-sm);
+}
+
+.project-hero-meta > span + span::before {
+  content: "·";
+  margin: 0 8px;
+  color: var(--text-4);
+}
+
+.project-tabs {
+  margin-bottom: var(--space-6);
+}
+
+.project-config + .project-config {
+  margin-top: var(--section-gap);
+}
+
+.project-config-title {
+  margin-bottom: var(--space-3);
+  color: var(--text-2);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.project-config-foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: var(--space-5);
+  color: var(--text-3);
+  font-size: var(--text-sm);
+}
+
+.project-config-foot a {
+  color: var(--text-2);
+}

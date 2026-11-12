@@ -11,7 +11,7 @@ import { AppRow, type RowExtras } from "./AppRow";
 import { useApp } from "./AppContext";
 import { Icon } from "./Icon";
 import { IconButton } from "./IconButton";
-import { StateDot } from "./StateDot";
+import { ProjectIcon } from "./AppIcons";
 import "./ProjectList.css";
 
 interface GroupActionsProps {
@@ -237,7 +237,7 @@ export function ProjectCard({
     <article className={`project project-${state}${folded ? " is-folded" : ""}`} aria-labelledby={headingId}>
       <header className="project-head">
         {folds && <FoldButton folded={folded} label={`the apps of ${project.name}`} controls={listId} onToggle={() => folds.setFolded(foldKey, !folded)} />}
-        <StateDot state={state} />
+        <ProjectIcon ms={ms} project={project} size={24} state={state === "off" ? undefined : state} />
         <h3 className="project-title" id={headingId}>
           <a href={href(projectRoute(ms, project))} title={`Open ${project.name}: its worktrees, apps and configuration`}>
             {project.name}

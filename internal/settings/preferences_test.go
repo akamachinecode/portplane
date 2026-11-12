@@ -58,3 +58,28 @@ func TestWatchSeesOutsideChanges(t *testing.T) {
 		t.Fatal("no change seen")
 	}
 }
+
+func TestIconChoicesAreValidated(t *testing.T) {
+	ok := DefaultPreferences()
+	ok.Icons = map[string]IconChoice{
+		"project:local|shop":       {Kind: "initials", Text: "SH", Tint: 3},
+		"app:box|/srv#shop/web":    {Kind: "file", Machine: "box", Path: "/srv/shop/logo.svg"},
+		"project:local|other-shop": {Kind: "auto"},
+	}
+	if err := ok.Validate(); err != nil {
+		t.Fatalf("valid icons refused: %v", err)
+	}
+	for name, c := range map[string]map[string]IconChoice{
+		"bad key":       {"shop": {Kind: "auto"}},
+		"long initials": {"project:local|shop": {Kind: "initials", Text: "ABCD"}},
+		"bad tint":      {"project:local|shop": {Kind: "initials", Tint: 9}},
+		"file, no path": {"project:local|shop": {Kind: "file", Machine: "local"}},
+		"unknown kind":  {"project:local|shop": {Kind: "emoji"}},
+	} {
+		p := DefaultPreferences()
+		p.Icons = c
+		if err := p.Validate(); err == nil {
+			t.Errorf("%s: accepted", name)
+		}
+	}
+}

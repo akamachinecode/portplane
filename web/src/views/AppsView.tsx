@@ -21,7 +21,6 @@ import { SnapshotGate } from "../shell/SnapshotGate";
 import { useShell } from "../shell/ShellContext";
 import { AppsTable, projectSections } from "./apps/AppsTable";
 import { AppsToolbar } from "./apps/AppsToolbar";
-import { GettingStarted } from "./apps/GettingStarted";
 import { HealthLine } from "./apps/HealthLine";
 import {
   canAct,
@@ -96,7 +95,6 @@ export function AppsView() {
           )
         }
       />
-      <GettingStarted />
       <SnapshotGate loading={<SkeletonCards label="Connecting to Portplane…" />}>
         {(snapshot) =>
           snapshot.machines.length === 0 ? (

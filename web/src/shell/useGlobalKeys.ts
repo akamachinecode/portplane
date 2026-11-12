@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { isTypingTarget } from "../lib/keyboard";
 import { createGlobalKeys } from "../lib/shortcuts";
 import { navigate } from "../lib/router";
-import { NAV, SETTINGS_NAV } from "./nav";
+import { viewRoute } from "./nav";
 
 /** Something modal is up (a dialog, the palette) or a menu has focus: shortcuts wait. */
 export function shortcutsBlocked(target: EventTarget | null): boolean {
@@ -28,10 +28,7 @@ export function useGlobalKeys(onHelp: () => void): void {
       e.preventDefault();
       e.stopPropagation();
       if (action.kind === "help") onHelp();
-      if (action.kind === "go") {
-        const item = [...NAV, SETTINGS_NAV].find((n) => n.view === action.view);
-        if (item) navigate(item.route);
-      }
+      if (action.kind === "go") navigate(viewRoute(action.view));
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);

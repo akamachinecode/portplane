@@ -1,5 +1,6 @@
 import type { Api } from "./client";
 import { createDekitHttp } from "./dekit";
+import { createIconsHttp } from "./icons";
 import { ApiError } from "./errors";
 import { machineHttp, type Http } from "./http";
 import { createPortlessHttp } from "./portless";
@@ -35,6 +36,9 @@ export function createMachineHttp(h: Http, api: Api, machine: string): MachinePa
     ...createPortlessHttp(mh),
     ...createDekitHttp(mh),
     ...createToolsHttp(mh),
+    ...createIconsHttp(mh),
+    // The file picker is this computer's: a remote machine's icon is one of its own images.
+    iconPick: () => Promise.resolve({ kind: "unsupported" }),
     setupCheck: () => json<SetupCheck>("GET", "/api/setup/check"),
     setupScan: (folder, overrides) => json<Proposal>("POST", "/api/setup/scan", { folder, overrides }),
     setupApply: (folder, digest, overrides) => json<ApplyResult>("POST", "/api/setup/apply", { folder, digest, overrides }),

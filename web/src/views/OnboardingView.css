@@ -1,155 +1,170 @@
 /* The guided setup (plan, section 3): a full-window flow with a progress bar, a
    rail of steps on wide windows and one step at a time. */
 
-.onboarding {
-  display: flex;
-  flex-direction: column;
-  min-height: 100dvh;
-  background:
-    radial-gradient(70% 40% at 50% 0%, var(--accent-soft), transparent 70%),
-    var(--bg);
-}
+/* Setup as a timeline (ADR-0028): a page of the app, one item per step;
+   done steps show what they found, the open one does its work in place. */
 
-.onboarding:focus {
-  outline: none;
-}
-
-/* ---------- top bar and progress ---------- */
-
-.ob-top {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  min-height: 48px;
-  padding: var(--space-2) var(--space-5);
-  background: color-mix(in srgb, var(--bg) 88%, transparent);
-  backdrop-filter: blur(8px);
-}
-
-/* the macOS window has no title bar: leave the traffic lights their corner */
-:root[data-window="mac"] .ob-top {
-  min-height: max(48px, calc(var(--titlebar-h) + 20px));
-  padding-left: max(var(--space-5), calc(var(--traffic-w) + var(--space-2)));
-}
-
-:root[data-window="mac"] .ob-progress {
-  top: max(48px, calc(var(--titlebar-h) + 20px));
-}
-
-.ob-top-mark {
-  border-radius: 6px;
-}
-
-.ob-top-name {
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-
-.ob-top-step {
-  flex: 1;
-  color: var(--text-2);
-  font-size: var(--text-sm);
-}
-
-.ob-progress {
-  position: sticky;
-  top: 48px;
-  z-index: 2;
-  height: 3px;
-  background: var(--border);
-}
-
-.ob-progress-bar {
-  display: block;
-  height: 100%;
-  border-radius: 0 2px 2px 0;
-  background: var(--accent);
-  transition: width var(--dur) var(--ease-out);
-}
-
-/* ---------- layout: rail and step ---------- */
-
-.ob-body {
-  display: grid;
-  grid-template-columns: 220px minmax(0, 760px);
-  justify-content: center;
-  gap: var(--space-8);
-  flex: 1;
-  width: 100%;
-  padding: var(--space-8) var(--space-5) 0;
-}
-
-.ob-rail ol {
-  position: sticky;
-  top: 80px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+.timeline {
+  position: relative;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.ob-rail-item {
-  display: flex;
+.tl-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: var(--space-4);
+  scroll-margin-top: calc(var(--toolbar-h, 48px) + var(--space-4));
+}
+
+/* the line between markers */
+.tl-item::before {
+  content: "";
+  position: absolute;
+  top: 30px;
+  bottom: -2px;
+  left: 13.5px;
+  width: 1px;
+  background: var(--border-strong);
+}
+
+.tl-item:last-child::before {
+  display: none;
+}
+
+.tl-item.is-done::before {
+  background: color-mix(in srgb, var(--on) 45%, var(--border));
+}
+
+.tl-marker {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin-top: 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--text-3);
+  font-size: 12px;
+  font-weight: var(--weight-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.is-done > .tl-marker {
+  border-color: color-mix(in srgb, var(--on) 55%, transparent);
+  background: var(--on-soft);
+  color: var(--on);
+}
+
+.is-current > .tl-marker {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.tl-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.tl-content {
+  min-width: 0;
+  padding-bottom: var(--space-2);
+}
+
+.tl-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
+  gap: 2px var(--space-4);
   width: 100%;
-  height: 32px;
-  padding: 0 8px;
+  min-height: 48px;
+  padding: 9px 12px;
   border: 0;
-  border-radius: var(--radius-sm);
-  background: none;
-  color: var(--text-2);
-  font-size: var(--text-sm);
+  border-radius: var(--radius);
+  background: transparent;
+  color: inherit;
+  font: inherit;
   text-align: left;
   cursor: pointer;
 }
 
-.ob-rail-item:hover:not(:disabled) {
-  background: var(--surface-2);
-  color: var(--text);
+.tl-head:hover:not(:disabled) {
+  background: var(--surface-hover);
 }
 
-.ob-rail-item:disabled {
-  color: var(--text-3);
+.tl-head:disabled {
   cursor: default;
 }
 
-.ob-rail-item.is-current {
+.tl-title {
+  grid-column: 1;
+  font-weight: var(--weight-strong);
+}
+
+.is-todo .tl-title {
+  color: var(--text-2);
+  font-weight: var(--weight-medium);
+}
+
+.tl-record {
+  grid-column: 1;
+  min-width: 0;
+  color: var(--text-3);
+  font-size: var(--text-sm);
+}
+
+.is-done .tl-record {
+  color: var(--text-2);
+}
+
+.tl-open {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--text-3);
+  font-size: var(--text-sm);
+  opacity: 0;
+  transition: opacity var(--dur-fast);
+}
+
+.tl-head:hover .tl-open,
+.tl-head:focus-visible .tl-open {
+  opacity: 1;
+}
+
+.is-current .tl-head {
+  min-height: 44px;
+}
+
+.is-current .tl-record {
+  display: none;
+}
+
+.is-current .tl-title {
+  color: var(--accent-text);
+  font-size: 12px;
+  font-weight: var(--weight-medium);
+}
+
+.tl-panel {
+  margin: var(--space-2) 0 var(--space-6);
+  padding: var(--space-6) var(--space-6) 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   background: var(--surface);
-  color: var(--text);
-  font-weight: 600;
-  box-shadow: var(--shadow-1), inset 0 0 0 1px var(--border);
 }
 
-.ob-rail-dot {
-  display: inline-grid;
-  place-items: center;
-  flex: none;
-  width: 20px;
-  height: 20px;
-  border: 1px solid var(--border-strong);
-  border-radius: 50%;
-  background: var(--surface);
-  font-size: 11px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-.ob-rail-item.is-current .ob-rail-dot {
-  border-color: var(--accent);
-  background: var(--accent);
-  color: var(--accent-fg);
-}
-
-.ob-rail-item.is-done .ob-rail-dot {
-  border-color: var(--on);
-  background: var(--on-soft);
-  color: var(--on);
+.ob-remote-banner {
+  margin-bottom: var(--space-5);
 }
 
 .ob-step {
@@ -162,19 +177,19 @@
 .ob-step-head {
   display: flex;
   align-items: flex-start;
-  gap: var(--space-4);
-  margin-bottom: var(--space-6);
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
 }
 
 .ob-step-icon {
   display: inline-grid;
   place-items: center;
   flex: none;
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .ob-step-titles {
@@ -182,10 +197,10 @@
 }
 
 .ob-step-title {
-  font-size: var(--text-2xl);
-  font-weight: 650;
-  letter-spacing: -0.02em;
-  line-height: 1.25;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-strong);
+  letter-spacing: -0.018em;
+  line-height: 1.3;
 }
 
 .ob-step-title:focus {
@@ -211,7 +226,7 @@
   flex-direction: column;
   gap: var(--space-4);
   flex: 1;
-  padding-bottom: var(--space-8);
+  padding-bottom: var(--space-6);
 }
 
 .ob-foot {
@@ -222,10 +237,11 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
-  margin: 0 calc(-1 * var(--space-5));
-  padding: var(--space-3) var(--space-5);
+  margin: 0 calc(-1 * var(--space-6));
+  padding: var(--space-3) var(--space-6);
   border-top: 1px solid var(--border);
-  background: color-mix(in srgb, var(--bg) 92%, transparent);
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
   backdrop-filter: blur(8px);
 }
 
@@ -1112,29 +1128,23 @@
 
 /* ---------- narrow windows ---------- */
 
-@media (max-width: 900px) {
-  .ob-body {
-    grid-template-columns: minmax(0, 1fr);
-    padding-top: var(--space-6);
-  }
-
-  .ob-rail {
-    display: none;
-  }
-}
-
 @media (max-width: 560px) {
-  .ob-top {
-    padding: var(--space-2) var(--space-4);
+  .tl-item {
+    grid-template-columns: 22px minmax(0, 1fr);
+    gap: var(--space-3);
   }
 
-  .ob-top-name,
-  .ob-top-step-label {
-    display: none;
+  .tl-marker {
+    width: 22px;
+    height: 22px;
   }
 
-  .ob-body {
-    padding: var(--space-5) var(--space-4) 0;
+  .tl-item::before {
+    left: 10.5px;
+  }
+
+  .tl-panel {
+    padding: var(--space-4) var(--space-4) 0;
   }
 
   .ob-foot {
@@ -1146,7 +1156,6 @@
     flex-basis: 100%;
     order: -1;
   }
-
   .ob-step-head {
     gap: var(--space-3);
   }
@@ -1198,9 +1207,4 @@
   }
 }
 
-/* A machine over SSH that is offline or runs an older agent (ADR-0026). */
-.ob-remote-banner {
-  width: min(100%, 1012px);
-  margin: var(--space-4) auto 0;
-  padding: 0 var(--space-5);
-}
+

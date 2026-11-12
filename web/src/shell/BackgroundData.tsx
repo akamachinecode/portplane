@@ -3,7 +3,7 @@ import { useJobs } from "../api/jobs";
 import { agentIsOutdated, clearAgentOutdated, LOCAL_MACHINE } from "../api/machine";
 import type { Snapshot } from "../api/types";
 import { useApp } from "../components/AppContext";
-import { primePortless, usePrimePortless } from "../views/domains/store";
+import { primePortless, useLivePortless, usePrimePortless } from "../views/domains/store";
 import { forgetRunners, primeRunners } from "../views/runners/problems";
 import { useShell } from "./ShellContext";
 
@@ -18,6 +18,7 @@ export function BackgroundData() {
   const { snapshot } = useShell();
   const local = snapshot?.machines.find((m) => m.machine.local);
   usePrimePortless(!!local?.tools.portless);
+  useLivePortless(snapshot?.machines);
   const dekit = !!local?.tools.dekit;
   useEffect(() => {
     if (dekit) void primeRunners(api);

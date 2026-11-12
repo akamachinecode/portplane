@@ -67,12 +67,12 @@ export function listAction(e: KeyLike): ListAction | null {
 /** g, then one of these letters, goes to a view. */
 export const GO_KEYS: Record<string, Exclude<View, "onboarding" | "project">> = {
   a: "apps",
-  c: "projects",
-  d: "domains",
-  r: "runners",
-  m: "machines",
+  d: "addresses",
   h: "health",
   s: "settings",
+  r: "runners",
+  p: "domains",
+  m: "machines",
 };
 
 export type GlobalAction = { kind: "help" } | { kind: "go"; view: Exclude<View, "onboarding" | "project"> } | { kind: "pending" };
@@ -152,12 +152,14 @@ export function shortcutGroups(mac: boolean): ShortcutGroup[] {
 
 const VIEW_NAMES: Record<Exclude<View, "onboarding" | "project">, string> = {
   apps: "Apps",
-  projects: "dekit configuration",
-  domains: "Domains",
-  runners: "Runners",
-  machines: "Machines",
+  addresses: "Addresses",
   health: "Health",
   settings: "Settings",
+  runners: "dekit runners",
+  dekit: "About dekit",
+  projects: "A dekit.yaml",
+  domains: "portless proxy",
+  machines: "Machines",
 };
 
 /** A tooltip with its shortcut: "Start web (S)". */

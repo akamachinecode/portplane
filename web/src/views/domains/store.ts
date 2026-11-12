@@ -4,6 +4,7 @@ import { errorText } from "../../api/errors";
 import { useJobs } from "../../api/jobs";
 import type { Certificates, DoctorReport, PortlessAction, PortlessStatus, RouteView } from "../../api/portless";
 import type { LanView, SharingOverview } from "../../api/sharing";
+import type { MachineSnapshot } from "../../api/types";
 import { useApp } from "../../components/AppContext";
 import { useMachineScope } from "../../components/MachineScope";
 import { LOCAL_MACHINE } from "../../api/machine";
@@ -16,7 +17,7 @@ import { invalidateProblems } from "../../shell/health";
 
 export type Load<T> = { status: "idle" } | { status: "loading"; value?: T } | { status: "ok"; value: T; at: number } | { status: "error"; error: string; value?: T };
 
-interface Resource<T> {
+export interface Resource<T> {
   get(): Load<T>;
   load(api: Api): Promise<void>;
   /** A value an action returned (the routes after adding an alias). */
@@ -24,7 +25,7 @@ interface Resource<T> {
   subscribe(l: () => void): () => void;
 }
 
-function resource<T>(fetch: (api: Api) => Promise<T>): Resource<T> {
+export function resource<T>(fetch: (api: Api) => Promise<T>): Resource<T> {
   let state: Load<T> = { status: "idle" };
   let inflight: Promise<void> | null = null;
   const listeners = new Set<() => void>();
@@ -203,6 +204,68 @@ export function useRefreshOnJobs(onDone?: () => void) {
     if (doctorR.get().status !== "idle") void doctorR.load(api);
     cb.current?.();
   }, [jobs, api, machine, statusR, routesR, doctorR, certificatesR]);
+}
+
+/**
+ * What portless's cached status and routes depend on in a machine's
+ * snapshot: whether the proxy runs, where, and which apps hold an address.
+ * When it changes, the status and the routes are read again, so a proxy
+ * started from a terminal or by the system, or an app that just started,
+ * shows without a click (the status used to be read once at start).
+ */
+export function portlessFingerprint(ms: MachineSnapshot): string {
+  const t = ms.tools;
+  const live = ms.apps
+    .filter((a) => a.hostname && (a.state === "on" || a.state === "starting"))
+    .map((a) => `${a.hostname}:${a.port ?? ""}`)
+    .sort();
+  return [t.portless ?? "", t.proxyRunning ? 1 : 0, t.proxyHttps ? 1 : 0, t.proxyPort ?? "", ...live].join("|");
+}
+
+/** How often the status is read again while the window is open, in case nothing in the snapshot moved. */
+export const STATUS_REFRESH_MS = 30_000;
+
+/**
+ * Keeps every machine's portless status and routes current: again when the
+ * snapshot's fingerprint changes, when the window comes back to the front,
+ * and every 30 seconds. Only what was loaded before is read again.
+ */
+export function useLivePortless(machines: MachineSnapshot[] | undefined): void {
+  const { api } = useApp();
+  const prints = useRef(new Map<string, string>());
+  const refresh = useCallback(
+    (id: string) => {
+      const r = resourcesOf(id);
+      const machineApi = id === LOCAL_MACHINE ? api : api.forMachine(id);
+      if (r.status.get().status !== "idle") void r.status.load(machineApi);
+      if (r.routes.get().status !== "idle") void r.routes.load(machineApi);
+    },
+    [api],
+  );
+  const reachable = (machines ?? []).filter((ms) => ms.tools.portless && (ms.machine.local || ms.machine.status === "online"));
+  const key = reachable.map((ms) => `${ms.machine.id}=${portlessFingerprint(ms)}`).join("\n");
+  useEffect(() => {
+    for (const ms of reachable) {
+      const id = ms.machine.id;
+      const print = portlessFingerprint(ms);
+      const before = prints.current.get(id);
+      prints.current.set(id, print);
+      if (before !== undefined && before !== print) refresh(id);
+    }
+  }, [key, refresh]);
+  useEffect(() => {
+    const ids = () => [...prints.current.keys()];
+    const all = () => {
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+      for (const id of ids()) refresh(id);
+    };
+    const timer = window.setInterval(all, STATUS_REFRESH_MS);
+    window.addEventListener("focus", all);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", all);
+    };
+  }, [refresh]);
 }
 
 // ---- intents ----

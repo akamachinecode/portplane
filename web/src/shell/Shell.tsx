@@ -41,18 +41,26 @@ const SettingsView = lazy(() => import("../views/SettingsView").then((m) => ({ d
 const OnboardingView = lazy(() => import("../views/OnboardingView").then((m) => ({ default: m.OnboardingView })));
 const AppDetail = lazy(() => import("../views/AppDetail").then((m) => ({ default: m.AppDetail })));
 const ProjectView = lazy(() => import("../views/ProjectView").then((m) => ({ default: m.ProjectView })));
+const AddressesView = lazy(() => import("../views/AddressesView").then((m) => ({ default: m.AddressesView })));
+const DekitView = lazy(() => import("../views/DekitView").then((m) => ({ default: m.DekitView })));
 
 /** One component per view; each reads the route and the shell's data itself. */
-const VIEWS: Record<Exclude<View, "onboarding">, ComponentType> = {
+const VIEWS: Record<View, ComponentType> = {
   apps: AppsView,
   project: ProjectView,
+  addresses: AddressesView,
+  health: HealthView,
+  onboarding: OnboardingView,
   projects: ProjectsView,
   domains: DomainsView,
   runners: RunnersView,
+  dekit: DekitView,
   machines: MachinesView,
-  health: HealthView,
   settings: SettingsView,
 };
+
+/** Views that read best as one narrow column (settings and the setup timeline). */
+const NARROW: ReadonlySet<View> = new Set<View>(["settings", "machines", "dekit", "domains", "onboarding", "health"]);
 
 function ExpiredBanner() {
   return (
@@ -71,9 +79,9 @@ function ExpiredBanner() {
 }
 
 /**
- * The app's frame (plan §6.1): sidebar, top bar with the palette, the
- * current view, and the app detail drawer over it. Onboarding takes the
- * whole window.
+ * The app's frame (plan §6.1, ADR-0028): sidebar, top bar with the
+ * palette, the current view, and the app detail drawer over it. Setup is a
+ * page like any other: the sidebar stays.
  */
 export function Shell() {
   const { info } = useApp();
@@ -104,17 +112,19 @@ export function Shell() {
     return () => window.removeEventListener("keydown", onKey);
   }, [mac]);
 
-  // First run (ADR-0027): the app opens on Apps, where the "Get started"
-  // checklist leads into the guided setup; someone already set up is
-  // marked done without seeing it.
+  // First run (ADR-0028): the app opens on Setup, with the sidebar, and
+  // its check runs at once; someone already set up is marked done without
+  // seeing it. A link to a page (the tray, a notification) wins.
   const firstRun = useRef(false);
   useEffect(() => {
     if (firstRun.current || preferences.status !== "ok" || !snapshot) return;
     const local = snapshot.machines.find((m) => m.machine.local);
     if (!local) return;
     firstRun.current = true;
-    if (firstRunAction(preferences.value, local) === "complete") void updatePreferences((p) => ({ ...p, onboarding: { ...p.onboarding, completed: true } }));
-  }, [preferences, snapshot, updatePreferences]);
+    const action = firstRunAction(preferences.value, local);
+    if (action === "complete") void updatePreferences((p) => ({ ...p, onboarding: { ...p.onboarding, completed: true } }));
+    if (action === "show" && route.view === "apps" && !route.detail) navigate({ view: "onboarding" }, { replace: true });
+  }, [preferences, snapshot, updatePreferences, route]);
 
   // An unknown or non-canonical URL becomes the route it showed.
   useEffect(() => {
@@ -128,7 +138,7 @@ export function Shell() {
     lastView.current = route.view;
     body.current?.scrollTo({ top: 0 });
     const raf = requestAnimationFrame(() => {
-      if (!document.querySelector("dialog[open]")) document.querySelector<HTMLElement>(".toolbar h1, #main h1, .onboarding h1")?.focus({ preventScroll: true });
+      if (!document.querySelector("dialog[open]")) document.querySelector<HTMLElement>(".toolbar h1, #main h1")?.focus({ preventScroll: true });
     });
     return () => cancelAnimationFrame(raf);
   }, [route.view]);
@@ -142,17 +152,6 @@ export function Shell() {
       <BackgroundData />
     </>
   );
-
-  if (route.view === "onboarding") {
-    return (
-      <>
-        <Suspense fallback={<LoadingState />}>
-          <OnboardingView />
-        </Suspense>
-        {overlays}
-      </>
-    );
-  }
 
   const View = VIEWS[route.view];
   return (
@@ -179,7 +178,7 @@ export function Shell() {
           }}
         >
           <TopBar slotRef={setSlot} />
-          <main id="main" className={`view view-${route.view}`} ref={main} tabIndex={-1}>
+          <main id="main" className={`view view-${route.view}${NARROW.has(route.view) ? " view-narrow" : ""}`} ref={main} tabIndex={-1}>
             {status === "expired" && <ExpiredBanner />}
             <Suspense fallback={<LoadingState />}>
               <View />

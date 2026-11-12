@@ -243,6 +243,22 @@ The first weeks of daily use on macOS asked for a layout around projects and a w
 
 **Done when:** the owner's own setup (one `dekit.yaml` for every repository, worktrees in a `worktrees/` folder) shows each worktree under its repository, and the macOS window is checked by hand: drag, double-click, full screen, hidden sidebar.
 
+### M5.8: Information architecture and design
+
+Daily use of M5.7 found every feature but no clear place for any of them: the same action in several homes, dekit's runners shown twice, a Routes list that missed running apps and a proxy that read "stopped" while it ran (ADR-0028, ADR-0029, ADR-0030).
+
+- [x] The work in the sidebar (Apps, Addresses, Health, Projects, Setup), the tools in Settings with its own sidebar (Portplane, dekit, portless); one page per object.
+- [x] Addresses: every `.localhost` name in one list, stopped apps included, with aliases, Compose and shares; read again when the snapshot changes.
+- [x] The proxy's status read again on changes, on focus and every 30 seconds, with the startup service as a second opinion.
+- [x] Health as a board: problems with their fix, then every check, portless doctor included.
+- [x] Setup inside the window as a timeline that records what each step found.
+- [x] Runners as the list of `dekit.yaml` folders; a project's own tasks on its page.
+- [x] Neutral greys, Portplane's green, Inter and Geist Mono, more room.
+- [x] App and project icons: the user's choice, the favicon or logo in the folder, or initials.
+- [ ] Checked by hand in the macOS window: the settings sidebar, Setup's timeline, the file picker for icons.
+
+**Done when:** the owner finds any feature from its object (an app, a project, an address) without asking where it is, and the macOS window is checked by hand.
+
 ## Phase 8: v1.0 release
 
 - [ ] Namespaces claimed for `portplane`: domain, npm, Homebrew tap, winget.

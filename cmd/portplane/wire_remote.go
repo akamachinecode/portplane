@@ -21,7 +21,7 @@ import (
 
 // remoteAreas are the areas a remote machine's agent serves. An area joins
 // once it works on a machine without a desktop (deps.headless).
-var remoteAreas = []func(d deps) map[string]http.HandlerFunc{toolsHandlers, dekitHandlers, portlessHandlers}
+var remoteAreas = []func(d deps) map[string]http.HandlerFunc{toolsHandlers, dekitHandlers, portlessHandlers, iconHandlers}
 
 // machineRoutes serves /api/m/{machine}/…: this computer's routes for the
 // local machine, the machine's agent for the others. routes are this

@@ -1,0 +1,133 @@
+/* Addresses (ADR-0028): filter chips, then one table of every address. */
+
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 var(--space-5);
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-2);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+  transition: background-color var(--dur-fast), border-color var(--dur-fast), color var(--dur-fast);
+}
+
+.filter-chip:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.filter-chip[aria-selected="true"] {
+  border-color: color-mix(in srgb, var(--text) 18%, var(--border));
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.filter-count {
+  color: var(--text-3);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.callout {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 var(--space-5);
+  padding: 10px 12px 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  font-size: var(--text-sm);
+}
+
+.callout > p {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-2);
+}
+
+.callout-warn {
+  border-color: color-mix(in srgb, var(--warn-dot) 35%, transparent);
+  background: var(--warn-soft);
+}
+
+.callout-warn > .icon {
+  color: var(--warn);
+}
+
+.addr-table td {
+  height: 52px;
+}
+
+.addr-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.addr-kind-icon {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--border);
+  color: var(--text-3);
+}
+
+.addr-port {
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.addr-from {
+  color: var(--text-2);
+}
+
+.addr-from .tag {
+  margin-right: 8px;
+}
+
+.from-app {
+  color: inherit;
+  text-decoration: none;
+}
+
+.from-app:hover .from-name {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.from-project {
+  color: var(--text-3);
+}
+
+.from-sep {
+  margin: 0 5px;
+  color: var(--text-4);
+}
+
+.from-name {
+  color: var(--text);
+  font-weight: var(--weight-medium);
+}
+
+.addr-row.is-off .addr-main,
+.addr-row.is-stale .addr-main {
+  opacity: 0.8;
+}

@@ -3,20 +3,20 @@ import { registerCommandSource, type Command, type CommandContext } from "../../
 import { suggestName } from "../../lib/portless";
 import { requestIntent } from "./store";
 
-// The portless center in the palette (plan §6.3): new alias, diagnostics,
-// the proxy, a URL for any listening port, and sharing, compose projects
-// and LAN mode (M5.6). The actions are this computer's; another machine's
-// are in Domains with that machine picked.
+// portless in the palette (plan §6.3): new alias, diagnostics, the proxy,
+// an address for any listening port, and sharing, compose projects and LAN
+// mode (M5.6). The actions are this computer's; another machine's are on
+// Addresses and in Settings with that machine picked (ADR-0028).
 
 export function portlessCommands(ctx: CommandContext): Command[] {
   const local = ctx.snapshot?.machines.find((m) => m.machine.local);
   const out: Command[] = [
     {
       id: "portless.open",
-      title: "Open domains",
+      title: "Open the proxy settings",
       group: "Go to",
-      icon: "globe",
-      keywords: ["portless", "proxy", "routes", "localhost"],
+      icon: "shield",
+      keywords: ["portless", "proxy", "domains", "https", "localhost"],
       searchOnly: true,
       run: () => navigate({ view: "domains", section: "proxy" }),
     },
@@ -37,9 +37,9 @@ export function portlessCommands(ctx: CommandContext): Command[] {
       title: "Open compose projects",
       group: "Go to",
       icon: "box",
-      keywords: ["docker", "compose", "containers", "portless"],
+      keywords: ["docker", "compose", "containers", "portless", "addresses"],
       searchOnly: true,
-      run: () => navigate({ view: "domains", section: "compose" }),
+      run: () => navigate({ view: "addresses", filter: "compose" }),
     },
     {
       id: "portless.compose.start",
@@ -50,7 +50,7 @@ export function portlessCommands(ctx: CommandContext): Command[] {
       searchOnly: true,
       run: () => {
         requestIntent({ kind: "compose-start" });
-        navigate({ view: "domains", section: "compose" });
+        navigate({ view: "addresses", filter: "compose" });
       },
     },
     {
@@ -81,10 +81,10 @@ export function portlessCommands(ctx: CommandContext): Command[] {
       title: "New alias",
       group: "Actions",
       icon: "plug",
-      keywords: ["portless", "url", "port", "route", "localhost"],
+      keywords: ["portless", "url", "port", "route", "localhost", "address"],
       run: () => {
         requestIntent({ kind: "new-alias" });
-        navigate({ view: "domains", section: "aliases", machine: local.machine.id });
+        navigate({ view: "addresses", filter: "aliases", machine: local.machine.id });
       },
     },
     {
@@ -95,7 +95,7 @@ export function portlessCommands(ctx: CommandContext): Command[] {
       keywords: ["portless", "doctor", "check", "health", "diagnose"],
       run: () => {
         requestIntent({ kind: "run-doctor" });
-        navigate({ view: "domains", section: "doctor", machine: local.machine.id });
+        navigate({ view: "health" });
       },
     },
     {
@@ -127,7 +127,7 @@ export function portlessCommands(ctx: CommandContext): Command[] {
     if (p.route) continue;
     out.push({
       id: `portless.alias.port.${p.port}`,
-      title: `Give port ${p.port} a URL`,
+      title: `Give port ${p.port} an address`,
       group: "Actions",
       icon: "link",
       hint: p.process,
@@ -135,7 +135,7 @@ export function portlessCommands(ctx: CommandContext): Command[] {
       searchOnly: true,
       run: () => {
         requestIntent({ kind: "new-alias", port: p.port, name: suggestName(p.process) });
-        navigate({ view: "domains", section: "aliases", machine: local.machine.id });
+        navigate({ view: "addresses", filter: "aliases", machine: local.machine.id });
       },
     });
   }

@@ -25,21 +25,22 @@ export function StepLayout({
 }) {
   const heading = useRef<HTMLHeadingElement>(null);
   const id = useId();
-  // Each step starts at its title, for keyboard and screen reader users.
+  // Each step starts at its title, for keyboard and screen reader users,
+  // and the timeline scrolls to it (ADR-0028).
   useEffect(() => {
     heading.current?.focus({ preventScroll: true });
-    window.scrollTo({ top: 0 });
+    heading.current?.closest(".tl-item")?.scrollIntoView({ block: "start", behavior: "smooth" });
   }, []);
   return (
     <section className="ob-step" aria-labelledby={id} aria-busy={busy || undefined}>
       <header className="ob-step-head">
         <span className="ob-step-icon" aria-hidden="true">
-          <Icon name={icon} size={20} />
+          <Icon name={icon} size={18} />
         </span>
         <div className="ob-step-titles">
-          <h1 className="ob-step-title" id={id} ref={heading} tabIndex={-1}>
+          <h2 className="ob-step-title" id={id} ref={heading} tabIndex={-1}>
             {title}
-          </h1>
+          </h2>
           {lead && <p className="ob-step-lead">{lead}</p>}
         </div>
       </header>

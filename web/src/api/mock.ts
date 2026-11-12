@@ -6,6 +6,7 @@ import { MOCK_REMOTE_ROOT, scopeMockContext, type MockContext } from "./mockCont
 import { createMockDekit } from "./mockDekit";
 import { createMockJobs, demoJob } from "./mockJobs";
 import { createMockPolish } from "./mockPolish";
+import { createMockIcons } from "./mockIcons";
 import { createMockOutput } from "./mockOutput";
 import { createMockPortless } from "./mockPortless";
 import { createMockSetup } from "./mockSetup";
@@ -514,6 +515,7 @@ export function createMockApi(scenario: Scenario = "default"): Api & MockControl
     ...createMockDekit(ctx),
     ...tools,
     ...createMockPolish(ctx),
+    ...createMockIcons(ctx),
     info: () => delay<Info>({ version: "0.0.0-mock", os: "linux", arch: "amd64", url: "https://portplane.localhost", picker: true }),
     snapshot: () => delay(snapshot),
     async act(target, verb: Verb) {

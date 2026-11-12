@@ -5,7 +5,7 @@ import { Icon } from "../../components/Icon";
 import { IconButton } from "../../components/IconButton";
 import { EmptyState, ErrorState, LoadingState } from "../../components/States";
 import { StateDot } from "../../components/StateDot";
-import { cleanTlds, describeOptions, lowPort, normalizeOptions, optionsProblems, proxyUrl, sameOptions, tldProblem, tldWarning } from "../../lib/portless";
+import { cleanTlds, describeOptions, lowPort, normalizeOptions, optionsProblems, proxyAnswers, proxyUrl, sameOptions, tldProblem, tldWarning } from "../../lib/portless";
 import { SettingRow, SettingsGroup } from "../settings/SettingsGroup";
 import { PlanDialog } from "./PlanDialog";
 import { usePortlessStatus, valueOf } from "./store";
@@ -28,13 +28,13 @@ export function NotInstalled() {
       icon="globe"
       title="portless isn't installed"
       action={
-        <a className="btn" href="#/settings/tools">
+        <a className="btn" href="#/onboarding/install">
           <Icon name="wand" size={14} />
-          Open Tools
+          Install it from Setup
         </a>
       }
     >
-      portless gives every dev server a stable https://name.localhost address. Install it from Settings → Tools or the welcome screen, then manage it here.
+      portless gives every dev server a stable https://name.localhost address. Setup installs it without a terminal; then it is managed here.
     </EmptyState>
   );
 }
@@ -48,16 +48,17 @@ export function usePlan() {
 
 function ProxyState({ status, plan }: { status: PortlessStatus; plan: (a: PortlessAction) => void }) {
   const p = status.proxy;
+  const { up, port } = proxyAnswers(status);
   const example = proxyUrl(`web.${p.tlds[0] ?? "localhost"}`, p);
   return (
-    <SettingsGroup title="Proxy" description="The local server that answers every .localhost address and passes each request to the right app.">
+    <SettingsGroup title="Proxy">
       <SettingRow label="State">
         <span className="inline-state">
-          <StateDot state={p.responding ? "on" : "failed"} />
-          {p.responding ? `Running on port ${p.port} with ${p.https ? "HTTPS" : "HTTP"}` : "Not running: your .localhost addresses won't load"}
+          <StateDot state={up ? "on" : "failed"} />
+          {up ? `Running on port ${port} with ${p.https ? "HTTPS" : "HTTP"}` : "Not running: your .localhost addresses won't load"}
         </span>
       </SettingRow>
-      {p.responding && (
+      {up && (
         <SettingRow label="Addresses" description="Every app gets one under each domain; the first is the main one.">
           <span className="chips">
             {p.tlds.map((t, i) => (
@@ -79,7 +80,7 @@ function ProxyState({ status, plan }: { status: PortlessStatus; plan: (a: Portle
           </span>
         </SettingRow>
       )}
-      {p.pid !== undefined && p.responding && (
+      {p.pid !== undefined && up && (
         <SettingRow label="Process">
           <span className="mono">
             PID {p.pid}
@@ -88,7 +89,7 @@ function ProxyState({ status, plan }: { status: PortlessStatus; plan: (a: Portle
         </SettingRow>
       )}
       <div className="sgroup-foot">
-        {p.responding ? (
+        {up ? (
           <>
             <button type="button" className="btn" onClick={() => plan("proxy-restart")}>
               <Icon name="restart" size={14} />
@@ -319,12 +320,53 @@ function Options({ status, plan }: { status: PortlessStatus; plan: (a: PortlessA
 }
 
 /** The proxy, its startup service and its options (plan §5.1). */
+/**
+ * What the proxy is, drawn: the browser asks for an address, the proxy
+ * answers it with the certificate and passes the request to the app's port.
+ */
+export function ProxyExplainer({ status }: { status: PortlessStatus }) {
+  const { up, port } = proxyAnswers(status);
+  const https = status.proxy.https;
+  const tld = status.proxy.tlds[0] ?? "localhost";
+  return (
+    <section className="explainer" aria-labelledby="proxy-what">
+      <h2 className="sgroup-title" id="proxy-what">
+        What the proxy does
+      </h2>
+      <ol className="flow" aria-label="How a request reaches an app">
+        <li className="flow-step">
+          <span className="flow-kicker">Your browser opens</span>
+          <span className="flow-value mono">{https ? "https" : "http"}://web.{tld}</span>
+        </li>
+        <li className={`flow-step flow-proxy${up ? " is-up" : " is-down"}`}>
+          <span className="flow-kicker">The proxy answers{up ? ` on :${port}` : ", once it runs"}</span>
+          <span className="flow-value">
+            <Icon name="shield" size={14} />
+            portless{https ? " · HTTPS" : ""}
+          </span>
+        </li>
+        <li className="flow-step">
+          <span className="flow-kicker">and passes it to the app</span>
+          <span className="flow-value mono">127.0.0.1:4514</span>
+        </li>
+      </ol>
+      <p className="explainer-text">
+        Every app listens on a port that changes from run to run. The proxy is one small server, always on the same port, that knows which
+        name belongs to which port right now: so <span className="mono">web.{tld}</span> always opens <em>web</em>, wherever it listens. It also
+        holds the certificate your browser trusts, which is what gives every address its padlock. Without it running, the apps still run,
+        but their addresses don't load.
+      </p>
+    </section>
+  );
+}
+
 export function ProxySection() {
   const { show, dialog } = usePlan();
   return (
     <StatusGate>
       {(status) => (
         <>
+          <ProxyExplainer status={status} />
           <ProxyState status={status} plan={(a) => show(a)} />
           <Service status={status} plan={(a) => show(a)} />
           <Options status={status} plan={show} />
