@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.4.0](https://github.com/akamachinecode/portplane/compare/v0.3.0...v0.4.0) (2026-11-12)
+
+
+### Features
+
+* **desktop:** open the UI in a native window on Linux and Windows ([#13](https://github.com/akamachinecode/portplane/issues/13)) ([c6d89dd](https://github.com/akamachinecode/portplane/commit/c6d89dd0449aaf7f5f51169cb82cf216a0dfaf31))
+* guide a new user from nothing to their first app (M5.1) ([#17](https://github.com/akamachinecode/portplane/issues/17)) ([d09a05f](https://github.com/akamachinecode/portplane/commit/d09a05facbf39a85f6f84fd73977549aff838b6c))
+* lay the app out around projects and drop the macOS title bar (M5.7) ([#24](https://github.com/akamachinecode/portplane/issues/24)) ([a85dd62](https://github.com/akamachinecode/portplane/commit/a85dd62ffef0fbfedab0977dec96bb121e0636e9))
+* M5.0 foundations for the guided setup and the dekit and portless centers ([#14](https://github.com/akamachinecode/portplane/issues/14)) ([0543c55](https://github.com/akamachinecode/portplane/commit/0543c55e9054f1bdddcc0f6602955101e1d9a61e))
+* make Portplane a full GUI for dekit (M5.3) ([#18](https://github.com/akamachinecode/portplane/issues/18)) ([c8fed62](https://github.com/akamachinecode/portplane/commit/c8fed62fd3b4d5c0cfb0d8c8bc3cee9ea942db9f))
+* polish the Apps view, Health, notifications and the tray (M5.5) ([#19](https://github.com/akamachinecode/portplane/issues/19)) ([f547133](https://github.com/akamachinecode/portplane/commit/f547133edecaf48956e57aa595589dcdc48c4ad5))
+* set up and manage dekit and portless on machines over SSH ([#22](https://github.com/akamachinecode/portplane/issues/22)) ([49a6c18](https://github.com/akamachinecode/portplane/commit/49a6c1885fbc848cc093fd35417eb0202f56eca7))
+* share apps, run compose projects and open apps on the LAN ([#21](https://github.com/akamachinecode/portplane/issues/21)) ([32386b8](https://github.com/akamachinecode/portplane/commit/32386b8afba4176e5049972347e7c5805b4bba2a))
+* show an app's live output (M5.4) ([#15](https://github.com/akamachinecode/portplane/issues/15)) ([4569fe0](https://github.com/akamachinecode/portplane/commit/4569fe0cd7e3452b57260d7999634d25f9d42089))
+* turn Domains into a full portless center (M5.2) ([#16](https://github.com/akamachinecode/portplane/issues/16)) ([41e0b28](https://github.com/akamachinecode/portplane/commit/41e0b2806e04360cdc7f090b97aecf9aa1c9fa39))
+* **web:** show certificate, runner and doctor problems in Health ([#20](https://github.com/akamachinecode/portplane/issues/20)) ([7018b12](https://github.com/akamachinecode/portplane/commit/7018b1296c3df06fc056b89cd90c5b512204591a))
+
 ## [0.3.0](https://github.com/akamachinecode/portplane/compare/v0.2.0...v0.3.0) (2026-11-11)
 
 
