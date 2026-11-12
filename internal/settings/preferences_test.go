@@ -10,7 +10,11 @@ import (
 func TestPreferencesDefaultsAndValidate(t *testing.T) {
 	var s Settings
 	p := s.Prefs()
-	if p.Theme != "system" || p.Density != "comfortable" || p.UpdateCheck != "manual" || !p.Notifications.Failures || p.Favorites == nil {
+	if p.Theme != "system" || p.Density != "comfortable" || p.UpdateCheck != "manual" || p.AppsLayout != "cards" || p.Favorites == nil {
+		t.Fatalf("defaults: %+v", p)
+	}
+	// Only failures notify until the user turns more on.
+	if p.Notifications != (Notifications{Failures: true}) {
 		t.Fatalf("defaults: %+v", p)
 	}
 	if err := p.Validate(); err != nil {
@@ -20,9 +24,14 @@ func TestPreferencesDefaultsAndValidate(t *testing.T) {
 	if err := p.Validate(); err == nil {
 		t.Fatal("accepted theme neon")
 	}
+	p.Theme = "dark"
+	p.AppsLayout = "grid"
+	if err := p.Validate(); err == nil {
+		t.Fatal("accepted layout grid")
+	}
 	partial := &Preferences{Theme: "dark"}
 	s.Preferences = partial
-	if got := s.Prefs(); got.Theme != "dark" || got.Density != "comfortable" || got.Onboarding.Done == nil {
+	if got := s.Prefs(); got.Theme != "dark" || got.Density != "comfortable" || got.AppsLayout != "cards" || got.Onboarding.Done == nil {
 		t.Fatalf("normalized: %+v", got)
 	}
 }

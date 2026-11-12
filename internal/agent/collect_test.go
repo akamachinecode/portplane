@@ -365,3 +365,19 @@ func TestHiddenTaskKeepsItsPorts(t *testing.T) {
 		}
 	}
 }
+
+func TestAppTags(t *testing.T) {
+	for _, c := range []struct {
+		task dekit.Task
+		want []string
+	}{
+		{dekit.Task{}, nil},
+		{dekit.Task{Tags: []string{"backend"}}, []string{"backend"}},
+		{dekit.Task{Autostart: true}, []string{"autostart"}},
+		{dekit.Task{Tags: []string{"autostart", "db"}, Autostart: true}, []string{"autostart", "db"}},
+	} {
+		if got := appTags(&c.task); !reflect.DeepEqual(got, c.want) {
+			t.Errorf("appTags(%+v) = %v, want %v", c.task, got, c.want)
+		}
+	}
+}

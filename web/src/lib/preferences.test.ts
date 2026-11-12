@@ -65,25 +65,34 @@ describe("theme and density on <html>", () => {
   });
 });
 
+describe("DEFAULT_PREFERENCES", () => {
+  it("notifies about failures only", () => {
+    expect(DEFAULT_PREFERENCES.notifications).toEqual({ failures: true, recoveries: false, jobs: false, config: false });
+  });
+});
+
 describe("normalizePreferences", () => {
   it("keeps a full, valid object as it is", () => {
     const p: Preferences = {
       theme: "dark",
       density: "compact",
       favorites: ["local|/home/dev/code#web"],
-      notifications: { failures: false, recoveries: true, jobs: false },
+      notifications: { failures: false, recoveries: true, jobs: false, config: true },
       updateCheck: "auto",
       onboarding: { completed: true, skipped: false, step: "folders", done: ["welcome", "tools"] },
+      appsLayout: "table",
     };
     expect(normalizePreferences(p)).toEqual(p);
   });
 
   it("fills what an older or newer binary leaves out or does not know", () => {
     expect(normalizePreferences(undefined)).toEqual(DEFAULT_PREFERENCES);
-    expect(normalizePreferences({ theme: "sepia", density: 3, favorites: ["a", 1], notifications: { jobs: false }, onboarding: { completed: "yes" } })).toEqual({
+    expect(
+      normalizePreferences({ theme: "sepia", density: 3, favorites: ["a", 1], notifications: { jobs: true }, onboarding: { completed: "yes" }, appsLayout: "grid" }),
+    ).toEqual({
       ...DEFAULT_PREFERENCES,
       favorites: ["a"],
-      notifications: { ...DEFAULT_PREFERENCES.notifications, jobs: false },
+      notifications: { ...DEFAULT_PREFERENCES.notifications, jobs: true },
     });
   });
 
@@ -99,6 +108,7 @@ describe("preferencesProblem", () => {
     expect(preferencesProblem(DEFAULT_PREFERENCES)).toBeNull();
     expect(preferencesProblem({ ...DEFAULT_PREFERENCES, theme: "sepia" as Preferences["theme"] })).toMatch(/theme/);
     expect(preferencesProblem({ ...DEFAULT_PREFERENCES, updateCheck: "daily" as Preferences["updateCheck"] })).toMatch(/updateCheck/);
+    expect(preferencesProblem({ ...DEFAULT_PREFERENCES, appsLayout: "grid" as Preferences["appsLayout"] })).toMatch(/appsLayout/);
   });
 });
 

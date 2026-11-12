@@ -202,9 +202,10 @@ describe("jobs and preferences endpoints", () => {
       theme: "dark" as const,
       density: "compact" as const,
       favorites: [],
-      notifications: { failures: true, recoveries: false, jobs: true },
+      notifications: { failures: true, recoveries: false, jobs: true, config: false },
       updateCheck: "manual" as const,
       onboarding: { completed: true, skipped: false, done: [] },
+      appsLayout: "cards" as const,
     };
     const ok = fakeFetch((_u, init) => json(JSON.parse(init.body as string)));
     expect(await createHttpApi("t", ok.fn).savePreferences(prefs)).toEqual(prefs);
