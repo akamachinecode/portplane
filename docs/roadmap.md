@@ -174,14 +174,15 @@ The milestone is done when:
 
 ### M5.2: portless center
 
-- [ ] Proxy: state, start and stop, install, reinstall and uninstall the service, and its options (port, HTTPS, TLDs, wildcard, LAN, own certificate).
-- [ ] Routes: every route with its owner, type, age and state; prune stale routes; kill orphaned servers, after a confirmation that lists them.
-- [ ] Aliases: add, edit and remove; "Give this port a URL" from Other ports.
-- [ ] Rename any app's URL wherever its name lives: Portplane's fragment, `dekit.yaml`, `portless.json`, `package.json` or an alias.
-- [ ] `portless.json` editor.
-- [ ] Certificates: the CA's fingerprint, expiry and where it is trusted; trust, trust in browsers, export, regenerate.
-- [ ] `/etc/hosts`: state, sync and clean.
-- [ ] Diagnosis from `doctor`, with a fix for each failure; update and uninstall portless.
+- [x] Proxy: state, start and stop, install, reinstall and uninstall the service, and its options (port, HTTPS, TLDs, wildcard, LAN, own certificate).
+- [x] Routes: every route with its owner, type, age and state; prune stale routes; kill orphaned servers, after a confirmation that lists them.
+- [x] Aliases: add, edit and remove; "Give this port a URL" from Other ports.
+- [x] Rename any app's URL wherever its name lives: Portplane's fragment, `dekit.yaml`, `portless.json`, `package.json` or an alias.
+- [x] `portless.json` editor.
+- [x] Certificates: the CA's fingerprint, expiry and where it is trusted; trust, export, regenerate, and fixing the owner of the system's copy on Linux.
+- [ ] Certificates: trust in each browser, once M5.1's browser check is wired into the Certificates section (the API has the field).
+- [x] `/etc/hosts`: state, sync and clean.
+- [x] Diagnosis from `doctor`, with a fix for each failure; update and uninstall portless.
 
 **Done when:** every portless command has a place in the app, except sharing (`--tailscale`, `--funnel`, `--ngrok`, `--cloudflare`), `compose` and `mcp`.
 

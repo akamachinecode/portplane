@@ -1,6 +1,18 @@
 # Troubleshooting
 
-**`https://portplane.localhost` does not open.** The portless proxy is not running. Run `sudo portless service install` once (or `portless proxy start` for this session). Portplane also prints its direct `http://127.0.0.1:<port>` URL when it starts.
+**`https://portplane.localhost` does not open.** The portless proxy is not running. In **Domains → Proxy**, click **Start the proxy**, or **Install the service** so it starts with your computer (both show the exact command first). By hand: `sudo portless service install` once, or `portless proxy start` for this session. Portplane also prints its direct `http://127.0.0.1:<port>` URL when it starts.
+
+**Something is off with portless and you don't know what.** **Domains → Doctor** runs `portless doctor` and offers a fix next to each problem. The palette's **Run diagnostics** does the same.
+
+**The proxy stopped starting with the computer after an upgrade.** The service still points to the Node.js or portless that the upgrade removed (Homebrew keeps versioned folders). **Domains → Proxy** marks the missing path; click **Reinstall**.
+
+**Browsers warn about the certificate.** Your system doesn't trust portless's local certificate authority yet: **Domains → Certificates → Trust the certificate**. Firefox keeps its own list of trusted certificates. On Linux, if Portplane says the trusted copy belongs to your user, click **Fix ownership**.
+
+**Names under `.test` (or another domain) don't load.** Only `.localhost` reaches your computer without help; other domains need portless's block in the hosts file: **Domains → Hosts file → Sync**.
+
+**An old address still shows up, or a port stays taken after an app crashed.** Its route is stale: **Domains → Routes → Clean stale routes** removes it and asks the leftover server to stop.
+
+**Change an app's URL.** Open the app, then its **URL** tab, and click **Change name**. Portplane edits the name where it lives (its task, `portless.json` or an alias), shows the change first, then reloads dekit and restarts the app.
 
 **"dekit isn't running for …".** Each dekit project has its own runner, which stops after a reboot until something starts it. Click **Start runner**, or run `dekit -C <folder> up`.
 
