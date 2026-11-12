@@ -117,6 +117,15 @@ function initialState(scenario: string, now: number): State {
 export function createMockPortless(ctx: MockContext): PortlessApi {
   const scenario = String(ctx.scenario);
   const state = initialState(scenario, Date.now());
+  // A machine over SSH (ADR-0026): no Portplane alias, no password dialog,
+  // and its CA is saved on this computer when exported.
+  const method = ctx.remote ? "" : "pkexec";
+  if (ctx.remote) {
+    state.aliases = [];
+    state.stale = [];
+    state.configs.clear();
+    state.ca.trusted = false;
+  }
   const started = Date.now();
 
   const local = (): MachineSnapshot => ctx.snapshot().machines.find((m) => m.machine.local)!;
@@ -247,7 +256,7 @@ export function createMockPortless(ctx: MockContext): PortlessApi {
       options: { port: 443, https: true, tlds: ["localhost"], wildcard: false, lan: false, unprivileged: false },
       adminToStart: true,
       adminToStop: false,
-      method: "pkexec",
+      method,
       install: { origin: "unknown", bin: "" },
       hostsNeeded: false,
     };
@@ -413,7 +422,7 @@ export function createMockPortless(ctx: MockContext): PortlessApi {
     const o = normalizeOptions(opts ?? state.options);
     const bad = Object.values(optionsProblems(o))[0];
     if (opts && bad) throw new ApiError(bad, 400);
-    const p: Plan = { action, title: "", summary: "", admin: false, steps: [], method: "pkexec" };
+    const p: Plan = { action, title: "", summary: "", admin: false, steps: [], method };
     const restart = () => {
       if (state.service.installed) p.steps.push(portlessStep("Restart the proxy service", true, "service", "install", ...optionArgs(o)));
       else {
@@ -880,13 +889,13 @@ export function createMockPortless(ctx: MockContext): PortlessApi {
     },
     async portlessCertificates() {
       need();
-      const c: Certificates = { ca: structuredClone(state.ca), hostCerts: hostCerts(), os: "linux", method: "pkexec", trustNeedsAdmin: true };
+      const c: Certificates = { ca: structuredClone(state.ca), hostCerts: hostCerts(), os: "linux", method, trustNeedsAdmin: true };
       return ctx.delay(c, 250);
     },
     async portlessExportCA() {
       need();
       if (!state.ca.exists) throw new ApiError("portless has no certificate yet: start the proxy with HTTPS or trust it first", 400);
-      return ctx.delay({ path: `${HOME}/Downloads/portless-ca.pem`, revealed: true }, 300);
+      return ctx.delay({ path: `${HOME}/Downloads/${ctx.remote ? `portless-ca-${ctx.remote.id}` : "portless-ca"}.pem`, revealed: true }, 300);
     },
     async portlessHosts() {
       need();

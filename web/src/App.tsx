@@ -6,6 +6,7 @@ import { createJobsStore, JobsContext } from "./api/jobs";
 import type { Info, Machine } from "./api/types";
 import { AppContext, type AppCtx } from "./components/AppContext";
 import { AddMachineDialog, EditMachineDialog, RemoveMachineDialog } from "./components/MachineDialogs";
+import { MachineScope } from "./components/MachineScope";
 import { SetupDialog } from "./components/SetupDialog";
 import { Toasts } from "./components/Toasts";
 import { usePending } from "./hooks/usePending";
@@ -30,7 +31,7 @@ export function App({ api }: { api: Api }) {
   const route = useRoute();
   const { preferences, updatePreferences, reloadPreferences } = usePreferences(api, toast);
   const [info, setInfo] = useState<Info | null>(null);
-  const [setupFolder, setSetupFolder] = useState<string | null>(null);
+  const [setupFolder, setSetupFolder] = useState<{ folder: string; machine: string } | null>(null);
   const [machineDialog, setMachineDialog] = useState<MachineDialog>(null);
 
   useEffect(() => {
@@ -64,7 +65,7 @@ export function App({ api }: { api: Api }) {
   const problems = useMemo(() => (snapshot ? collectProblems(snapshot) : []), [snapshot, problemSources]);
 
   const openSettings = useCallback(() => navigate({ view: "settings", section: "folders" }), []);
-  const openSetup = useCallback((folder: string) => setSetupFolder(folder), []);
+  const openSetup = useCallback((folder: string, machine = "local") => setSetupFolder({ folder, machine }), []);
   const openAddMachine = useCallback(() => setMachineDialog({ kind: "add" }), []);
   const openEditMachine = useCallback((id: string) => setMachineDialog({ kind: "edit", id }), []);
   const openRemoveMachine = useCallback((m: Machine) => setMachineDialog({ kind: "remove", id: m.id, name: m.name }), []);
@@ -86,7 +87,11 @@ export function App({ api }: { api: Api }) {
         <JobsContext value={jobsCtx}>
           <Shell />
           <Toasts toasts={toasts} onDismiss={dismiss} />
-          {setupFolder !== null && <SetupDialog folder={setupFolder} onClose={() => setSetupFolder(null)} />}
+          {setupFolder !== null && (
+            <MachineScope machine={setupFolder.machine}>
+              <SetupDialog folder={setupFolder.folder} onClose={() => setSetupFolder(null)} />
+            </MachineScope>
+          )}
           {machineDialog?.kind === "add" && <AddMachineDialog onClose={closeMachineDialog} />}
           {machineDialog?.kind === "edit" && <EditMachineDialog id={machineDialog.id} onClose={closeMachineDialog} />}
           {machineDialog?.kind === "remove" && <RemoveMachineDialog id={machineDialog.id} name={machineDialog.name} onClose={closeMachineDialog} />}

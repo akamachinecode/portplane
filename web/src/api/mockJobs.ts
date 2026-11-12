@@ -20,6 +20,8 @@ export interface MockJobSpec {
   failAt?: number;
   error?: string;
   result?: unknown;
+  /** The machine it runs on; absent for this computer. */
+  machine?: string;
 }
 
 export interface MockJobs {
@@ -92,7 +94,8 @@ export function createMockJobs(): MockJobs {
     },
     start(spec) {
       const job: Job = {
-        id: `job-${next++}`,
+        id: spec.machine ? `${spec.machine}:job-${next++}` : `job-${next++}`,
+        machine: spec.machine,
         kind: spec.kind,
         title: spec.title,
         state: "running",

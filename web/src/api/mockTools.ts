@@ -108,6 +108,11 @@ export function machineFor(scenario: string): MachineModel {
       return { ...ready, dekit: undefined, portless: undefined, node: "v20.11.1", proxy: "none", caExists: false, caTrusted: false, certutil: false, browsers: browsers(), onPath: false, packageManagers: { npm: "10.2.4", pnpm: "", yarn: "1.22.22", bun: "" } };
     case "nopassword":
       return { ...ready, proxy: "none", caExists: false, caTrusted: false, browsers: browsers(), dialog: false };
+    case "remote":
+      // A Linux box over SSH (ADR-0026): the tools are there, nobody can
+      // answer a password dialog, its browsers don't matter, and the
+      // system there doesn't trust the certificate yet.
+      return { ...ready, managers: [], caTrusted: false, browsers: [], dialog: false, onPath: false, packageManagers: { npm: "10.9.2", pnpm: "10.4.1", yarn: "", bun: "" } };
     case "degraded":
       return { ...ready, portless: undefined, proxy: "none" };
     case "readonly":
@@ -393,7 +398,7 @@ export interface MockTools extends ToolsApi {
 }
 
 export function createMockTools(ctx: MockContext): MockTools {
-  const m = machineFor(ctx.scenario);
+  const m = machineFor(ctx.remote ? "remote" : ctx.scenario);
   const effects = new Map<string, () => void>();
 
   // A job's effect lands when it succeeds, like the real install.
@@ -702,7 +707,9 @@ export function createMockTools(ctx: MockContext): MockTools {
 
     folderSuggestions: () =>
       ctx.delay<FolderSuggestion[]>(
-        ctx.scenario === "fresh"
+        ctx.remote
+          ? [{ path: `${HOME}/src`, repos: 2 }]
+          : ctx.scenario === "fresh"
           ? [{ path: `${HOME}/code`, repos: 3 }]
           : [
               { path: `${HOME}/code`, repos: 3 },
