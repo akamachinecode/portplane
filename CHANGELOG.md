@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/akamachinecode/portplane/compare/v0.4.0...v0.5.0) (2026-11-12)
+
+
+### Features
+
+* organise the app by objects, a quieter design and an icon per app (M5.8) ([#25](https://github.com/akamachinecode/portplane/issues/25)) ([3bdd8c9](https://github.com/akamachinecode/portplane/commit/3bdd8c95ace8f6a29e4a5f94d5030b7825d47894))
+
 ## [0.4.0](https://github.com/akamachinecode/portplane/compare/v0.3.0...v0.4.0) (2026-11-12)
 
 
