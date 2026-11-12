@@ -89,7 +89,12 @@ func TestInstallPrivateNode(t *testing.T) {
 	defer srv.Close()
 	in := testInstaller(t, srv)
 	var used []string
-	in.UseDir = func(dir string, first bool) { used = append(used, dir) }
+	in.UseDir = func(dir string, first bool) {
+		if first {
+			t.Error("Portplane's Node never goes before the user's folders on PATH")
+		}
+		used = append(used, dir)
+	}
 	p := &progress{}
 	got, err := in.InstallNode(context.Background(), p, "")
 	if err != nil {
@@ -100,7 +105,7 @@ func TestInstallPrivateNode(t *testing.T) {
 		t.Errorf("got %+v", got)
 	}
 	if len(used) != 1 || used[0] != filepath.Dir(want) {
-		t.Errorf("node's folder goes first on PATH: %v", used)
+		t.Errorf("node's folder is added to PATH: %v", used)
 	}
 	if strings.Join(p.steps, "|") != strings.Join(NodeSteps(""), "|") {
 		t.Errorf("steps: %v", p.steps)

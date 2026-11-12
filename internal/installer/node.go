@@ -149,13 +149,15 @@ func (in *Installer) isPrivate(p string) bool {
 	return err == nil && filepath.IsLocal(rel)
 }
 
-// UsePrivateNode puts the private Node, when there is one and the user's
-// is too old or missing, first on Portplane's PATH, so portless and npm
-// find it. Call it at start.
+// UsePrivateNode makes the private Node, when there is one and the user's
+// is too old or missing, findable from Portplane: after the user's own
+// folders on PATH, never before them, so the dev servers dekit starts keep
+// the user's Node (ADR-0019). The portless launcher and npm call it by its
+// full path anyway. Call it at start.
 func (in *Installer) UsePrivateNode(ctx context.Context) {
 	n := in.FindNode(ctx)
 	if n.Private && n.Path != "" {
-		in.useDir(filepath.Dir(n.Path), true)
+		in.useDir(filepath.Dir(n.Path), false)
 	}
 }
 
@@ -323,7 +325,7 @@ func (in *Installer) installPrivateNode(ctx context.Context, p Progress) (NodeIn
 		return NodeInfo{}, fmt.Errorf("the Node.js that was installed does not run on this computer: %w", err)
 	}
 	p.Logf("$ node --version\n%s", out)
-	in.useDir(filepath.Dir(bin), true)
+	in.useDir(filepath.Dir(bin), false)
 	return NodeInfo{Path: bin, Version: CleanVersionV(out), Private: true}, nil
 }
 

@@ -102,7 +102,9 @@ type Installer struct {
 	// Environ is the environment programs start with (os.Environ).
 	Environ func() []string
 	// UseDir is told about a folder with programs Portplane just installed
-	// or found (envpath.Prepend for Node, envpath.Add otherwise).
+	// or found: envpath.Prepend when first, envpath.Add otherwise. Portplane's
+	// own Node is never put first, so the apps dekit starts keep the
+	// user's Node.
 	UseDir func(dir string, first bool)
 }
 

@@ -34,9 +34,8 @@ import (
 func toolsHandlers(d deps) map[string]http.HandlerFunc {
 	in := installer.New()
 	// Tools Portplane installs are found at once, even before ~/.local/bin
-	// is on PATH, and a private Node goes first when the user's is too old.
+	// is on PATH; a private Node is found after the user's own folders.
 	envpath.WatchDir(in.BinDir)
-	envpath.WatchDir(in.PortlessPrefix())
 	ictx, cancel := context.WithTimeout(d.ctx, 10*time.Second)
 	in.UsePrivateNode(ictx)
 	cancel()
