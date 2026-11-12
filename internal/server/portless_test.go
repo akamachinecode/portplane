@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/akamachinecode/portplane/internal/dekit"
+	"github.com/akamachinecode/portplane/internal/envpath"
 	"github.com/akamachinecode/portplane/internal/jobs"
 	"github.com/akamachinecode/portplane/internal/model"
 	"github.com/akamachinecode/portplane/internal/portless"
@@ -36,6 +37,7 @@ case "$1" in
   service) cat "$FAKE_STATUS" ;;
   prune) cat "$FAKE_FIXTURES/prune-some.txt" ;;
   get) echo "https://feature.$2.localhost" ;;
+  compose) cat "$FAKE_FIXTURES/compose-up.txt" ;;
   alias)
     if [ "$2" = "taken" ]; then
       echo 'Error: "taken.localhost" is already registered by a running process (PID 4). Use --force to override.' >&2
@@ -62,6 +64,20 @@ type portlessFixture struct {
 	handler  http.Handler
 	project  string
 	port     int
+
+	// M5.6: fake tools (name and arguments → output), the programs found
+	// on PATH, and what ran.
+	tools     map[string]string
+	toolErrs  map[string]error
+	toolCalls []string
+	programs  map[string]string
+	execs     [][]string
+	starts    []string
+	onRestart func(task string)
+	home      string
+	memory    string
+	listen    []Listener
+	goos      string
 }
 
 func closedPort(t *testing.T) int {
@@ -80,7 +96,7 @@ func newPortlessFixture(t *testing.T) *portlessFixture {
 	if runtime.GOOS == "windows" {
 		t.Skip("the fake portless is a shell script")
 	}
-	f := &portlessFixture{t: t, state: t.TempDir(), jobs: jobs.NewManager(), port: closedPort(t)}
+	f := &portlessFixture{t: t, state: t.TempDir(), jobs: jobs.NewManager(), port: closedPort(t), tools: map[string]string{}, toolErrs: map[string]error{}, programs: map[string]string{}, home: t.TempDir()}
 	dir := t.TempDir()
 	f.log = filepath.Join(dir, "calls.log")
 	bin := filepath.Join(dir, "portless")
@@ -107,6 +123,13 @@ func newPortlessFixture(t *testing.T) *portlessFixture {
 	f.local = model.MachineSnapshot{Machine: model.Machine{ID: "local", Local: true, Name: "This computer"}, Folders: []string{f.project}}
 	f.handler = f.serve()
 	return f
+}
+
+func (f *portlessFixture) goosOr(def string) string {
+	if f.goos != "" {
+		return f.goos
+	}
+	return def
 }
 
 func write(t *testing.T, path, body string) {
@@ -140,12 +163,59 @@ func (f *portlessFixture) serve() http.Handler {
 		},
 		Restart: func(_ context.Context, root, task string) error {
 			f.mu.Lock()
-			defer f.mu.Unlock()
 			f.restarts = append(f.restarts, task)
+			hook := f.onRestart
+			f.mu.Unlock()
+			if hook != nil {
+				hook(task)
+			}
 			return nil
 		},
+		Start: func(_ context.Context, root, task string) error {
+			f.mu.Lock()
+			f.starts = append(f.starts, task)
+			hook := f.onRestart
+			f.mu.Unlock()
+			if hook != nil {
+				hook(task)
+			}
+			return nil
+		},
+		// No test runs the real tailscale, ngrok, cloudflared or docker.
+		Tool: func(_ context.Context, name string, args ...string) ([]byte, error) {
+			k := strings.TrimSpace(name + " " + strings.Join(args, " "))
+			f.mu.Lock()
+			defer f.mu.Unlock()
+			f.toolCalls = append(f.toolCalls, k)
+			if out, ok := f.tools[k]; ok {
+				return []byte(out), f.toolErrs[k]
+			}
+			if err, ok := f.toolErrs[k]; ok {
+				return nil, err
+			}
+			return nil, portless.ErrToolMissing
+		},
+		Lookup: func(name string) string {
+			if p, ok := f.programs[name]; ok {
+				return p
+			}
+			switch name {
+			case "tailscale", "ngrok", "cloudflared", "docker", "avahi-publish-address", "dns-sd", "systemctl":
+				return ""
+			}
+			return envpath.Lookup(name)
+		},
+		Network: func() ([]portless.Iface, string) {
+			return []portless.Iface{{Name: "wlan0", Up: true, MAC: "a4:c3:f0:11:22:33", IPs: []net.IP{net.ParseIP("192.168.1.20")}}}, "192.168.1.20"
+		},
+		OSRelease:     func() string { return "ID=fedora\n" },
+		Home:          func() string { return f.home },
+		Getenv:        func(string) string { return "" },
+		User:          func() string { return "dev" },
+		ComposeMemory: f.memory,
+		ShareWait:     3 * time.Second,
 		Listeners: func(context.Context) []Listener {
-			return []Listener{{Port: 4519, PID: 777, Process: "node"}, {Port: 5432, PID: 90, Process: "postgres"}}
+			return append([]Listener{{Port: 4519, PID: 777, Process: "node"}, {Port: 5432, PID: 90, Process: "postgres"}}, f.listen...)
 		},
 		Elevate: func(_ context.Context, c privileged.Command, out io.Writer) error {
 			f.mu.Lock()
@@ -154,11 +224,16 @@ func (f *portlessFixture) serve() http.Handler {
 			_, _ = io.WriteString(out, "elevated ok\n")
 			return f.elevErr
 		},
-		Method:    func() string { return "pkexec" },
-		Exec:      func(context.Context, []string, map[string]string, io.Writer) error { return nil },
+		Method: func() string { return "pkexec" },
+		Exec: func(_ context.Context, argv []string, _ map[string]string, _ io.Writer) error {
+			f.mu.Lock()
+			defer f.mu.Unlock()
+			f.execs = append(f.execs, argv)
+			return nil
+		},
 		Downloads: func() string { return filepath.Join(f.state, "..", "downloads") },
 		Reveal:    func(string) error { return nil },
-		GOOS:      "linux",
+		GOOS:      f.goosOr("linux"),
 		Now:       func() time.Time { return time.Date(2026, 11, 12, 9, 0, 0, 0, time.UTC) },
 	})
 	for pattern, fn := range h {
