@@ -1,0 +1,83 @@
+/* The documentation pages (made by scripts/sitedocs). Builds on style.css. */
+
+.brand-sub { color: var(--text-3); font-weight: 510; padding-left: 9px; margin-left: 1px; border-left: 1px solid var(--border-strong); }
+.top nav a[aria-current="page"] { color: var(--text); }
+
+.docs-layout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 48px; padding-top: 40px; align-items: start; }
+.docs-page .wrap { max-width: 1340px; }
+@media (min-width: 1280px) { .docs-layout { grid-template-columns: 200px minmax(0, 1fr) 220px; } }
+@media (min-width: 1280px) { .prose { max-width: 740px; } }
+
+/* sidebar */
+.sidebar { position: sticky; top: 88px; max-height: calc(100vh - 104px); overflow-y: auto; font-size: 0.9rem; }
+.side-group + .side-group { margin-top: 22px; }
+.side-title { margin: 0 0 6px; padding: 0 10px; font-size: 0.72rem; font-weight: 510; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); }
+.sidebar ul, .toc ul { list-style: none; margin: 0; padding: 0; }
+.sidebar a { display: block; padding: 5px 10px; border-radius: 7px; text-decoration: none; color: var(--text-2); transition: background 0.12s, color 0.12s; }
+.sidebar a:hover { background: var(--surface-hover); color: var(--text); }
+.sidebar a[aria-current="page"] { background: var(--surface-2); color: var(--text); font-weight: 510; }
+.sidebar .ext { color: var(--text-3); font-size: 0.8em; }
+
+/* on this page */
+.toc { display: none; position: sticky; top: 88px; max-height: calc(100vh - 104px); overflow-y: auto; font-size: 0.82rem; }
+@media (min-width: 1280px) { .toc { display: block; } }
+.toc .side-title { padding: 0; }
+.toc li a { display: block; padding: 4px 0 4px 12px; border-left: 1px solid var(--border); color: var(--text-3); text-decoration: none; line-height: 1.4; transition: color 0.12s, border-color 0.12s; }
+.toc li.sub a { padding-left: 22px; }
+.toc li a:hover { color: var(--text); }
+.toc li a.active { color: var(--accent-text); border-left-color: var(--accent); }
+
+/* the guide */
+.prose { min-width: 0; font-size: 0.97rem; line-height: 1.7; padding-bottom: 24px; }
+.prose > :first-child { margin-top: 0; }
+.prose h1 { font-size: clamp(1.9rem, 4vw, 2.5rem); line-height: 1.1; letter-spacing: -0.03em; margin: 0 0 20px; font-variation-settings: "opsz" 32; }
+.prose h2 { font-size: 1.4rem; margin: 56px 0 12px; padding-top: 8px; }
+.prose h3 { font-size: 1.08rem; margin: 36px 0 8px; }
+.prose h2, .prose h3, .prose .question { scroll-margin-top: 80px; }
+.prose p, .prose ul, .prose ol { margin: 0 0 16px; color: light-dark(#33353b, #c9cbd1); }
+.prose li { margin: 4px 0; }
+.prose li::marker { color: var(--text-3); }
+.prose strong { color: var(--text); font-weight: 590; }
+.prose a { color: var(--accent-text); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--accent) 35%, transparent); text-underline-offset: 3px; }
+.prose a:hover { text-decoration-color: currentColor; }
+.prose code { font-size: 0.86em; }
+.prose blockquote { margin: 0 0 16px; padding: 4px 16px; border-left: 2px solid var(--accent); color: var(--text-2); }
+.prose hr { border: 0; border-top: 1px solid var(--border); margin: 40px 0; }
+
+.prose .question { padding: 16px 0 0; margin: 0 0 16px; border-top: 1px solid var(--border); }
+.prose h1 + p + .question, .prose h1 + .question { border-top: 0; }
+
+.code { position: relative; margin: 0 0 20px; }
+.prose pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; overflow-x: auto; line-height: 1.6; font-size: 0.84rem; }
+.prose pre code { background: none; padding: 0; font-size: inherit; overflow-wrap: normal; }
+.code .copy { position: absolute; top: 8px; right: 8px; opacity: 0; transition: opacity 0.15s; }
+.code:hover .copy, .code .copy:focus-visible, .code .copy.done { opacity: 1; }
+@media (hover: none) { .code .copy { opacity: 1; } }
+
+.prose table { display: block; overflow-x: auto; border-collapse: collapse; margin: 0 0 20px; font-size: 0.88rem; max-width: 100%; }
+.prose th, .prose td { text-align: left; padding: 9px 14px 9px 0; border-bottom: 1px solid var(--border); vertical-align: top; }
+.prose th { color: var(--text-3); font-weight: 510; font-size: 0.8rem; }
+
+.page-foot { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border); }
+.page-foot .edit { font-size: 0.85rem; color: var(--text-3); text-decoration: none; }
+.page-foot .edit:hover { color: var(--text); }
+.pager { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; }
+.pager a { display: flex; flex-direction: column; gap: 2px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 10px; text-decoration: none; color: var(--text); font-weight: 510; transition: border-color 0.15s; }
+.pager a:hover { border-color: var(--border-strong); }
+.pager a span { font-size: 0.78rem; color: var(--text-3); font-weight: 400; }
+.pager .next { grid-column: 2; text-align: right; }
+
+.docs-page footer:last-of-type { margin-top: 48px; }
+
+@media (max-width: 860px) {
+  .docs-layout { grid-template-columns: minmax(0, 1fr); gap: 0; padding-top: 0; }
+  /* the sidebar becomes a row of pages under the header */
+  .sidebar { position: sticky; top: 56px; z-index: 5; max-height: none; overflow-x: auto; overflow-y: hidden; display: flex; gap: 2px; margin: 0 -16px 24px; padding: 8px 16px; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); scrollbar-width: none; }
+  .sidebar::-webkit-scrollbar { display: none; }
+  .side-group, .side-group + .side-group { margin: 0; }
+  .side-group ul { display: flex; gap: 2px; }
+  .side-title, .sidebar a:has(.ext) { display: none; }
+  .sidebar a { white-space: nowrap; }
+  .prose h2, .prose h3, .prose .question { scroll-margin-top: 120px; }
+  .brand-sub { display: none; }
+}

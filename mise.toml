@@ -19,6 +19,10 @@ description = "Build the portplane binary with the embedded UI"
 depends = ["web:build"]
 run = "go build -o bin/portplane ./cmd/portplane"
 
+[tasks.site]
+description = "Make the website's documentation pages (site/docs) from docs/"
+run = "go run ./scripts/sitedocs"
+
 [tasks.test]
 description = "Go and web tests"
 run = ["go test ./...", "pnpm -C web test"]

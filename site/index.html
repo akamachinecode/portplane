@@ -4,106 +4,185 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Portplane: every dev server, on every machine, in one window</title>
-  <meta name="description" content="See which local dev servers are running across your project folders and machines, open them at stable https://name.localhost URLs, and start or stop them with a click. Built on dekit and portless.">
+  <meta name="description" content="See which local dev servers are running across your project folders and machines, open them at stable https://name.localhost URLs, and start or stop them with a click. Free downloads for macOS, Linux and Windows.">
+  <meta name="theme-color" content="#fdfdfd" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0c0d0e" media="(prefers-color-scheme: dark)">
+  <meta property="og:title" content="Portplane">
+  <meta property="og:description" content="Every dev server, on every machine, in one window. Built on dekit and portless.">
+  <meta property="og:image" content="https://akamachinecode.github.io/portplane/app-dark.webp">
   <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="preload" href="fonts/inter.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="style.css">
   <script src="app.js" defer></script>
 </head>
 <body>
   <header class="top">
-    <a class="brand" href="./"><img src="icon.svg" alt="" width="28" height="28"> Portplane</a>
-    <nav>
-      <a href="#how">How it works</a>
-      <a href="#install">Install</a>
-      <a href="https://github.com/akamachinecode/portplane">GitHub</a>
-    </nav>
+    <div class="wrap top-inner">
+      <a class="brand" href="./"><img src="icon.svg" alt="" width="24" height="24"> Portplane</a>
+      <nav aria-label="Main">
+        <a href="#features">Features</a>
+        <a href="#how">How it works</a>
+        <a href="#download">Download</a>
+        <a href="docs/" class="docs">Docs</a>
+        <a href="https://github.com/akamachinecode/portplane" class="gh">GitHub</a>
+      </nav>
+    </div>
   </header>
 
   <main>
-    <section class="hero">
-      <p class="eyebrow">Open source · macOS · Linux · Windows (beta)</p>
-      <h1>Every dev server,<br>on every machine,<br>in one window.</h1>
-      <p class="lede">See what is running across all your project folders and your other machines over SSH. Open each app at a stable <code>https://&lt;name&gt;.localhost</code> URL, and start or stop it with a click. No logs, no terminals: the state of things at a glance.</p>
+    <section class="hero wrap">
+      <a class="pill" id="release-pill" href="https://github.com/akamachinecode/portplane/releases/latest">
+        <span class="dot" aria-hidden="true"></span>
+        <span id="release-pill-text">Open source · macOS · Linux · Windows</span>
+        <span class="arrow" aria-hidden="true">→</span>
+      </a>
+      <h1>Every dev server,<br>on every machine,<br><span class="accent">in one window.</span></h1>
+      <p class="lede">See what is running across all your project folders and your other machines over SSH. Open each app at a stable <code>https://&lt;name&gt;.localhost</code> address and start or stop it with a click.</p>
       <div class="cta">
-        <a class="button primary" id="download" href="https://github.com/akamachinecode/portplane/releases/latest">Download</a>
-        <a class="button" href="#install">Install from the terminal</a>
+        <a class="button primary" id="hero-download" href="#download">
+          <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8m0 0L4.5 6.5M8 10l3.5-3.5M3 13h10" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span id="hero-download-label">Download Portplane</span>
+        </a>
+        <a class="button" href="#download">All downloads</a>
       </div>
-      <p class="fine" id="download-note">Free and open source under Apache-2.0. Downloads come from GitHub Releases, with signed checksums.</p>
+      <p class="fine" id="hero-download-note">Free and open source under Apache-2.0. Every build has signed checksums.</p>
     </section>
 
-    <figure class="shot">
-      <picture>
-        <source srcset="screenshot-dark.png" media="(prefers-color-scheme: dark)">
-        <img src="screenshot-light.png" alt="Portplane showing a monorepo with running, starting and failed apps, each with its .localhost URL" width="1200" height="640">
-      </picture>
-    </figure>
+    <div class="wrap">
+      <figure class="shot">
+        <picture>
+          <source srcset="app-dark.webp" media="(prefers-color-scheme: dark)">
+          <img src="app-light.webp" alt="Portplane's Apps page: a monorepo with two git worktrees, each app with its state and .localhost address" width="1280" height="800">
+        </picture>
+      </figure>
+    </div>
 
-    <section class="features">
-      <div>
+    <div class="wrap">
+    <section id="features" class="features">
+      <article>
+        <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="3" width="6" height="6" rx="1.5"/><rect x="11" y="3" width="6" height="6" rx="1.5"/><rect x="3" y="11" width="6" height="6" rx="1.5"/><rect x="11" y="11" width="6" height="6" rx="1.5"/></svg>
         <h3>See</h3>
-        <p>Every app's state (on, starting, failed or off), its stable URL and the port behind it, grouped by project and git worktree. Ports opened by anything else show up too.</p>
-      </div>
-      <div>
+        <p>Every app's state (on, starting, failed or off), its address and the port behind it, grouped by project and git worktree. Ports opened by anything else show up too.</p>
+      </article>
+      <article>
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M6 4.5v11l9-5.5z"/></svg>
         <h3>Act</h3>
-        <p>Start, stop or restart an app or a whole project. Open everything a project runs in one click. When something fails, the last lines of its output are one click away, ready to copy.</p>
-      </div>
-      <div>
+        <p>Start, stop or restart an app or a whole project. When something fails, its last lines of output are one click away, ready to copy.</p>
+      </article>
+      <article>
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H8l1.5 1.5h6A1.5 1.5 0 0 1 17 8v6.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 3 14.5z"/></svg>
         <h3>Set up</h3>
-        <p>Point Portplane at a folder. It finds the apps in your monorepos and worktrees, proposes a URL for each and writes plain dekit config after you review the diff.</p>
-      </div>
-      <div>
+        <p>Point Portplane at a folder. It finds the apps in your monorepos and worktrees, proposes an address for each and writes plain dekit config after you review it.</p>
+      </article>
+      <article>
+        <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="4" width="14" height="5" rx="1.5"/><rect x="3" y="11" width="14" height="5" rx="1.5"/></svg>
         <h3>Reach</h3>
-        <p>Add a machine from <code>~/.ssh/config</code> or Tailscale. Its servers appear next to yours and open at <code>https://&lt;app&gt;.&lt;machine&gt;.localhost</code> through the SSH connection.</p>
-      </div>
+        <p>Add a machine from <code>~/.ssh/config</code> or Tailscale. Its servers appear next to yours and open at <code>https://&lt;app&gt;.&lt;machine&gt;.localhost</code> over SSH.</p>
+      </article>
     </section>
+    </div>
 
-    <section id="how" class="how">
+    <section id="how" class="how wrap">
       <h2>Built on the tools you already use</h2>
-      <p>Portplane does not run your servers and does not replace anything. It sits on top of two small tools and keeps their config plain and yours.</p>
-      <table>
-        <thead><tr><th>Piece</th><th>Owns</th></tr></thead>
-        <tbody>
-          <tr><td><a href="https://dekit.run">dekit</a></td><td>Running and supervising processes, dependencies between tasks, restarts</td></tr>
-          <tr><td><a href="https://github.com/vercel-labs/portless">portless</a></td><td>Stable <code>.localhost</code> URLs, the local HTTPS proxy and its trusted certificate</td></tr>
-          <tr><td>Portplane</td><td>Finding projects, the combined view, remote machines, setup</td></tr>
-        </tbody>
-      </table>
+      <p class="sub">Portplane doesn't run your servers or replace anything. It sits on two small tools and keeps their config plain and yours.</p>
+      <div class="stack">
+        <a class="layer" href="https://dekit.run">
+          <span class="name">dekit</span>
+          <span>Runs and supervises processes, dependencies between tasks, restarts.</span>
+        </a>
+        <a class="layer" href="https://github.com/vercel-labs/portless">
+          <span class="name">portless</span>
+          <span>Stable <code>.localhost</code> addresses, the local HTTPS proxy and its trusted certificate.</span>
+        </a>
+        <div class="layer own">
+          <span class="name">Portplane</span>
+          <span>Finds your projects, shows them all in one place, reaches other machines and sets everything up.</span>
+        </div>
+      </div>
       <ul class="principles">
         <li><strong>Local-first.</strong> No accounts, no cloud, no telemetry.</li>
-        <li><strong>No listener on your network.</strong> The UI lives on loopback; other machines are reached only over SSH, with your keys.</li>
-        <li><strong>No lock-in.</strong> Generated config is plain dekit YAML you can keep using without Portplane.</li>
+        <li><strong>Nothing listening on your network.</strong> The UI lives on loopback; other machines are reached only over SSH, with your keys.</li>
+        <li><strong>No lock-in.</strong> The config it writes is plain dekit YAML you can keep using without Portplane.</li>
       </ul>
     </section>
 
-    <section id="install" class="install">
-      <h2>Install</h2>
-      <div class="tabs" role="tablist">
-        <button role="tab" data-os="mac" aria-selected="true">macOS</button>
-        <button role="tab" data-os="linux" aria-selected="false">Linux</button>
-        <button role="tab" data-os="windows" aria-selected="false">Windows</button>
+    <section id="download" class="download wrap">
+      <div class="download-head">
+        <h2>Download</h2>
+        <p class="sub" id="release-meta">The latest release, straight from GitHub Releases.</p>
       </div>
-      <div class="panel" data-os="mac">
-        <p>Download the <code>.dmg</code> for your Mac (Apple silicon: <code>arm64</code>, Intel: <code>amd64</code>) and drag Portplane to Applications. It lives in the menu bar. Or install the command line:</p>
-        <pre><code>curl -fsSL https://akamachinecode.github.io/portplane/install.sh | sh</code></pre>
-        <p class="fine">Portplane is not notarized by Apple. The first time you open the app, macOS blocks it: open <em>System Settings → Privacy &amp; Security</em> and choose <em>Open Anyway</em>. The terminal install is not affected.</p>
+
+      <noscript>
+        <p>Every build is on the <a href="https://github.com/akamachinecode/portplane/releases/latest">latest release page</a>.</p>
+      </noscript>
+
+      <div class="platforms">
+        <section class="platform" id="download-mac" data-os="darwin" aria-labelledby="h-mac">
+          <header>
+            <h3 id="h-mac">macOS</h3>
+            <span class="req">macOS 12 or later</span>
+          </header>
+          <ul class="files"></ul>
+          <p class="fine">Not notarized by Apple: the first time you open it, go to <em>System Settings → Privacy &amp; Security</em> and choose <em>Open Anyway</em>.</p>
+        </section>
+        <section class="platform" id="download-linux" data-os="linux" aria-labelledby="h-linux">
+          <header>
+            <h3 id="h-linux">Linux</h3>
+            <span class="req">WebKitGTK 6.0</span>
+          </header>
+          <ul class="files"></ul>
+          <p class="fine">The <code>.deb</code> and <code>.rpm</code> add Portplane to your applications menu and pull in WebKitGTK.</p>
+        </section>
+        <section class="platform" id="download-windows" data-os="windows" aria-labelledby="h-windows">
+          <header>
+            <h3 id="h-windows">Windows <span class="tag">Beta</span></h3>
+            <span class="req">Windows 10 or 11</span>
+          </header>
+          <ul class="files"></ul>
+          <p class="fine">Not code-signed: if SmartScreen warns you, choose <em>More info → Run anyway</em>.</p>
+        </section>
       </div>
-      <div class="panel" data-os="linux" hidden>
-        <pre><code>curl -fsSL https://akamachinecode.github.io/portplane/install.sh | sh</code></pre>
-        <p>Or download the <code>.deb</code> or <code>.rpm</code> from the latest release.</p>
+
+      <div class="verify">
+        <span>Verify a download:</span>
+        <a id="checksums" href="https://github.com/akamachinecode/portplane/releases/latest">checksums.txt</a>
+        <a id="signature" href="https://github.com/akamachinecode/portplane/releases/latest">cosign signature</a>
+        <a href="docs/#verify-a-download-by-hand">How to verify</a>
+        <a href="https://github.com/akamachinecode/portplane/releases">All releases</a>
       </div>
-      <div class="panel" data-os="windows" hidden>
-        <pre><code>irm https://akamachinecode.github.io/portplane/install.ps1 | iex</code></pre>
-        <p class="fine">Windows support is in beta. The binary is not code-signed, so SmartScreen may warn you: choose <em>More info → Run anyway</em>.</p>
+
+      <div class="terminal">
+        <h3>Or install from the terminal</h3>
+        <div class="tabs" role="tablist" aria-label="Operating system">
+          <button role="tab" id="tab-unix" aria-controls="panel-unix" data-tab="unix" aria-selected="true">macOS and Linux</button>
+          <button role="tab" id="tab-windows" aria-controls="panel-windows" data-tab="windows" aria-selected="false" tabindex="-1">Windows</button>
+        </div>
+        <div class="cmd" role="tabpanel" id="panel-unix" aria-labelledby="tab-unix" data-tab="unix">
+          <pre><code>curl -fsSL https://akamachinecode.github.io/portplane/install.sh | sh</code></pre>
+          <button class="copy" type="button" aria-label="Copy command">Copy</button>
+        </div>
+        <div class="cmd" role="tabpanel" id="panel-windows" aria-labelledby="tab-windows" data-tab="windows" hidden>
+          <pre><code>irm https://akamachinecode.github.io/portplane/install.ps1 | iex</code></pre>
+          <button class="copy" type="button" aria-label="Copy command">Copy</button>
+        </div>
+        <p class="fine">The script checks the SHA-256 of what it downloads, and the signature too when <code>cosign</code> is installed. Then open Portplane: its guided setup installs <a href="https://dekit.run">dekit</a> and <a href="https://github.com/vercel-labs/portless">portless</a> for you. Details in <a href="docs/">the install guide</a>.</p>
       </div>
-      <p>Then add a folder and open the window:</p>
-      <pre><code>portplane folders add ~/code
-portplane</code></pre>
-      <p>You also need <a href="https://dekit.run">dekit</a> and <a href="https://github.com/vercel-labs/portless">portless</a>; Portplane tells you what is missing and the exact command to install it. Every download can be verified: see <a href="https://github.com/akamachinecode/portplane/blob/main/docs/install.md">the install guide</a>.</p>
     </section>
   </main>
 
   <footer>
-    <p>Portplane is open source (Apache-2.0). <a href="https://github.com/akamachinecode/portplane">Source</a> · <a href="https://github.com/akamachinecode/portplane/blob/main/docs/security.md">Security</a> · <a href="https://github.com/akamachinecode/portplane/issues">Issues</a></p>
+    <div class="wrap foot">
+      <span class="brand small"><img src="icon.svg" alt="" width="18" height="18"> Portplane</span>
+      <nav aria-label="Footer">
+        <a href="docs/">Docs</a>
+        <a href="docs/troubleshooting/">Troubleshooting</a>
+        <a href="docs/security/">Security</a>
+        <a href="https://github.com/akamachinecode/portplane/blob/main/CHANGELOG.md">Changelog</a>
+        <a href="https://github.com/akamachinecode/portplane">Source</a>
+        <a href="https://github.com/akamachinecode/portplane/issues">Issues</a>
+      </nav>
+      <span class="fine">Apache-2.0</span>
+    </div>
   </footer>
 </body>
 </html>
