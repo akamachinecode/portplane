@@ -1,17 +1,28 @@
 import type { MachineSnapshot } from "../api/types";
 import { shortenPath } from "../lib/format";
+import { href } from "../lib/router";
 import { runnerFingerprint } from "../lib/pending";
 import { useApp } from "./AppContext";
 import { Banner } from "./Banner";
 import { Spinner } from "./Icon";
 
+/** A link into the guided setup, for this computer's own tools (F3). */
+function SetupLink({ step, children }: { step: "install" | "proxy"; children: string }) {
+  return (
+    <a className="btn" href={href({ view: "onboarding", step })}>
+      {children}
+    </a>
+  );
+}
+
 /** What is missing on this machine, and why it matters, in one sentence each. */
 export function ToolBanners({ ms }: { ms: MachineSnapshot }) {
   const { tools } = ms;
+  const local = ms.machine.local;
   return (
     <>
       {!tools.dekit && (
-        <Banner tone="warn" title="dekit isn't installed">
+        <Banner tone="warn" title="dekit isn't installed" action={local ? <SetupLink step="install">Install dekit</SetupLink> : undefined}>
           Portplane uses{" "}
           <a href="https://dekit.run" target="_blank" rel="noopener noreferrer">
             dekit
@@ -21,7 +32,7 @@ export function ToolBanners({ ms }: { ms: MachineSnapshot }) {
         </Banner>
       )}
       {!tools.portless && (
-        <Banner tone="info" title="portless isn't installed">
+        <Banner tone="info" title="portless isn't installed" action={local ? <SetupLink step="install">Install portless</SetupLink> : undefined}>
           <a href="https://github.com/vercel-labs/portless" target="_blank" rel="noopener noreferrer">
             portless
           </a>{" "}
@@ -30,9 +41,15 @@ export function ToolBanners({ ms }: { ms: MachineSnapshot }) {
         </Banner>
       )}
       {tools.portless && !tools.proxyRunning && (
-        <Banner tone="warn" title="The portless proxy isn't running">
-          Apps keep their <code>.localhost</code> names, but the URLs won't load until the proxy runs. Start it with{" "}
-          <code>portless proxy start</code>.
+        <Banner tone="warn" title="The portless proxy isn't running" action={local ? <SetupLink step="proxy">Set up the proxy</SetupLink> : undefined}>
+          Apps keep their <code>.localhost</code> names, but the URLs won't load until the proxy runs.{" "}
+          {local ? (
+            <>Installing it as a service asks for your password once, and it then starts with your computer.</>
+          ) : (
+            <>
+              Install it there once with <code>sudo portless service install</code>.
+            </>
+          )}
         </Banner>
       )}
     </>

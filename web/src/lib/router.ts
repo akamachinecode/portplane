@@ -13,7 +13,7 @@ import { useSyncExternalStore } from "react";
 // Anything else shows the apps.
 
 export const APP_TABS = ["summary", "output", "config", "url"] as const;
-export const DOMAIN_SECTIONS = ["proxy", "routes", "aliases", "certificates", "hosts", "doctor"] as const;
+export const DOMAIN_SECTIONS = ["proxy", "routes", "aliases", "config", "certificates", "hosts", "doctor", "maintenance"] as const;
 export const SETTINGS_SECTIONS = ["general", "folders", "tools", "network", "advanced"] as const;
 
 export type AppTab = (typeof APP_TABS)[number];

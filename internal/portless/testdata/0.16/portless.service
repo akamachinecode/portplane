@@ -1,0 +1,20 @@
+[Unit]
+Description=Portless HTTPS proxy
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=HOME="/home/dev"
+Environment=PORTLESS_STATE_DIR="/home/dev/.portless"
+Environment=SUDO_UID="1000"
+Environment=SUDO_GID="1000"
+Environment=PATH="/home/dev/.local/bin:/usr/local/bin:/usr/bin"
+ExecStart="/opt/node/24.11.1/bin/node" "/usr/lib/node_modules/portless/dist/cli.js" "proxy" "start" "--foreground" "--port" "443" "--https" "--tld" "localhost" "--tld" "test" "--wildcard"
+Restart=on-failure
+RestartSec=2
+KillSignal=SIGTERM
+TimeoutStopSec=5
+
+[Install]
+WantedBy=multi-user.target

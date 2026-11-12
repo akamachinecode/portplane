@@ -1,0 +1,21 @@
+
+portless doctor
+
+Version: 0.16.0
+Node.js: 24.11.1
+Platform: darwin arm64
+State dir: /Users/dev/.portless
+Proxy target: https://127.0.0.1
+Mode: HTTPS, .local, LAN
+
+ok    Node.js 24.11.1 satisfies portless requirements.
+ok    State directory is writable: /Users/dev/.portless
+ok    Proxy is responding on port 443.
+ok    Proxy PID file points to the responding proxy process: 702
+ok    OpenSSL is available for certificate generation.
+ok    Local CA is trusted by the OS trust store.
+ok    Routes: 1 active route.
+ok    mDNS publishing support is available for LAN mode.
+warn  LAN mode is enabled but no LAN IP is recorded.
+
+Summary: 0 failures, 1 warning.

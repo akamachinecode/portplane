@@ -76,7 +76,8 @@ type RunnersResponse struct {
 	Live bool `json:"live"`
 }
 
-// FileEdit is one file an edit changes, with the digest it was read at.
+// FileEdit is one file an edit changes, with the digest it was read at
+// (the dekit center sets it; the portless center's renames leave it "").
 type FileEdit struct {
 	Path    string `json:"path"`
 	Before  string `json:"before"`

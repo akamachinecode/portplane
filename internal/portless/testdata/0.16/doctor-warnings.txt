@@ -1,0 +1,30 @@
+[1m
+portless doctor
+[22m
+Version: 0.16.0
+Node.js: 24.11.1
+Platform: linux x64
+State dir: /home/dev/.portless
+Proxy target: https://127.0.0.1
+Mode: HTTPS, .localhost, .test
+
+ok    Node.js 24.11.1 satisfies portless requirements.
+ok    State directory is writable: /home/dev/.portless
+[33mwarn [39m Proxy is not running on port 443.
+[2m      Run: portless proxy start[22m
+[33mwarn [39m Proxy PID file is stale: 48211
+[2m      Run: portless proxy stop[22m
+ok    OpenSSL is available for certificate generation.
+[33mwarn [39m Local CA exists but is not trusted by the OS trust store.
+[2m      Run: portless trust[22m
+[33mwarn [39m Routes: 2 active routes, 2 stale routes.
+[2m      Run: portless prune[22m
+[33mwarn [39m Stale route web.localhost is owned by exited PID 51022.
+[33mwarn [39m Stale route api.web.localhost is owned by exited PID 51023.
+[33mwarn [39m Route db.localhost points to port 5432, but nothing is listening there.
+[2m      Remove the alias or start that service.[22m
+[33mwarn [39m 1 hostname did not resolve through the system resolver.
+[2m      Run: portless hosts sync[22m
+[33mwarn [39m docs.test is missing from hosts block.
+
+Summary: 0 failures, 10 warnings.

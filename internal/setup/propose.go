@@ -56,12 +56,14 @@ type Proposal struct {
 	Folder string `json:"folder"`
 	// Root is the dekit project the tasks join: the folder itself, or the
 	// project above it when the folder has no dekit.yaml of its own.
-	Root     string        `json:"root"`
-	Apps     []AppProposal `json:"apps"`
-	Warnings []string      `json:"warnings"`
-	Change   Change        `json:"change"`
-	Files    []FileChange  `json:"files"`
-	Digest   string        `json:"digest"` // apply only what was reviewed
+	Root string        `json:"root"`
+	Apps []AppProposal `json:"apps"`
+	// Unsupported are projects setup cannot write tasks for yet.
+	Unsupported []Unsupported `json:"unsupported"`
+	Warnings    []string      `json:"warnings"`
+	Change      Change        `json:"change"`
+	Files       []FileChange  `json:"files"`
+	Digest      string        `json:"digest"` // apply only what was reviewed
 }
 
 // Overrides are the user's edits to a proposal, keyed by task path.
@@ -96,7 +98,7 @@ func Propose(ctx context.Context, folder string, ov Overrides, opt Options) (*Pr
 			root = up
 		}
 	}
-	p := &Proposal{Folder: folder, Root: root, Apps: []AppProposal{}, Warnings: []string{}, Change: Change{Added: []string{}, Changed: []string{}, Removed: []string{}}}
+	p := &Proposal{Folder: folder, Root: root, Apps: []AppProposal{}, Unsupported: []Unsupported{}, Warnings: []string{}, Change: Change{Added: []string{}, Changed: []string{}, Removed: []string{}}}
 
 	fragPath := filepath.Join(folder, filepath.FromSlash(FragmentRel))
 	previous, _ := os.ReadFile(fragPath)
@@ -105,7 +107,13 @@ func Propose(ctx context.Context, folder string, ov Overrides, opt Options) (*Pr
 
 	var tasks []genTask
 	for _, repo := range FindRepos(ctx, folder) {
+		before := len(p.Apps)
 		tasks = append(tasks, pl.repo(folder, repo, oldFrag, ov, opt, p)...)
+		if len(p.Apps) == before {
+			if kinds := OtherStacks(repo.Root); len(kinds) > 0 {
+				p.Unsupported = append(p.Unsupported, Unsupported{Project: repo.Name, Dir: rel(folder, repo.Root), Kinds: kinds})
+			}
+		}
 	}
 
 	content := renderFragment(tasks, opt)

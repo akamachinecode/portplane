@@ -4,13 +4,15 @@ import type { FeedHandlers } from "./events";
 import type { MockContext } from "./mockContext";
 import { createMockDekit } from "./mockDekit";
 import { createMockJobs, demoJob } from "./mockJobs";
+import { createMockOutput } from "./mockOutput";
 import { createMockPortless } from "./mockPortless";
 import { createMockSetup } from "./mockSetup";
-import { createMockTools } from "./mockTools";
+import { createMockTools, evaluateMachine } from "./mockTools";
 import { DEFAULT_PREFERENCES, preferencesProblem } from "../lib/preferences";
 import type {
   App,
   Excerpt,
+  Proposal,
   Info,
   MachineCandidate,
   MachineSettings,
@@ -31,9 +33,16 @@ import type {
 //   degraded   portless missing and one dekit runner down
 //   readonly   neither dekit nor portless: only other ports
 //   empty      folders without any dekit.yaml
-//   nofolders  first run
+//   nofolders  first run, with the tools already installed
+//   fresh      first run on a computer without dekit, portless or Node.js
+//   node20     first run with Node.js 20 (too old for portless)
+//   nopassword first run where no password dialog can open (the proxy
+//              service fails with the command to run by hand)
 
-export type Scenario = "default" | "degraded" | "readonly" | "empty" | "nofolders";
+export type Scenario = "default" | "degraded" | "readonly" | "empty" | "nofolders" | "fresh" | "node20" | "nopassword";
+
+/** Scenarios that start on the guided setup, with no folders. */
+export const FIRST_RUN: readonly Scenario[] = ["nofolders", "fresh", "node20", "nopassword"];
 
 const HOME = "/home/dev";
 const ROOT = `${HOME}/code`;
@@ -159,11 +168,12 @@ export const MOCK_CANDIDATES: MachineCandidate[] = [
 ];
 
 export function mockSnapshot(scenario: Scenario = "default"): Snapshot {
-  const apps = scenario === "empty" || scenario === "nofolders" || scenario === "readonly" ? [] : mockApps();
+  const first = FIRST_RUN.includes(scenario);
+  const apps = scenario === "empty" || scenario === "readonly" || first ? [] : mockApps();
   const ms: MachineSnapshot = {
     machine: { id: "local", name: "This computer", local: true, hostname: "workstation", os: "linux", arch: "amd64", status: "online" },
     tools: { dekit: "0.10.3", portless: "0.16.0", proxyRunning: true, proxyHttps: true, proxyPort: 443 },
-    folders: scenario === "nofolders" ? [] : [ROOT],
+    folders: first ? [] : [ROOT],
     runners: apps.length ? [{ root: ROOT, name: "code", up: true }] : [],
     apps,
     otherPorts: mockOtherPorts(),
@@ -181,8 +191,11 @@ export function mockSnapshot(scenario: Scenario = "default"): Snapshot {
       delete a.hostname;
     }
   }
-  if (scenario === "readonly") {
+  if (scenario === "readonly" || scenario === "fresh" || scenario === "node20") {
     ms.tools = { proxyRunning: false, proxyHttps: false };
+  }
+  if (scenario === "nopassword") {
+    ms.tools = { dekit: "0.10.3", portless: "0.16.0", proxyRunning: false, proxyHttps: false };
   }
   if (scenario === "default") return { machines: [ms, mockRemote(), mockOffline()], version: 1 };
   return { machines: [ms], version: 1 };
@@ -205,6 +218,19 @@ const EXCERPT: Excerpt = {
   command: "dekit -C ~/code screen my-monorepo/admin",
 };
 
+/** What a scan of a folder other than ~/code finds in the mock: a Django site. */
+function otherFolderProposal(folder: string): Proposal {
+  return {
+    folder,
+    apps: [],
+    unsupported: [{ project: "django-site", dir: "django-site", kinds: ["Docker Compose", "Python"] }],
+    warnings: [],
+    change: { added: [], changed: [], removed: [] },
+    files: [],
+    digest: "00000000",
+  };
+}
+
 /** Test and debug hooks of the mock, on top of the Api. */
 export interface MockControls {
   /** Edits the folder behind setup's back: the next write gets a 409. */
@@ -215,7 +241,7 @@ export interface MockControls {
 
 /** Preferences a mock starts with: first run has not been through onboarding. */
 export function mockPreferences(scenario: Scenario): Preferences {
-  const done = scenario !== "nofolders";
+  const done = !FIRST_RUN.includes(scenario);
   return { ...structuredClone(DEFAULT_PREFERENCES), onboarding: { completed: done, skipped: false, done: [] } };
 }
 
@@ -227,7 +253,7 @@ export function createMockApi(scenario: Scenario = "default"): Api & MockControl
   let autostart = false;
   let preferences = mockPreferences(scenario);
   const jobs = createMockJobs();
-  const setup = createMockSetup(scenario === "empty" || scenario === "readonly" || scenario === "nofolders" ? "fresh" : "existing", ROOT);
+  const setup = createMockSetup(scenario === "empty" || scenario === "readonly" || FIRST_RUN.includes(scenario) ? "fresh" : "existing", ROOT);
   const listeners = new Set<FeedHandlers>();
   let nextPid = 50000;
   let nextPort = 4600;
@@ -285,11 +311,12 @@ export function createMockApi(scenario: Scenario = "default"): Api & MockControl
     for (const l of listeners) l.onJob?.(job);
   });
   const ctx: MockContext = { scenario, snapshot: () => snapshot, update, delay, later, jobs };
+  const tools = createMockTools(ctx);
 
   return {
     ...createMockPortless(ctx),
     ...createMockDekit(ctx),
-    ...createMockTools(ctx),
+    ...tools,
     info: () => delay<Info>({ version: "0.0.0-mock", os: "linux", arch: "amd64", url: "https://portplane.localhost", picker: true }),
     snapshot: () => delay(snapshot),
     async act(target, verb: Verb) {
@@ -326,6 +353,7 @@ export function createMockApi(scenario: Scenario = "default"): Api & MockControl
       }, machine);
     },
     excerpt: () => delay(EXCERPT, 300),
+    ...createMockOutput(ctx),
     open: () => delay(undefined),
     reveal: () => delay(undefined),
     settings: () => delay<Settings>({ folders }),
@@ -337,7 +365,8 @@ export function createMockApi(scenario: Scenario = "default"): Api & MockControl
       folders = [...s.folders];
       update((ms) => {
         ms.folders = [...folders];
-        if (folders.length && ms.apps.length === 0 && scenario !== "empty" && scenario !== "readonly") {
+        // A first run gets its apps from setup; the other scenarios show the demo apps at once.
+        if (folders.length && ms.apps.length === 0 && scenario !== "empty" && scenario !== "readonly" && !FIRST_RUN.includes(scenario)) {
           ms.apps = mockApps();
           ms.runners = [{ root: ROOT, name: "code", up: true }];
         }
@@ -350,15 +379,21 @@ export function createMockApi(scenario: Scenario = "default"): Api & MockControl
     },
     pickFolder: () => delay<PickResult>({ kind: "picked", path: `${HOME}/projects` }, 600),
 
-    setupCheck: () => delay(setup.check(snapshot.machines[0].tools), 350),
+    setupCheck: () => delay(evaluateMachine(tools.machine()), 350),
     async setupScan(folder, overrides) {
       await delay(undefined, 500);
       if (!folders.includes(folder)) throw new ApiError("set up only folders Portplane watches: add it in Settings first", 400);
+      // Other folders hold only a project setup can't write tasks for.
+      if (folder !== ROOT) return otherFolderProposal(folder);
       return setup.scan(folder, overrides);
     },
     async setupApply(folder, digest, overrides) {
       await delay(undefined, 600);
       if (!folders.includes(folder)) throw new ApiError("set up only folders Portplane watches: add it in Settings first", 400);
+      if (folder !== ROOT) {
+        if (digest !== otherFolderProposal(folder).digest) throw new ApiError("the folder changed since this proposal was made: scan again and review the new changes", 409);
+        return { written: [], reloaded: false };
+      }
       const { written, tasks } = setup.apply(folder, digest, overrides);
       const runner = machineSnap("local")?.runners.find((r) => r.root === folder);
       if (written.length && !runner) {

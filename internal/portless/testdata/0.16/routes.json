@@ -1,0 +1,34 @@
+[
+  {
+    "hostname": "web.localhost",
+    "port": 4512,
+    "pid": 4100,
+    "registeredAt": 1762934400000,
+    "childPgid": 4101,
+    "childStartTime": "Wed Nov 12 09:00:00 2025",
+    "tailscaleUrl": "https://workstation.tail1234.ts.net",
+    "tailscaleHttpsPort": 443
+  },
+  {
+    "hostname": "db.localhost",
+    "port": 5432,
+    "pid": 0,
+    "registeredAt": 1762934500000
+  },
+  {
+    "hostname": "shop-web.localhost",
+    "port": 14001,
+    "pid": 0
+  },
+  {
+    "hostname": "broken"
+  },
+  {
+    "hostname": "docs.localhost",
+    "port": 4519,
+    "pid": 999999999,
+    "ngrokUrl": "https://abc123.ngrok-free.app",
+    "ngrokPid": 51200,
+    "futureField": true
+  }
+]

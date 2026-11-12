@@ -44,7 +44,7 @@ function RequirementRow({ req, os }: { req: Requirement; os: string | undefined 
   );
 }
 
-/** Step 1: what setup needs on this computer. Portplane shows commands, it never runs them (ADR-0014). */
+/** Step 1: what setup needs on this computer, with the commands to do it by hand; the guided setup installs them (ADR-0019). */
 export function SetupTools({ load, rechecking }: { load: CheckLoad; rechecking: boolean }) {
   const { info } = useApp();
   if (load.status === "loading") {
@@ -75,12 +75,12 @@ export function SetupTools({ load, rechecking }: { load: CheckLoad; rechecking: 
           </>
         ) : (
           <>
-            Install what's missing, then re-check. Portplane only shows the commands: run them in a terminal yourself.
+            Install what's missing, then check again. The guided setup (Settings, General) can install the tools for you, without a terminal.
           </>
         )}
       </p>
       <ul className="req-list">
-        {check.requirements.map((r) => (
+        {check.requirements.filter((r) => r.status !== "skipped" && r.status !== "info").map((r) => (
           <RequirementRow key={r.id} req={r} os={info?.os} />
         ))}
       </ul>

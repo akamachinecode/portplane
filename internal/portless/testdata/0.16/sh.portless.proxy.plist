@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>sh.portless.proxy</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/homebrew/Cellar/node/24.11.1/bin/node</string>
+    <string>/opt/homebrew/Cellar/portless/0.16.0/libexec/lib/node_modules/portless/dist/cli.js</string>
+    <string>proxy</string>
+    <string>start</string>
+    <string>--foreground</string>
+    <string>--port</string>
+    <string>8443</string>
+    <string>--cert</string>
+    <string>/Users/dev/certs/dev &amp; test.pem</string>
+    <string>--key</string>
+    <string>/Users/dev/certs/dev-key.pem</string>
+    <string>--lan</string>
+    <string>--ip</string>
+    <string>192.168.1.20</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>HOME</key>
+    <string>/Users/dev</string>
+  </dict>
+  <key>RunAtLoad</key>
+  <true/>
+</dict>
+</plist>

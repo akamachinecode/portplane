@@ -1,0 +1,11 @@
+portless service
+  Manager state: not installed
+  Installed: no
+  Proxy on 443: not responding
+  HTTPS: yes
+  TLDs: .localhost
+  LAN mode: no
+  Wildcard: no
+  Unprivileged: no
+  State directory: /home/dev/.portless
+  Service entry: /etc/systemd/system/portless.service
