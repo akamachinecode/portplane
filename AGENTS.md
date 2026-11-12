@@ -14,6 +14,7 @@ Portplane is a cross-platform desktop app (macOS, Linux, Windows). It shows ever
 - `cmd/portplane-window`: the Linux window (GTK 4 and WebKitGTK loaded at run time), a second binary so `portplane` never links desktop libraries (ADR-0018).
 - `internal/`: Go packages. `internal/webui/dist` holds the built UI that the binary embeds.
 - `web/`: the React + Vite UI (`pnpm -C web dev|build|test|typecheck`).
+- `site/`: the website on GitHub Pages (landing page and downloads). Its docs pages (`site/docs/`, not committed) come from the guides in `docs/` through `mise run site` (`scripts/sitedocs`); the Pages workflow runs it on deploy.
 - `mise run build|test|lint`: everything CI checks. Dev servers run under dekit (`dekit.yaml` at the root), never started directly.
 
 `prototype/` is the single-machine Node prototype that started the project. It is reference material: do not extend it into the product.

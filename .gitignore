@@ -4,6 +4,7 @@
 /build/
 /internal/webui/dist/*
 !/internal/webui/dist/.keep
+/site/docs/
 node_modules/
 *.test
 coverage.*

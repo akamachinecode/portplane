@@ -50,7 +50,13 @@
         }
       ],
       "initial-version": "0.1.0",
-      "include-component-in-tag": false
+      "include-component-in-tag": false,
+      "extra-files": [
+        {
+          "type": "generic",
+          "path": "site/app.js"
+        }
+      ]
     }
   },
   "include-component-in-tag": false

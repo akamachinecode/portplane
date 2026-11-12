@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.Title}} · Portplane docs</title>
+  {{with .Description}}<meta name="description" content="{{.}}">{{end}}
+  <meta name="theme-color" content="#fdfdfd" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0c0d0e" media="(prefers-color-scheme: dark)">
+  <link rel="icon" type="image/svg+xml" href="{{.Root}}icon.svg">
+  <link rel="preload" href="{{.Root}}fonts/inter.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="{{.Root}}style.css">
+  <link rel="stylesheet" href="{{.Root}}docs.css">
+  <script src="{{.Root}}docs.js" defer></script>
+</head>
+<body class="docs-page">
+  <header class="top">
+    <div class="wrap top-inner">
+      <a class="brand" href="{{.Root}}"><img src="{{.Root}}icon.svg" alt="" width="24" height="24"> Portplane <span class="brand-sub">Docs</span></a>
+      <nav aria-label="Main">
+        <a href="{{.Root}}#features">Features</a>
+        <a href="{{.Root}}#download">Download</a>
+        <a href="{{.Root}}docs/" class="docs" aria-current="page">Docs</a>
+        <a href="https://github.com/akamachinecode/portplane" class="gh">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="wrap docs-layout">
+    <nav class="sidebar" aria-label="Documentation">
+      {{range .Groups}}
+      <div class="side-group">
+        <p class="side-title">{{.Name}}</p>
+        <ul>
+          {{range .Items}}<li><a href="{{.URL}}"{{if .Current}} aria-current="page"{{end}}>{{.Name}}{{if .External}} <span class="ext" aria-label="(on GitHub)">↗</span>{{end}}</a></li>
+          {{end}}
+        </ul>
+      </div>
+      {{end}}
+    </nav>
+
+    <main class="prose" id="content">
+      {{.Body}}
+      <footer class="page-foot">
+        <a class="edit" href="{{.EditURL}}">Edit this page on GitHub</a>
+        <div class="pager">
+          {{with .Prev}}<a class="prev" href="{{.URL}}"><span>Previous</span>{{.Name}}</a>{{end}}
+          {{with .Next}}<a class="next" href="{{.URL}}"><span>Next</span>{{.Name}}</a>{{end}}
+        </div>
+      </footer>
+    </main>
+
+    {{if .TOC}}
+    <aside class="toc" aria-label="On this page">
+      <p class="side-title">On this page</p>
+      <ul>
+        {{range .TOC}}<li{{if .Sub}} class="sub"{{end}}><a href="#{{.ID}}">{{.Text}}</a></li>
+        {{end}}
+      </ul>
+    </aside>
+    {{end}}
+  </div>
+
+  <footer>
+    <div class="wrap foot">
+      <span class="brand small"><img src="{{.Root}}icon.svg" alt="" width="18" height="18"> Portplane</span>
+      <nav aria-label="Footer">
+        <a href="{{.Root}}#download">Download</a>
+        <a href="https://github.com/akamachinecode/portplane/blob/main/CHANGELOG.md">Changelog</a>
+        <a href="https://github.com/akamachinecode/portplane">Source</a>
+        <a href="https://github.com/akamachinecode/portplane/issues">Issues</a>
+      </nav>
+      <span class="fine">Apache-2.0</span>
+    </div>
+  </footer>
+</body>
+</html>

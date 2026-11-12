@@ -2,8 +2,6 @@
 
 Portplane starts and stops processes, reads process information, connects to other machines and, when you ask, installs dekit and portless and runs portless's admin steps. This page says what it trusts, what it exposes and what it never does. Report vulnerabilities privately (see [SECURITY.md](../SECURITY.md)).
 
-> Installs, privileged steps and update checks arrive with milestone M5 ([roadmap](roadmap.md)). Until a release includes them, Portplane shows the commands for you to run instead.
-
 ## What runs where
 
 | Component | Runs as | Listens on |
