@@ -157,6 +157,8 @@ export interface LanAddress {
 export interface LanApp {
   hostname: string;
   url: string;
+  /** The address the app registered: not .local yet until it restarts after LAN mode is turned on. */
+  route: string;
   label: string;
   kind: "app" | "alias" | "compose";
   machine?: string;

@@ -523,7 +523,7 @@ export function createMockSharing(ctx: MockContext, hooks: SharingHooks): MockSh
       const host = `${r.hostname.replace(/\.(localhost|test|local)$/, "")}.local`;
       if (seen.has(host)) continue;
       seen.add(host);
-      apps.push({ hostname: host, url: proxyUrl(host, proxy), label: r.owner?.label ?? r.hostname, kind: r.kind === "compose" ? "compose" : r.kind === "alias" ? "alias" : "app", machine: r.owner?.machine, appId: r.owner?.appId });
+      apps.push({ hostname: host, url: proxyUrl(host, proxy), route: r.hostname, label: r.owner?.label ?? r.hostname, kind: r.kind === "compose" ? "compose" : r.kind === "alias" ? "alias" : "app", machine: r.owner?.machine, appId: r.owner?.appId });
     }
     return {
       os: "linux",

@@ -404,7 +404,7 @@ func TestPortlessLAN(t *testing.T) {
 	if len(v.Addresses) != 1 || !v.Addresses[0].Default || v.Addresses[0].IP != "192.168.1.20" {
 		t.Errorf("addresses %+v", v.Addresses)
 	}
-	if len(v.Apps) != 1 || v.Apps[0].Hostname != "shop.local" || v.Apps[0].AppID == "" || !strings.HasPrefix(v.Apps[0].URL, "https://shop.local:") {
+	if len(v.Apps) != 1 || v.Apps[0].Hostname != "shop.local" || v.Apps[0].Route != "shop.localhost" || v.Apps[0].AppID == "" || !strings.HasPrefix(v.Apps[0].URL, "https://shop.local:") {
 		t.Fatalf("apps %+v", v.Apps)
 	}
 	if v.Options.LAN || v.Options.Port != 443 || !v.ServiceInstalled {
@@ -429,7 +429,7 @@ func TestPortlessLAN(t *testing.T) {
 	write(t, filepath.Join(f.state, "proxy.lan"), "192.168.1.20\n")
 	write(t, filepath.Join(f.state, "routes.json"), `[{"hostname": "shop.local", "port": 4600, "pid": `+strconv.Itoa(os.Getpid())+`}]`)
 	v = decodeBody[LANView](t, f.do("GET", "/api/portless/lan", nil))
-	if !v.Enabled || v.IP != "192.168.1.20" || len(v.Apps) != 1 || v.Apps[0].Hostname != "shop.local" {
+	if !v.Enabled || v.IP != "192.168.1.20" || len(v.Apps) != 1 || v.Apps[0].Hostname != "shop.local" || v.Apps[0].Route != "shop.local" {
 		t.Fatalf("enabled %+v", v)
 	}
 

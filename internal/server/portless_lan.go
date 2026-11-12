@@ -18,10 +18,13 @@ import (
 type LANApp struct {
 	Hostname string `json:"hostname"` // name.local
 	URL      string `json:"url"`
-	Label    string `json:"label"`
-	Kind     string `json:"kind"` // app, alias, compose
-	Machine  string `json:"machine,omitempty"`
-	AppID    string `json:"appId,omitempty"`
+	// Route is the address the app registered; it differs from Hostname
+	// until the app restarts after LAN mode was turned on.
+	Route   string `json:"route"`
+	Label   string `json:"label"`
+	Kind    string `json:"kind"` // app, alias, compose
+	Machine string `json:"machine,omitempty"`
+	AppID   string `json:"appId,omitempty"`
 }
 
 // LANView is GET /api/portless/lan.
@@ -127,7 +130,7 @@ func (p *portlessAPI) lan(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		seen[host] = true
-		a := LANApp{Hostname: host, URL: proxy.URL(host), Kind: rv.Kind, Label: rv.Hostname}
+		a := LANApp{Hostname: host, URL: proxy.URL(host), Route: rv.Hostname, Kind: rv.Kind, Label: rv.Hostname}
 		if rv.Owner != nil {
 			a.Label = rv.Owner.Label
 			if rv.Owner.Kind == "app" {
