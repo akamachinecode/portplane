@@ -4,6 +4,7 @@ import type { FeedHandlers } from "./events";
 import type { MockContext } from "./mockContext";
 import { createMockDekit } from "./mockDekit";
 import { createMockJobs, demoJob } from "./mockJobs";
+import { createMockOutput } from "./mockOutput";
 import { createMockPortless } from "./mockPortless";
 import { createMockSetup } from "./mockSetup";
 import { createMockTools } from "./mockTools";
@@ -318,6 +319,7 @@ export function createMockApi(scenario: Scenario = "default"): Api & MockControl
       }, machine);
     },
     excerpt: () => delay(EXCERPT, 300),
+    ...createMockOutput(ctx),
     open: () => delay(undefined),
     reveal: () => delay(undefined),
     settings: () => delay<Settings>({ folders }),
