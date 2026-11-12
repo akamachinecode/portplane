@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/akamachinecode/portplane/compare/v0.6.0...v0.7.0) (2026-11-12)
+
+
+### Features
+
+* Portplane updates itself in one click, and asks once to check daily ([#32](https://github.com/akamachinecode/portplane/issues/32)) ([dc845d0](https://github.com/akamachinecode/portplane/commit/dc845d0065d2df878c9559f29f6a77c4a32dbb61))
+
 ## [0.6.0](https://github.com/akamachinecode/portplane/compare/v0.5.0...v0.6.0) (2026-11-12)
 
 
