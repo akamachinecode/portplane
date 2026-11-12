@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.0](https://github.com/akamachinecode/portplane/compare/v0.5.0...v0.6.0) (2026-11-12)
+
+
+### Features
+
+* **site:** a landing page with every download, and the docs on the website ([#27](https://github.com/akamachinecode/portplane/issues/27)) ([467a6fe](https://github.com/akamachinecode/portplane/commit/467a6fee6c41c1d6a4531d86fa331aae5bf13295))
+* **site:** questions before installing, and the pieces Exhale has ([#29](https://github.com/akamachinecode/portplane/issues/29)) ([54fd21b](https://github.com/akamachinecode/portplane/commit/54fd21be9ec3614357b671f59855bd5cbe55d119))
+
 ## [0.5.0](https://github.com/akamachinecode/portplane/compare/v0.4.0...v0.5.0) (2026-11-12)
 
 
