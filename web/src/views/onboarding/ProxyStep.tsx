@@ -6,6 +6,7 @@ import { useApp } from "../../components/AppContext";
 import { Banner } from "../../components/Banner";
 import { Icon, Spinner } from "../../components/Icon";
 import { JobCard } from "../../components/JobCard";
+import { useMachineScope, useRemoteCommand } from "../../components/MachineScope";
 import { EmptyState } from "../../components/States";
 import { useJobEnd, useOnboarding } from "./context";
 import { CopyCommand, Mark, NextButton, PrivilegedPreview, StepFooter, StepLayout } from "./parts";
@@ -15,8 +16,17 @@ import { statusOf } from "./steps";
 
 const NO_ADVANCED: Advanced = { tld: "localhost", wildcard: false, httpOnly: false, cert: "", key: "" };
 
+/** Where no password dialog can open: on this computer, or on a machine over SSH (ADR-0026). */
+function useNoDialog(): string {
+  const scope = useMachineScope();
+  const name = scope.ms?.machine.name ?? scope.id;
+  return scope.remote
+    ? `Nobody at ${name}'s screen can answer a password dialog. Run this in a terminal here: it opens SSH to ${name}, where sudo asks for your password.`
+    : "This computer can't show a password dialog here. Run this in a terminal instead:";
+}
+
 /** What a proxy job found, as a short checklist. */
-function Results({ result, onOpen }: { result: ProxyResult; onOpen(): void }) {
+function Results({ result, onOpen }: { result: ProxyResult; onOpen?: () => void }) {
   const rows: Array<[boolean, string, string]> = [
     [result.answers, "The proxy answers", "The proxy didn't answer."],
     [result.caTrusted, "Your system trusts the local certificate", "Your system doesn't trust the local certificate yet."],
@@ -34,7 +44,7 @@ function Results({ result, onOpen }: { result: ProxyResult; onOpen(): void }) {
           </li>
         ))}
       </ul>
-      {result.answers && (
+      {result.answers && onOpen && (
         <button type="button" className="btn" onClick={onOpen}>
           <Icon name="open" size={14} />
           Open {result.url}
@@ -48,6 +58,9 @@ function Results({ result, onOpen }: { result: ProxyResult; onOpen(): void }) {
 function TrustSystem() {
   const { api } = useApp();
   const { checks, jobs, trackJob, go } = useOnboarding();
+  const scope = useMachineScope();
+  const command = useRemoteCommand();
+  const noDialog = useNoDialog();
   const job = useJob(jobs.trust);
   const [preview, setPreview] = useState<CommandPreview | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -69,14 +82,24 @@ function TrustSystem() {
         <h2 className="ob-tool-name">Trust the local certificate</h2>
       </header>
       <p className="ob-tool-what">
-        Browsers warn about https://….localhost until they trust portless's certificate. Trust it in your system{preview?.needsAdmin ? " (asks for your password)" : ""}, or add it to each browser on the next step without a password.
+        {scope.remote ? (
+          <>
+            {scope.ms?.machine.name ?? scope.id}'s apps open here with this computer's certificate. Trusting {scope.ms?.machine.name ?? scope.id}'s own matters to programs there that call
+            https://….localhost addresses{preview?.needsAdmin ? " (needs your password there)" : ""}.
+          </>
+        ) : (
+          <>
+            Browsers warn about https://….localhost until they trust portless's certificate. Trust it in your system{preview?.needsAdmin ? " (asks for your password)" : ""}, or add it to each
+            browser on the next step without a password.
+          </>
+        )}
       </p>
       {preview && !job && <PrivilegedPreview preview={preview} />}
       {job && <JobCard job={job} lines={6} headingLevel={3} />}
       {preview && preview.needsAdmin && preview.admin === "" && (
         <>
-          <p className="ob-tool-what">This computer can't show a password dialog here. Run this in a terminal instead:</p>
-          <CopyCommand command={preview.terminal} />
+          <p className="ob-tool-what">{noDialog}</p>
+          <CopyCommand command={command(preview.terminal)} />
         </>
       )}
       {error && (
@@ -91,9 +114,16 @@ function TrustSystem() {
             {preview.needsAdmin ? "Trust it (asks for your password)" : "Trust it"}
           </button>
         )}
-        <button type="button" className="btn btn-ghost" onClick={() => go("browsers")}>
-          Add it to my browsers instead
-        </button>
+        {preview && preview.needsAdmin && preview.admin === "" && (
+          <button type="button" className="btn" onClick={() => void checks.run(["ca"])} disabled={checks.pending.has("ca")}>
+            {checks.pending.has("ca") ? <Spinner size={12} /> : <Icon name="restart" size={14} />}I ran it: check again
+          </button>
+        )}
+        {!scope.remote && (
+          <button type="button" className="btn btn-ghost" onClick={() => go("browsers")}>
+            Add it to my browsers instead
+          </button>
+        )}
       </div>
     </article>
   );
@@ -102,6 +132,10 @@ function TrustSystem() {
 /** Step 4: the proxy, with one password (the service) or none (port 1355). */
 export function ProxyStep() {
   const { api, toast } = useApp();
+  const scope = useMachineScope();
+  const remoteName = scope.remote ? (scope.ms?.machine.name ?? scope.id) : null;
+  const command = useRemoteCommand();
+  const noDialog = useNoDialog();
   const { checks, jobs, trackJob, choose, choices, go, setBrowsersNeeded } = useOnboarding();
   const proxy = checks.items.proxy;
   const port = checks.items.port;
@@ -167,7 +201,7 @@ export function ProxyStep() {
   const proxyOK = !!proxy && statusOf(proxy) === "ok";
   const ca = checks.items.ca;
   const caUntrusted = !!ca && ca.fix === "trust-system";
-  const open = (url: string) => void api.open("local", [url]).catch((err: unknown) => toast.error(errorText(err)));
+  const open = (url: string) => void api.open(scope.id, [url]).catch((err: unknown) => toast.error(errorText(err)));
 
   if (!portlessReady) {
     return (
@@ -193,7 +227,11 @@ export function ProxyStep() {
     <StepLayout
       icon="shield"
       title="HTTPS and the proxy"
-      lead="Your apps get addresses like https://shop.localhost from the portless proxy, which listens on port 443 with a certificate your computer creates and trusts. Installing it as a service needs your password once, so it can use port 443 and start with your computer."
+      lead={
+        remoteName
+          ? `Apps on ${remoteName} get addresses like https://shop.localhost from the portless proxy there; you open them here through Portplane, at https://shop.${scope.id}.localhost. Installing the proxy as a service on ${remoteName} needs your password there once: Portplane shows the command to run over SSH.`
+          : "Your apps get addresses like https://shop.localhost from the portless proxy, which listens on port 443 with a certificate your computer creates and trusts. Installing it as a service needs your password once, so it can use port 443 and start with your computer."
+      }
       busy={running}
       footer={
         <StepFooter status={running ? "Working…" : proxyOK ? "The proxy is running." : ""}>
@@ -218,7 +256,7 @@ export function ProxyStep() {
       {failed && job?.kind === "proxy-service" && preview && (
         <div className="ob-manual">
           <p className="muted">You can also do it by hand in a terminal, then check again:</p>
-          <CopyCommand command={preview.terminal} />
+          <CopyCommand command={command(preview.terminal)} />
         </div>
       )}
 
@@ -292,9 +330,9 @@ export function ProxyStep() {
                 </p>
               )}
               {preview && preview.admin === "" && (
-                <Banner tone="info" title="This computer can't show a password dialog here">
-                  Run this in a terminal, then check again. Or use the option without a password above.
-                  <CopyCommand command={preview.terminal} />
+                <Banner tone="info" title={remoteName ? `Run this on ${remoteName} over SSH` : "This computer can't show a password dialog here"}>
+                  {remoteName ? `${noDialog} Then check again, or use the option without a password above.` : "Run this in a terminal, then check again. Or use the option without a password above."}
+                  <CopyCommand command={command(preview.terminal)} />
                 </Banner>
               )}
             </div>
@@ -326,7 +364,7 @@ export function ProxyStep() {
         </>
       )}
 
-      {result && <Results result={result} onOpen={() => open(result.url)} />}
+      {result && <Results result={result} onOpen={scope.remote ? undefined : () => open(result.url)} />}
       {(result || proxyOK) && caUntrusted && <TrustSystem />}
     </StepLayout>
   );

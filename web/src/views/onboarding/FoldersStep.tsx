@@ -4,6 +4,7 @@ import type { FolderSuggestion } from "../../api/tools";
 import { useApp } from "../../components/AppContext";
 import { FolderInput } from "../../components/FolderInput";
 import { Icon, Spinner } from "../../components/Icon";
+import { useMachineScope } from "../../components/MachineScope";
 import { LoadingState } from "../../components/States";
 import { inferHome, shortenPath } from "../../lib/format";
 import { useOnboarding } from "./context";
@@ -13,6 +14,7 @@ import { count } from "./summary";
 
 /** Step 5: where the projects live. */
 export function FoldersStep() {
+  const scope = useMachineScope();
   const { api, toast } = useApp();
   const { folders, setFolders, next } = useOnboarding();
   const [rows, setRows] = useState<FolderRow[] | null>(null);
@@ -62,7 +64,11 @@ export function FoldersStep() {
     <StepLayout
       icon="folder"
       title="Where do your projects live?"
-      lead="Pick the folders that hold your projects. Portplane looks for apps in them, one or two levels down, and you can add more later in Settings."
+      lead={
+        scope.remote
+          ? `Pick the folders on ${scope.ms?.machine.name ?? scope.id} that hold your projects. Portplane looks for apps in them, one or two levels down, and you can change them later with Edit machine.`
+          : "Pick the folders that hold your projects. Portplane looks for apps in them, one or two levels down, and you can add more later in Settings."
+      }
       busy={saving}
       footer={
         <StepFooter status={chosen.length ? (chosen.length === 1 ? "One folder chosen." : `${chosen.length} folders chosen.`) : "Choose at least one folder."}>

@@ -3,21 +3,23 @@ import { errorText } from "../../api/errors";
 import type { App, Excerpt } from "../../api/types";
 import { useApp } from "../../components/AppContext";
 import { Icon, Spinner } from "../../components/Icon";
+import { useMachineScope } from "../../components/MachineScope";
+import { appHref } from "../../lib/apps";
 import { EmptyState } from "../../components/States";
 import { inferHome, shortenPath } from "../../lib/format";
 import { appRoute, href } from "../../lib/router";
-import { useShell } from "../../shell/ShellContext";
 import { useOnboarding } from "./context";
 import { Mark, NextButton, StepFooter, StepLayout } from "./parts";
 import { count, firstWorking, sentence, preselect, startCandidates, startPhase, startTargets } from "./summary";
 
 function FailedApp({ app }: { app: App }) {
   const { api } = useApp();
+  const { id: machine } = useMachineScope();
   const [excerpt, setExcerpt] = useState<Excerpt | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
-    api.excerpt("local", app.runner, app.task).then(setExcerpt, (err: unknown) => setError(errorText(err)));
-  }, [api, app.runner, app.task]);
+    api.excerpt(machine, app.runner, app.task).then(setExcerpt, (err: unknown) => setError(errorText(err)));
+  }, [api, machine, app.runner, app.task]);
   return (
     <div className="ob-failed">
       {excerpt && excerpt.lines.length > 0 && (
@@ -27,10 +29,10 @@ function FailedApp({ app }: { app: App }) {
       )}
       {error && <p className="muted">Couldn't read its output: {error}</p>}
       <div className="ob-tool-actions">
-        <a className="btn btn-sm" href={href(appRoute("local", app.id))}>
+        <a className="btn btn-sm" href={href(appRoute(machine, app.id))}>
           Why
         </a>
-        <a className="btn btn-sm btn-ghost" href={href(appRoute("local", app.id, "output"))}>
+        <a className="btn btn-sm btn-ghost" href={href(appRoute(machine, app.id, "output"))}>
           See the output
         </a>
       </div>
@@ -41,11 +43,10 @@ function FailedApp({ app }: { app: App }) {
 /** Step 8: start a few apps and see the first one load. */
 export function StartStep() {
   const { api, toast } = useApp();
-  const { snapshot } = useShell();
+  const { id: machine, ms } = useMachineScope();
   const { roots, folders } = useOnboarding();
-  const ms = snapshot?.machines.find((m) => m.machine.local);
   const runners = roots.length ? roots : folders;
-  const apps = useMemo(() => startCandidates(ms, runners), [ms, runners]);
+  const apps = useMemo(() => startCandidates(ms ?? undefined, runners), [ms, runners]);
   const [picked, setPicked] = useState<Set<string> | null>(null);
   const [started, setStarted] = useState<Set<string>>(new Set());
   const [starting, setStarting] = useState(false);
@@ -63,8 +64,8 @@ export function StartStep() {
     setStarting(true);
     setError(null);
     try {
-      for (const t of startTargets("local", apps, chosen)) {
-        if (!ms.runners.find((r) => r.root === t.runner)?.up) await api.runnerUp("local", t.runner);
+      for (const t of startTargets(machine, apps, chosen)) {
+        if (!ms.runners.find((r) => r.root === t.runner)?.up) await api.runnerUp(machine, t.runner);
         await api.act(t, "start");
       }
       setStarted(new Set(chosen));
@@ -79,7 +80,9 @@ export function StartStep() {
   const phases = apps.filter((a) => started.has(a.id)).map(startPhase);
   const waiting = phases.filter((p) => p === "waiting" || p === "starting").length;
   const failed = phases.filter((p) => p === "failed").length;
-  const open = (url: string) => void api.open("local", [url]).catch((err: unknown) => toast.error(errorText(err)));
+  const open = (url: string) => void api.open(machine, [url]).catch((err: unknown) => toast.error(errorText(err)));
+  // A remote app opens through Portplane's tunnel (ADR-0016).
+  const urlOf = (a: App) => (ms ? appHref(a, ms.machine) : a.url);
 
   let status = "";
   if (starting) status = "Starting…";
@@ -116,16 +119,16 @@ export function StartStep() {
         </EmptyState>
       ) : (
         <>
-          {first?.url && (
+          {first && urlOf(first) && (
             <div className="ob-celebrate" role="status">
               <span className="ob-celebrate-icon" aria-hidden="true">
                 <Icon name="checkCircle" size={22} />
               </span>
               <div>
                 <p className="ob-celebrate-title">Your first app is running</p>
-                <p className="ob-celebrate-url mono">{first.url}</p>
+                <p className="ob-celebrate-url mono">{urlOf(first)}</p>
               </div>
-              <button type="button" className="btn btn-primary" onClick={() => open(first.url!)}>
+              <button type="button" className="btn btn-primary" onClick={() => open(urlOf(first)!)}>
                 <Icon name="open" size={14} />
                 Open it
               </button>
@@ -166,8 +169,8 @@ export function StartStep() {
                     {was && phase === "starting" && "Starting…"}
                     {was && phase === "waiting" && "Waiting…"}
                     {was && phase === "failed" && "Didn't start"}
-                    {phase === "on" && a.url && (
-                      <button type="button" className="btn btn-sm" onClick={() => open(a.url!)}>
+                    {phase === "on" && urlOf(a) && (
+                      <button type="button" className="btn btn-sm" onClick={() => open(urlOf(a)!)}>
                         <Icon name="open" size={13} />
                         Open
                       </button>

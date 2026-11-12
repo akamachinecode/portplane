@@ -1,5 +1,6 @@
 import type { Requirement, RequirementId } from "../../api/types";
 import { Icon, Spinner } from "../../components/Icon";
+import { useMachineScope, useRemoteCommand } from "../../components/MachineScope";
 import { useOnboarding } from "./context";
 import { CopyCommand, Mark, NextButton, StepFooter, StepLayout } from "./parts";
 import { CHECK_ORDER, firstFixStep, problems, statusOf } from "./steps";
@@ -23,6 +24,7 @@ const PENDING_NAME: Record<RequirementId, string> = {
 const FIXABLE = new Set(["install-dekit", "install-node", "install-portless", "proxy", "reinstall-service", "trust-system", "trust-browsers", "path-profile", "use-1355"]);
 
 function CheckRow({ id, req, pending, error }: { id: RequirementId; req?: Requirement; pending: boolean; error?: string }) {
+  const command = useRemoteCommand();
   if (!req) {
     return (
       <li className="ob-check is-pending">
@@ -63,7 +65,7 @@ function CheckRow({ id, req, pending, error }: { id: RequirementId; req?: Requir
                   <Icon name="open" size={12} />
                 </a>
               ) : (
-                <CopyCommand key={c} command={c} />
+                <CopyCommand key={c} command={command(c)} />
               ),
             )}
           </div>
@@ -76,7 +78,10 @@ function CheckRow({ id, req, pending, error }: { id: RequirementId; req?: Requir
 /** Step 2: every check at once, each answer as it comes. */
 export function CheckStep() {
   const { checks, go, flow } = useOnboarding();
-  const shown = CHECK_ORDER.filter((id) => {
+  const scope = useMachineScope();
+  const remote = scope.remote ? (scope.ms?.machine.name ?? scope.id) : null;
+  // A machine over SSH has no tray icon to check.
+  const shown = CHECK_ORDER.filter((id) => !(remote && id === "tray")).filter((id) => {
     const r = checks.items[id];
     return !r || statusOf(r) !== "skipped";
   }).filter((id) => checks.items[id] || checks.pending.has(id) || checks.errors[id]);
@@ -96,8 +101,12 @@ export function CheckStep() {
   return (
     <StepLayout
       icon="pulse"
-      title="Check your computer"
-      lead="Portplane looks at what's installed and how the proxy and certificate stand. Nothing changes until you choose to fix something."
+      title={remote ? `Check ${remote}` : "Check your computer"}
+      lead={
+        remote
+          ? `Portplane looks at what's installed on ${remote} and how its proxy stands, over SSH. Nothing changes until you choose to fix something.`
+          : "Portplane looks at what's installed and how the proxy and certificate stand. Nothing changes until you choose to fix something."
+      }
       busy={running}
       footer={
         <StepFooter status={status}>
