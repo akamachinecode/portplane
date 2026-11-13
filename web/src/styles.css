@@ -408,6 +408,16 @@ code {
   cursor: pointer;
 }
 
+/* a link to help or details: grey, not the green of the main action */
+.quiet-link.link-btn {
+  color: var(--text-2);
+  font-size: var(--text-xs);
+}
+
+.quiet-link.link-btn:hover {
+  color: var(--text);
+}
+
 .link-btn:hover {
   text-decoration: underline;
   text-underline-offset: 2px;

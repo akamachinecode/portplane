@@ -210,15 +210,6 @@
   font-size: var(--text-xs);
 }
 
-.quiet-link.link-btn {
-  color: var(--text-2);
-  font-size: var(--text-xs);
-}
-
-.quiet-link.link-btn:hover {
-  color: var(--text);
-}
-
 /* a group of fields: folded to one line that says what it holds */
 .form-section {
   border-top: 1px solid var(--border);
