@@ -12,14 +12,13 @@ import { useApp } from "../components/AppContext";
 import { Icon } from "../components/Icon";
 import { Menu, type MenuItem } from "../components/Menu";
 import { GroupActions, ProjectCard } from "../components/ProjectCard";
-import { StateDot } from "../components/StateDot";
 import { EmptyState } from "../components/States";
 import { useFolds } from "../hooks/useFolds";
 import { ViewHeader } from "../components/ViewHeader";
 import { indexApps, isVisible, projectApps, serviceCounts, worktreeApps } from "../lib/apps";
 import { inferHome, shortenPath } from "../lib/format";
 import { appsFingerprint } from "../lib/pending";
-import { checkoutsText, findProject, groupState } from "../lib/projects";
+import { checkoutsText, findProject } from "../lib/projects";
 import { href, navigate } from "../lib/router";
 import { projectTargets } from "../lib/targets";
 import { SnapshotGate } from "../shell/SnapshotGate";
@@ -72,7 +71,6 @@ function ProjectBody({ ms, project }: { ms: MachineSnapshot; project: Project })
   const byId = useMemo(() => indexApps(ms.apps), [ms.apps]);
   const apps = projectApps(project, byId);
   const { running, total } = serviceCounts(apps);
-  const state = groupState(apps);
   const home = inferHome([...ms.folders, ...ms.runners.map((r) => r.root)]);
   const favorites = useMemo(() => new Set(preferences.status === "ok" ? preferences.value.favorites : []), [preferences]);
   const runners = project.runners?.length ? project.runners : [project.runner];
@@ -122,7 +120,6 @@ function ProjectBody({ ms, project }: { ms: MachineSnapshot; project: Project })
     menu.push({ label: "Copy folder path", icon: "copy", onSelect: () => void copyWithToast(ctx, repo, "the path") });
   }
 
-  const stateWord = state === "failed" ? "Something failed" : state === "starting" ? "Starting" : running > 0 ? `${running} of ${total} running` : "Nothing running";
   const linked = checkoutsText(project);
   const tab = route.view === "project" ? (route.tab ?? "apps") : "apps";
   const tabRoute = (t: "apps" | "config") => ({ view: "project" as const, machine, name: project.name, ...(route.view === "project" && route.runner ? { runner: route.runner } : {}), ...(t === "config" ? { tab: t } : {}) });
@@ -137,14 +134,9 @@ function ProjectBody({ ms, project }: { ms: MachineSnapshot; project: Project })
     <>
       <ViewHeader
         title={project.name}
-        summary={
-          state !== "off" && (
-            <span className={`project-state project-state-${state}`}>
-              <StateDot state={state} />
-              {stateWord}
-            </span>
-          )
-        }
+        // a project has no state of its own (ADR-0032): its rows say what failed
+        // or starts; the title counts what runs, while something does
+        summary={running > 0 && <span className="project-state">{`${running} of ${total} running`}</span>}
         actions={
           <>
             <GroupActions ms={ms} name={project.name} keyBase={`project|${machine}|${project.runner}|${project.name}|`} apps={apps} targets={projectTargets(machine, project, byId)} withOpen />

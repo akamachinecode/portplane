@@ -1,17 +1,8 @@
 /* A project's page (ADR-0027). */
 
 .project-state {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.project-state-failed {
-  color: var(--err);
-}
-
-.project-state-starting {
-  color: var(--warn);
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---------- the project's head and tabs (ADR-0028) ---------- */
