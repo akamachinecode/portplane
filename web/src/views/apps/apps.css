@@ -303,7 +303,7 @@
 }
 
 .row:hover .row-check,
-.row-check:focus-visible,
+.row:focus-within .row-check,
 .row.is-selected .row-check,
 .apps:has(.row.is-selected) .row-check {
   opacity: 1;

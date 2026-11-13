@@ -49,6 +49,7 @@
 }
 
 .sgroup-text {
+  max-width: 64ch;
   color: var(--text-2);
   font-size: var(--text-sm);
   line-height: 1.6;

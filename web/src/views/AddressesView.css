@@ -127,11 +127,6 @@
   font-weight: var(--weight-medium);
 }
 
-.addr-row.is-off .addr-main,
-.addr-row.is-stale .addr-main {
-  opacity: 0.85;
-}
-
 /* fixed columns: the address and where it comes from take the room, the
    rest keep their width, so nothing runs off the right edge */
 .addr-table {

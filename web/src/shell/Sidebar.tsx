@@ -167,10 +167,12 @@ export function Sidebar({ onSearch }: { onSearch(): void }) {
         <SettingsNav />
       ) : (
         <>
-          <button type="button" className="sidebar-search" onClick={onSearch} aria-keyshortcuts={mac ? "Meta+K /" : "Control+K /"} aria-label="Search or run a command">
+          <button type="button" className="sidebar-search" onClick={onSearch} aria-keyshortcuts={mac ? "Meta+K /" : "Control+K /"}>
             <Icon name="search" size={14} />
             <span className="sidebar-search-text">Search or run…</span>
-            <kbd className="kbd">{paletteShortcutLabel(mac)}</kbd>
+            <kbd className="kbd" aria-hidden="true">
+              {paletteShortcutLabel(mac)}
+            </kbd>
           </button>
           <WorkNav />
         </>

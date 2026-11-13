@@ -54,7 +54,8 @@ const STOP_OPTIONS: Array<{ value: StopMode; label: string }> = [
  * open; the rest is folded with a line that says what it holds now. A group
  * opens by itself when one of its fields has a problem.
  */
-function Section({ title, summary, open: initial = false, problem = false, children }: { title: string; summary?: string; open?: boolean; problem?: boolean; children: ReactNode }) {
+function Section({ title, summary, level = 4, open: initial = false, problem = false, children }: { title: string; summary?: string; level?: 3 | 4; open?: boolean; problem?: boolean; children: ReactNode }) {
+  const Heading = level === 3 ? "h3" : "h4";
   const [open, setOpen] = useState(initial);
   useEffect(() => {
     if (problem) setOpen(true);
@@ -63,7 +64,7 @@ function Section({ title, summary, open: initial = false, problem = false, child
     <details className="form-section" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
       <summary className="form-section-head">
         <Icon name="chevronRight" size={14} className="form-section-chevron" />
-        <h4 className="form-section-title">{title}</h4>
+        <Heading className="form-section-title">{title}</Heading>
         {!open && summary && <span className="form-section-summary">{summary}</span>}
       </summary>
       <div className="form-section-body">{children}</div>
@@ -110,6 +111,8 @@ export interface TaskFormProps {
   entry: TaskEntry | null;
   defaults?: boolean;
   os?: string;
+  /** The level of the form's group titles: 3 under the drawer's h2, 4 (the default) under the task editor's h3. */
+  headingLevel?: 3 | 4;
   onSaved(): void;
 }
 
@@ -138,7 +141,7 @@ export function NotEditable({ runner, file, reason }: { runner: string; file: st
   );
 }
 
-export function TaskForm({ runner, config, entry, defaults, os, onSaved }: TaskFormProps) {
+export function TaskForm({ runner, config, entry, defaults, os, headingLevel = 4, onSaved }: TaskFormProps) {
   const { api, info } = useApp();
   const { help } = useDekitHelp();
   const original: Record<string, YamlValue> = useMemo(
@@ -223,7 +226,7 @@ export function TaskForm({ runner, config, entry, defaults, os, onSaved }: TaskF
       )}
 
       {!defaults && (
-        <Section title="What it runs" open summary={draft.mode === "cmd" ? joinCommand(draft.cmd.filter(Boolean)) : draft.script} problem={flagged("cmd", "script")}>
+        <Section level={headingLevel} title="What it runs" open summary={draft.mode === "cmd" ? joinCommand(draft.cmd.filter(Boolean)) : draft.script} problem={flagged("cmd", "script")}>
           <FormRow label="Label" htmlFor={ids.label} help={h("label")} locked={lock("label")}>
             <input id={ids.label} className="input" value={draft.label} placeholder={entry!.path.split("/").pop()} onChange={(e) => set({ label: e.target.value })} />
           </FormRow>
@@ -257,7 +260,7 @@ export function TaskForm({ runner, config, entry, defaults, os, onSaved }: TaskF
         </Section>
       )}
 
-      <Section title={defaults ? "Shared settings" : "Where"} open summary={`${draft.cwd.trim() || "The project folder"}${draft.env.length ? `, ${draft.env.length === 1 ? "1 variable" : `${draft.env.length} variables`}` : ""}`} problem={flagged("env")}>
+      <Section level={headingLevel} title={defaults ? "Shared settings" : "Where"} open summary={`${draft.cwd.trim() || "The project folder"}${draft.env.length ? `, ${draft.env.length === 1 ? "1 variable" : `${draft.env.length} variables`}` : ""}`} problem={flagged("env")}>
         <FormRow label="Folder" htmlFor={ids.cwd} help={h("cwd", <>Relative to <span className="mono">{fileInfo?.rel ?? "the file"}</span>.</>)} locked={lock("cwd")}>
           <div className="input-row">
             <input id={ids.cwd} className="input mono" value={draft.cwd} placeholder={defaults ? "the project folder" : "the project folder"} spellCheck={false} onChange={(e) => set({ cwd: e.target.value })} />
@@ -278,7 +281,7 @@ export function TaskForm({ runner, config, entry, defaults, os, onSaved }: TaskF
       </Section>
 
       {!defaults && (
-        <Section title="Dependencies and tags" summary={depsSummary(draft, parent)} problem={flagged("deps", "tags")}>
+        <Section level={headingLevel} title="Dependencies and tags" summary={depsSummary(draft, parent)} problem={flagged("deps", "tags")}>
           <FormRow label="Needs" help={h("deps")} error={err("deps")} locked={lock("deps")}>
             <TaskPicker value={draft.deps} onChange={(deps) => set({ deps })} options={taskOptions} label="Tasks it needs" near={parent} />
           </FormRow>
@@ -288,7 +291,7 @@ export function TaskForm({ runner, config, entry, defaults, os, onSaved }: TaskF
         </Section>
       )}
 
-      <Section title="Starting and stopping" summary={startSummary(draft, !!defaults)} problem={flagged("autorestart", "ready", "readyInterval", "readyTimeout", "stop", "stopTimeout")}>
+      <Section level={headingLevel} title="Starting and stopping" summary={startSummary(draft, !!defaults)} problem={flagged("autorestart", "ready", "readyInterval", "readyTimeout", "stop", "stopTimeout")}>
         <FormRow label="Start with dekit up" help={h("autostart")} locked={lock("autostart")}>
           <Switch checked={draft.autostart} onChange={(autostart) => set({ autostart })} label="Start it with the project" />
         </FormRow>
@@ -368,7 +371,7 @@ export function TaskForm({ runner, config, entry, defaults, os, onSaved }: TaskF
         </FormRow>
       </Section>
 
-      <Section title="Output" summary={outputSummary(draft)} problem={flagged("scrollback_len")}>
+      <Section level={headingLevel} title="Output" summary={outputSummary(draft)} problem={flagged("scrollback_len")}>
         <FormRow label="Write to a file" htmlFor={ids.log} help={h("log")} locked={lock("log")}>
           <select id={ids.log} className="input" value={draft.log.mode} onChange={(e) => set({ log: { ...draft.log, mode: e.target.value as LogMode } })}>
             <option value="off">No</option>

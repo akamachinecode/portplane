@@ -24,7 +24,7 @@
   --border-strong: light-dark(#d8d8dd, #2e3035);
   --text: light-dark(#18181b, #ededef);
   --text-2: light-dark(#5b5e67, #a1a4ac);
-  --text-3: light-dark(#6c6f79, #80848d);
+  --text-3: light-dark(#676a73, #888c95);
   --text-4: light-dark(#9a9ca4, #5f636b);
   /* the one colour: Portplane's green, for the main action and focus */
   --accent: light-dark(#10804a, #3dd68c);
@@ -33,12 +33,12 @@
   --accent-soft: light-dark(#e5f4eb, #14281e);
   --accent-text: light-dark(#0d7442, #4fdc97);
   /* state: running is the same green */
-  --on: light-dark(#13874d, #3dd68c);
+  --on: light-dark(#0e7843, #3dd68c);
   --on-soft: light-dark(#dcf1e4, #133022);
   --warn: light-dark(#94590a, #e8b04e);
   --warn-dot: light-dark(#d99a1e, #e8b04e);
   --warn-soft: light-dark(#fbf1dc, #30280f);
-  --err: light-dark(#c53434, #f0696b);
+  --err: light-dark(#bf3030, #f0696b);
   --err-soft: light-dark(#fbe6e6, #361b1c);
   --err-fg: light-dark(#ffffff, #2a0d0e);
   --code-bg: light-dark(#f2f2f4, #1d1e21);
@@ -742,7 +742,11 @@ code {
   min-width: 0;
 }
 
+/* a 24px target (WCAG 2.2, 2.5.8) that doesn't make the row taller */
 .row-label {
+  display: inline-block;
+  margin-block: -2px;
+  padding-block: 2px;
   font-weight: var(--weight-strong);
   text-decoration: none;
   border-radius: 3px;
