@@ -1,19 +1,35 @@
-import { useId, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useId, useState, type KeyboardEvent, type ReactNode } from "react";
 import { Icon } from "../../components/Icon";
 import { IconButton } from "../../components/IconButton";
 import { joinCommand, shellMetachar, splitCommandLine } from "../../lib/dekit/shell";
 import { looksSecret, type EnvRow } from "../../lib/dekit/taskForm";
 
-// Form controls of the config editors (plan §6.6): ArgvEditor, KeyValue
-// (env), Chips (tags), ListRows (add_path) and a labelled Row.
+// Form controls of the config editors (plan §6.6): CommandField (and its
+// ArgvEditor), KeyValue (env), Chips (tags), ListRows (add_path),
+// TaskPicker (deps) and a labelled Row.
 
-/** A form row: label, control, dekit's help or an error. */
-export function FormRow({ label, htmlFor, help, error, children, locked }: { label: ReactNode; htmlFor?: string; help?: ReactNode; error?: string | null; children: ReactNode; locked?: string }) {
+/** A form row: label, control and error, with dekit's help behind the ⓘ next to the label (ADR-0032). */
+export function FormRow({ label, htmlFor, help, error, children, locked }: { label: string; htmlFor?: string; help?: ReactNode; error?: string | null; children: ReactNode; locked?: string }) {
   const errId = useId();
+  const hintId = useId();
+  const [about, setAbout] = useState(false);
   return (
     <div className={`form-row${error ? " has-error" : ""}`}>
       <div className="form-row-label">
         {htmlFor ? <label htmlFor={htmlFor}>{label}</label> : <span>{label}</span>}
+        {help && (
+          <button
+            type="button"
+            className={`form-help-btn${about ? " is-on" : ""}`}
+            aria-expanded={about}
+            aria-controls={hintId}
+            aria-label={`About ${label}`}
+            title={`About ${label}`}
+            onClick={() => setAbout((a) => !a)}
+          >
+            <Icon name="info" size={14} />
+          </button>
+        )}
       </div>
       <div className="form-row-control">
         {locked ? (
@@ -26,26 +42,119 @@ export function FormRow({ label, htmlFor, help, error, children, locked }: { lab
         ) : (
           children
         )}
-        {error ? (
+        {error && (
           <p className="field-error" id={errId} role="alert">
             {error}
           </p>
-        ) : (
-          help && <p className="field-hint">{help}</p>
+        )}
+        {help && (
+          <p className="field-hint form-help" id={hintId} hidden={!about}>
+            {help}
+          </p>
         )}
       </div>
     </div>
   );
 }
 
-/** One argument per row, plus "Paste a command line" that splits it like sh. */
+const sameWords = (a: string[], b: string[]) => a.length === b.length && a.every((w, i) => w === b[i]);
+const lineOf = (words: string[]) => (words.some(Boolean) ? joinCommand(words.filter((w, i) => w || i === 0)) : "");
+
+/**
+ * A command as one line to type or paste, split like sh into the program and
+ * its arguments (dekit runs them without a shell). "Edit as separate
+ * arguments" shows one input per word, for arguments with spaces or quotes.
+ */
+export function CommandField({ value, onChange, label, placeholder = "pnpm run dev", id }: { value: string[]; onChange(next: string[]): void; label: string; placeholder?: string; id?: string }) {
+  const own = useId();
+  const inputId = id ?? own;
+  const noteId = useId();
+  const [mode, setMode] = useState<"line" | "argv">("line");
+  const [text, setText] = useState(() => lineOf(value));
+  const split = splitCommandLine(text);
+  const meta = text.trim() ? shellMetachar(text) : "";
+
+  // A change from outside (Discard, a picked suggestion) shows, unless the line already says it.
+  useEffect(() => {
+    const mine = splitCommandLine(text);
+    if (mine.error || !sameWords(mine.words, value.filter(Boolean))) setText(lineOf(value));
+    // only an outside change of value resets what the user types, so text is not a dependency
+  }, [value]);
+
+  const type = (line: string) => {
+    setText(line);
+    const r = splitCommandLine(line);
+    if (!r.error) onChange(r.words.length ? r.words : [""]);
+  };
+
+  if (mode === "argv") {
+    return (
+      <div className="argv">
+        <ArgvEditor value={value} onChange={onChange} label={label} placeholder={placeholder.split(" ")[0]} />
+        <div className="argv-tools">
+          <button type="button" className="btn btn-sm btn-ghost" onClick={() => onChange([...(value.length ? value : [""]), ""])}>
+            <Icon name="plus" size={13} />
+            Add argument
+          </button>
+          <button type="button" className="btn btn-sm btn-ghost" onClick={() => setMode("line")}>
+            <Icon name="terminal" size={13} />
+            Edit as one line
+          </button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="argv">
+      <div className="command-input">
+        <span className="argv-n" aria-hidden="true">
+          $
+        </span>
+        <input
+          id={inputId}
+          className="input mono"
+          value={text}
+          placeholder={placeholder}
+          aria-label={id ? undefined : label}
+          aria-invalid={split.error ? true : undefined}
+          aria-describedby={split.error || meta ? noteId : undefined}
+          spellCheck={false}
+          autoComplete="off"
+          autoCapitalize="off"
+          onChange={(e) => type(e.target.value)}
+        />
+      </div>
+      {split.error ? (
+        <p className="field-error" id={noteId}>
+          {split.error}
+        </p>
+      ) : (
+        meta && (
+          <p className="argv-warn" id={noteId}>
+            <Icon name="warning" size={13} />
+            <span>
+              <code>{meta}</code> is shell syntax, and dekit runs the program without a shell.{" "}
+              <button type="button" className="link-btn" onClick={() => onChange(["sh", "-c", text.trim()])}>
+                Run it through sh -c
+              </button>
+            </span>
+          </p>
+        )
+      )}
+      <div className="argv-tools">
+        <button type="button" className="btn btn-sm btn-ghost" onClick={() => setMode("argv")}>
+          <Icon name="rows" size={13} />
+          Edit as separate arguments
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** One argument per row: CommandField's "Edit as separate arguments". */
 export function ArgvEditor({ value, onChange, label, placeholder = "program" }: { value: string[]; onChange(next: string[]): void; label: string; placeholder?: string }) {
   const base = useId();
-  const [pasting, setPasting] = useState(false);
-  const [line, setLine] = useState("");
   const rows = value.length ? value : [""];
-  const split = line.trim() ? splitCommandLine(line) : null;
-  const meta = line.trim() ? shellMetachar(line) : "";
   const focusRow = (i: number) => requestAnimationFrame(() => document.getElementById(`${base}-${i}`)?.focus());
   const onKey = (i: number) => (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
@@ -59,67 +168,29 @@ export function ArgvEditor({ value, onChange, label, placeholder = "program" }: 
     }
   };
   return (
-    <div className="argv">
-      <ol className="argv-rows" aria-label={label}>
-        {rows.map((w, i) => (
-          <li key={i} className="argv-row">
-            <span className="argv-n" aria-hidden="true">
-              {i === 0 ? "$" : i}
-            </span>
-            <input
-              id={`${base}-${i}`}
-              className="input mono"
-              value={w}
-              placeholder={i === 0 ? placeholder : "argument"}
-              aria-label={i === 0 ? `${label}: program` : `${label}: argument ${i}`}
-              spellCheck={false}
-              autoComplete="off"
-              autoCapitalize="off"
-              onChange={(e) => onChange(rows.map((x, j) => (j === i ? e.target.value : x)))}
-              onKeyDown={onKey(i)}
-            />
-            <IconButton icon="arrowUp" label={`Move argument ${i} up`} disabled={i === 0} onClick={() => onChange(rows.map((x, j) => (j === i - 1 ? rows[i] : j === i ? rows[i - 1] : x)))} />
-            <IconButton icon="close" label={i === 0 ? "Clear the program" : `Remove argument ${i}`} onClick={() => onChange(rows.length > 1 ? rows.filter((_, j) => j !== i) : [""])} />
-          </li>
-        ))}
-      </ol>
-      <div className="argv-tools">
-        <button type="button" className="btn btn-sm btn-ghost" onClick={() => onChange([...rows, ""])}>
-          <Icon name="plus" size={13} />
-          Add argument
-        </button>
-        <button type="button" className="btn btn-sm btn-ghost" aria-expanded={pasting} onClick={() => setPasting((p) => !p)}>
-          <Icon name="terminal" size={13} />
-          Paste a command line
-        </button>
-        {value.some(Boolean) && <span className="argv-preview mono" title="As a shell would show it">{joinCommand(value.filter((w, i) => w || i === 0))}</span>}
-      </div>
-      {pasting && (
-        <div className="argv-paste">
-          <input className="input mono" value={line} placeholder="pnpm run dev --host 127.0.0.1" aria-label="Command line to split" spellCheck={false} onChange={(e) => setLine(e.target.value)} />
-          {split?.error && <p className="field-error">{split.error}</p>}
-          {meta && (
-            <p className="argv-warn">
-              <Icon name="warning" size={13} />
-              <span>
-                <code>{meta}</code> is shell syntax. dekit runs the program directly, without a shell, so it would reach the program as a plain word.{" "}
-                <button type="button" className="link-btn" onClick={() => (onChange(["sh", "-c", line.trim()]), setPasting(false), setLine(""))}>
-                  Run it through sh -c
-                </button>
-              </span>
-            </p>
-          )}
-          <div className="argv-paste-actions">
-            <button type="button" className="btn btn-sm" disabled={!split || !!split.error || split.words.length === 0} onClick={() => (onChange(split!.words), setPasting(false), setLine(""))}>
-              Use {split && !split.error ? `${split.words.length} ${split.words.length === 1 ? "word" : "words"}` : "it"}
-            </button>
-            <button type="button" className="btn btn-sm btn-ghost" onClick={() => (setPasting(false), setLine(""))}>
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
+    <ol className="argv-rows" aria-label={label}>
+      {rows.map((w, i) => (
+        <li key={i} className="argv-row">
+          <span className="argv-n" aria-hidden="true">
+            {i === 0 ? "$" : i}
+          </span>
+          <input
+            id={`${base}-${i}`}
+            className="input mono"
+            value={w}
+            placeholder={i === 0 ? placeholder : "argument"}
+            aria-label={i === 0 ? `${label}: program` : `${label}: argument ${i}`}
+            spellCheck={false}
+            autoComplete="off"
+            autoCapitalize="off"
+            onChange={(e) => onChange(rows.map((x, j) => (j === i ? e.target.value : x)))}
+            onKeyDown={onKey(i)}
+          />
+          <IconButton icon="arrowUp" label={`Move argument ${i} up`} disabled={i === 0} onClick={() => onChange(rows.map((x, j) => (j === i - 1 ? rows[i] : j === i ? rows[i - 1] : x)))} />
+          <IconButton icon="close" label={i === 0 ? "Clear the program" : `Remove argument ${i}`} onClick={() => onChange(rows.length > 1 ? rows.filter((_, j) => j !== i) : [""])} />
+        </li>
+      ))}
+    </ol>
   );
 }
 
@@ -258,25 +329,49 @@ export function ListRows({ value, onChange, label, placeholder, addLabel }: { va
   );
 }
 
-/** Several of the project's tasks, as checkboxes with a filter. */
-export function TaskPicker({ value, onChange, options, label }: { value: string[]; onChange(next: string[]): void; options: Array<{ path: string; label: string; disabled?: string }>; label: string }) {
+/** The folder part of a task path ("shop/" of "shop/web"), "" at the top. */
+export function taskParent(path: string): string {
+  const p = path.replace(/\/$/, "");
+  const i = p.lastIndexOf("/");
+  return i < 0 ? "" : p.slice(0, i + 1);
+}
+
+/**
+ * Several of the project's tasks, as checkboxes. With `near` (a folder such
+ * as "shop/"), the tasks of that folder show by their short name, and every
+ * other task of the file waits behind the search or "Show all".
+ */
+export function TaskPicker({ value, onChange, options, label, near }: { value: string[]; onChange(next: string[]): void; options: Array<{ path: string; label: string; disabled?: string }>; label: string; near?: string }) {
   const [filter, setFilter] = useState("");
-  const shown = options.filter((o) => !filter || o.path.includes(filter) || o.label.includes(filter));
+  const [all, setAll] = useState(false);
+  const q = filter.trim().toLowerCase();
+  const isNear = (p: string) => near === undefined || taskParent(p) === near;
+  const shown = options.filter((o) => (q ? o.path.toLowerCase().includes(q) || o.label.toLowerCase().includes(q) : all || isNear(o.path) || value.includes(o.path)));
+  const hidden = q ? 0 : options.length - shown.length;
+  const name = (p: string) => (near && isNear(p) ? p.slice(near.length) : p);
+  const leaf = (p: string) => p.split("/").pop() ?? p;
   return (
     <div className="picker">
-      {options.length > 8 && <input className="input" type="search" placeholder="Filter tasks" aria-label={`Filter ${label}`} value={filter} onChange={(e) => setFilter(e.target.value)} />}
+      {(options.length > 8 || hidden > 0) && (
+        <input className="input" type="search" placeholder={near !== undefined ? `Search all ${options.length} tasks` : "Filter tasks"} aria-label={`Search ${label}`} value={filter} onChange={(e) => setFilter(e.target.value)} />
+      )}
       <ul className="picker-list" aria-label={label}>
         {shown.map((o) => (
           <li key={o.path}>
-            <label className={`picker-item${o.disabled ? " is-disabled" : ""}`} title={o.disabled}>
+            <label className={`picker-item${o.disabled ? " is-disabled" : ""}`} title={o.disabled ?? o.path}>
               <input type="checkbox" checked={value.includes(o.path)} disabled={!!o.disabled && !value.includes(o.path)} onChange={(e) => onChange(e.target.checked ? [...value, o.path] : value.filter((x) => x !== o.path))} />
-              <span className="mono">{o.path}</span>
-              {o.label !== o.path.split("/").pop() && <span className="muted">{o.label}</span>}
+              <span className="mono">{name(o.path)}</span>
+              {!o.label.startsWith(leaf(o.path)) && <span className="muted">{o.label}</span>}
             </label>
           </li>
         ))}
-        {shown.length === 0 && <li className="muted picker-none">No other tasks.</li>}
+        {shown.length === 0 && <li className="muted picker-none">{q ? "No task matches." : near !== undefined ? "No other tasks in this folder." : "No other tasks."}</li>}
       </ul>
+      {hidden > 0 && (
+        <button type="button" className="link-btn picker-more" onClick={() => setAll(true)}>
+          Show all {options.length} tasks
+        </button>
+      )}
     </div>
   );
 }

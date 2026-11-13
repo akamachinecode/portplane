@@ -224,7 +224,7 @@ function ProjectConfig({ ms, project, runners, home, apps }: { ms: MachineSnapsh
       <p className="project-config-foot">
         <Icon name="info" size={13} />
         Only this project's tasks show here. The whole file, its settings and its runner are in{" "}
-        <a href={href({ view: "projects", runner: { machine: ms.machine.id, root: project.runner } })}>Settings › dekit › Runners</a>.
+        <a href={href({ view: "projects", runner: { machine: ms.machine.id, root: project.runner } })}>Runners</a>.
       </p>
       <DekitHelpHost />
     </MachineScope>

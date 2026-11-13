@@ -6,7 +6,8 @@ import { useMachineScope } from "../../components/MachineScope";
 import { Switch } from "../../components/Controls";
 import { Icon } from "../../components/Icon";
 import { Segmented } from "../../components/Segmented";
-import { taskKey } from "../../lib/dekit/help";
+import { joinCommand } from "../../lib/dekit/shell";
+import { fieldHelp, taskKey } from "../../lib/dekit/help";
 import {
   DEFAULTS_KEYS,
   dirOf,
@@ -24,7 +25,7 @@ import {
   type TaskDraft,
 } from "../../lib/dekit/taskForm";
 import { FieldHelp, HelpLink, useDekitHelp } from "../runners/DekitHelp";
-import { ArgvEditor, Chips, FormRow, KeyValueEditor, ListRows, TaskPicker } from "./fields";
+import { Chips, CommandField, FormRow, KeyValueEditor, ListRows, TaskPicker, taskParent } from "./fields";
 import { SaveReview } from "./SaveReview";
 
 // The task form (plan §4.4): every key of a dekit task, with dekit's own
@@ -48,16 +49,52 @@ const STOP_OPTIONS: Array<{ value: StopMode; label: string }> = [
   { value: "cmd", label: "Run a command" },
 ];
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
-  const id = useId();
+/**
+ * A group of fields that folds (ADR-0032): what a task runs and where are
+ * open; the rest is folded with a line that says what it holds now. A group
+ * opens by itself when one of its fields has a problem.
+ */
+function Section({ title, summary, open: initial = false, problem = false, children }: { title: string; summary?: string; open?: boolean; problem?: boolean; children: ReactNode }) {
+  const [open, setOpen] = useState(initial);
+  useEffect(() => {
+    if (problem) setOpen(true);
+  }, [problem]);
   return (
-    <section className="form-section" aria-labelledby={id}>
-      <h4 className="form-section-title" id={id}>
-        {title}
-      </h4>
-      {children}
-    </section>
+    <details className="form-section" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
+      <summary className="form-section-head">
+        <Icon name="chevronRight" size={14} className="form-section-chevron" />
+        <h4 className="form-section-title">{title}</h4>
+        {!open && summary && <span className="form-section-summary">{summary}</span>}
+      </summary>
+      <div className="form-section-body">{children}</div>
+    </details>
   );
+}
+
+const READY_SHORT: Record<ReadyKind, string> = { none: "", log: "ready on a line of output", tcp: "ready when a port answers", http: "ready when a URL answers", cmd: "ready when a command succeeds", file: "ready when a file appears", sd_notify: "ready when it says so" };
+
+/** What "Starting and stopping" holds, in a few words. */
+function startSummary(d: TaskDraft, defaults: boolean): string {
+  const parts: string[] = [];
+  parts.push(d.autostart ? "Starts with the project" : "Starts when asked");
+  if (d.autorestart === "on-failure") parts.push("restarts when it fails");
+  if (d.autorestart === "always") parts.push("always restarts");
+  if (!defaults && d.type === "service" && d.ready.kind !== "none") parts.push(READY_SHORT[d.ready.kind]);
+  if (d.stop.mode === "signal" && d.stop.signal.trim()) parts.push(`stops with ${d.stop.signal.trim()}`);
+  if (d.stop.mode === "keys") parts.push("stops by typing keys");
+  if (d.stop.mode === "cmd") parts.push("stops with a command");
+  return parts.join(", ");
+}
+
+function outputSummary(d: TaskDraft): string {
+  const file = d.log.mode === "off" ? "Not written to a file" : "Also written to a file";
+  return d.scrollback.trim() ? `${file}, keeps ${d.scrollback.trim()} lines` : file;
+}
+
+function depsSummary(d: TaskDraft, parent: string): string {
+  const short = (p: string) => (parent && p.startsWith(parent) ? p.slice(parent.length) : p);
+  const needs = d.deps.length ? `Needs ${d.deps.map(short).join(", ")}` : "Needs nothing";
+  return d.tags.length ? `${needs}; tags ${d.tags.join(", ")}` : needs;
 }
 
 function jsSource(v: YamlValue | undefined): string | undefined {
@@ -133,8 +170,10 @@ export function TaskForm({ runner, config, entry, defaults, os, onSaved }: TaskF
   const dirty = ops.length > 0;
   const hasErrors = Object.keys(errors).length > 0;
   const set = (patch: Partial<TaskDraft>) => setDraft((d) => ({ ...d, ...patch }));
+  const flagged = (...keys: Array<keyof typeof errors>) => (showErrors || dirty) && keys.some((k) => !!errors[k]);
+  const parent = defaults ? "" : taskParent(entry!.path);
   const err = (k: keyof typeof errors) => (showErrors || dirty ? errors[k] : undefined);
-  const h = (key: string, extra?: ReactNode) => <FieldHelp help={help as DekitHelp | null} fieldKey={taskKey(key)} extra={extra} />;
+  const h = (key: string, extra?: ReactNode) => (fieldHelp(help, taskKey(key)) || extra ? <FieldHelp help={help as DekitHelp | null} fieldKey={taskKey(key)} extra={extra} /> : undefined);
   const lock = (key: string) => jsSource(original[key]);
   const readOnlyReason = !defaults && entry && !entry.editable ? entry.problem ?? "it's written in a way Portplane doesn't rewrite" : fileInfo && !fileInfo.editable ? fileInfo.problem ?? "this file is written in a style Portplane doesn't rewrite" : null;
 
@@ -169,11 +208,14 @@ export function TaskForm({ runner, config, entry, defaults, os, onSaved }: TaskF
       {fileInfo && (
         <p className="task-form-where">
           <Icon name="file" size={13} />
-          {defaults ? "defaults: in " : "Saved in "}
-          <span className="mono">{fileInfo.rel}</span>
-          {fileInfo.role === "portplane" && <span className="tag">Portplane's tasks</span>}
+          <span>
+            {defaults ? "defaults: in " : "In "}
+            <span className="mono" title={fileInfo.role === "portplane" ? `${fileInfo.path} (the tasks Portplane added)` : fileInfo.path}>
+              {fileInfo.rel}
+            </span>
+          </span>
           <span className="spacer" />
-          <HelpLink tag={defaults ? "config" : "config/tasks"}>
+          <HelpLink tag={defaults ? "config" : "config/tasks"} className="link-btn help-link quiet-link">
             <Icon name="book" size={13} />
             {defaults ? "About defaults" : "About tasks"}
           </HelpLink>
@@ -181,7 +223,7 @@ export function TaskForm({ runner, config, entry, defaults, os, onSaved }: TaskF
       )}
 
       {!defaults && (
-        <Section title="What it runs">
+        <Section title="What it runs" open summary={draft.mode === "cmd" ? joinCommand(draft.cmd.filter(Boolean)) : draft.script} problem={flagged("cmd", "script")}>
           <FormRow label="Label" htmlFor={ids.label} help={h("label")} locked={lock("label")}>
             <input id={ids.label} className="input" value={draft.label} placeholder={entry!.path.split("/").pop()} onChange={(e) => set({ label: e.target.value })} />
           </FormRow>
@@ -207,7 +249,7 @@ export function TaskForm({ runner, config, entry, defaults, os, onSaved }: TaskF
               ]}
             />
             {draft.mode === "cmd" ? (
-              <ArgvEditor value={draft.cmd} onChange={(cmd) => set({ cmd })} label="Command" />
+              <CommandField value={draft.cmd} onChange={(cmd) => set({ cmd })} label="Command" />
             ) : (
               <input id={ids.script} className="input mono form-gap" value={draft.script} placeholder="scripts/dev.mjs" aria-label="Script" onChange={(e) => set({ script: e.target.value })} />
             )}
@@ -215,7 +257,7 @@ export function TaskForm({ runner, config, entry, defaults, os, onSaved }: TaskF
         </Section>
       )}
 
-      <Section title={defaults ? "Shared settings" : "Where"}>
+      <Section title={defaults ? "Shared settings" : "Where"} open summary={`${draft.cwd.trim() || "The project folder"}${draft.env.length ? `, ${draft.env.length === 1 ? "1 variable" : `${draft.env.length} variables`}` : ""}`} problem={flagged("env")}>
         <FormRow label="Folder" htmlFor={ids.cwd} help={h("cwd", <>Relative to <span className="mono">{fileInfo?.rel ?? "the file"}</span>.</>)} locked={lock("cwd")}>
           <div className="input-row">
             <input id={ids.cwd} className="input mono" value={draft.cwd} placeholder={defaults ? "the project folder" : "the project folder"} spellCheck={false} onChange={(e) => set({ cwd: e.target.value })} />
@@ -236,9 +278,9 @@ export function TaskForm({ runner, config, entry, defaults, os, onSaved }: TaskF
       </Section>
 
       {!defaults && (
-        <Section title="Dependencies and tags">
+        <Section title="Dependencies and tags" summary={depsSummary(draft, parent)} problem={flagged("deps", "tags")}>
           <FormRow label="Needs" help={h("deps")} error={err("deps")} locked={lock("deps")}>
-            <TaskPicker value={draft.deps} onChange={(deps) => set({ deps })} options={taskOptions} label="Tasks it needs" />
+            <TaskPicker value={draft.deps} onChange={(deps) => set({ deps })} options={taskOptions} label="Tasks it needs" near={parent} />
           </FormRow>
           <FormRow label="Tags" help={h("tags")} error={err("tags")} locked={lock("tags")}>
             <Chips value={draft.tags} onChange={(tags) => set({ tags })} label="Tags" />
@@ -246,7 +288,7 @@ export function TaskForm({ runner, config, entry, defaults, os, onSaved }: TaskF
         </Section>
       )}
 
-      <Section title="Starting and stopping">
+      <Section title="Starting and stopping" summary={startSummary(draft, !!defaults)} problem={flagged("autorestart", "ready", "readyInterval", "readyTimeout", "stop", "stopTimeout")}>
         <FormRow label="Start with dekit up" help={h("autostart")} locked={lock("autostart")}>
           <Switch checked={draft.autostart} onChange={(autostart) => set({ autostart })} label="Start it with the project" />
         </FormRow>
@@ -310,7 +352,7 @@ export function TaskForm({ runner, config, entry, defaults, os, onSaved }: TaskF
             <input id={ids.signal} className="input mono form-gap" aria-label="Signal" value={draft.stop.signal} placeholder="SIGINT" onChange={(e) => set({ stop: { ...draft.stop, signal: e.target.value.toUpperCase() } })} />
           )}
           {draft.stop.mode === "keys" && <Chips value={draft.stop.keys} onChange={(keys) => set({ stop: { ...draft.stop, keys } })} label="Keys to type" suggestions={["<C-c>", "q", "<Enter>"]} />}
-          {draft.stop.mode === "cmd" && <ArgvEditor value={draft.stop.cmd} onChange={(cmd) => set({ stop: { ...draft.stop, cmd } })} label="Stop command" />}
+          {draft.stop.mode === "cmd" && <CommandField value={draft.stop.cmd} onChange={(cmd) => set({ stop: { ...draft.stop, cmd } })} label="Stop command" placeholder="pnpm run stop" />}
           <div className="form-inline form-gap">
             <label className="form-inline-field">
               <span>Kill after</span>
@@ -326,7 +368,7 @@ export function TaskForm({ runner, config, entry, defaults, os, onSaved }: TaskF
         </FormRow>
       </Section>
 
-      <Section title="Output">
+      <Section title="Output" summary={outputSummary(draft)} problem={flagged("scrollback_len")}>
         <FormRow label="Write to a file" htmlFor={ids.log} help={h("log")} locked={lock("log")}>
           <select id={ids.log} className="input" value={draft.log.mode} onChange={(e) => set({ log: { ...draft.log, mode: e.target.value as LogMode } })}>
             <option value="off">No</option>
@@ -359,20 +401,17 @@ export function TaskForm({ runner, config, entry, defaults, os, onSaved }: TaskF
         </FormRow>
       </Section>
 
-      <div className="form-actions">
-        {dirty && <span className="form-dirty">{ops.length === 1 ? "1 change" : `${ops.length} changes`} not saved</span>}
-        <span className="spacer" />
-        <button type="button" className="btn btn-ghost" disabled={!dirty} onClick={() => (setDraft(toDraft(original, mount)), setShowErrors(false))}>
-          Discard
-        </button>
-        <button type="submit" className="btn btn-primary" disabled={!dirty}>
-          Review and save…
-        </button>
-      </div>
-      {showErrors && hasErrors && (
-        <p className="field-error" role="alert">
-          Fix the highlighted fields first.
-        </p>
+      {(dirty || (showErrors && hasErrors)) && (
+        <div className="form-actions">
+          <span className="form-dirty" role="status">{showErrors && hasErrors ? "Fix the fields with a problem first." : ops.length === 1 ? "1 change not saved" : `${ops.length} changes not saved`}</span>
+          <span className="spacer" />
+          <button type="button" className="btn btn-ghost" onClick={() => (setDraft(toDraft(original, mount)), setShowErrors(false))}>
+            Discard
+          </button>
+          <button type="submit" className="btn btn-primary" disabled={!dirty}>
+            Review and save…
+          </button>
+        </div>
       )}
 
       {reviewing && (

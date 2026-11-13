@@ -153,14 +153,17 @@
 
 .dk-about-facts dt {
   color: var(--text-3);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
 }
 
 .dk-about-facts dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
   margin: 0;
-  overflow: hidden;
   font-size: var(--text-sm);
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 
 .dk-note {
@@ -178,12 +181,6 @@
 
 .dk-section + .dk-section {
   margin-top: var(--space-6);
-}
-
-.dk-section-text {
-  margin: calc(-1 * var(--space-1)) 0 var(--space-2);
-  color: var(--text-2);
-  font-size: var(--text-xs);
 }
 
 .dk-runners {
@@ -219,8 +216,8 @@
 .dk-runner-name {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
+  align-items: baseline;
+  gap: 0 var(--space-2);
   font-weight: 600;
 }
 
@@ -243,39 +240,11 @@
   white-space: nowrap;
 }
 
-.dk-runner-facts {
-  display: grid;
-  grid-template-columns: 96px 84px 64px 130px;
-  align-items: center;
-  gap: var(--space-3);
-  margin: 0;
-  color: var(--text-2);
-  font-size: var(--text-xs);
-}
-
-.dk-runner-facts div {
-  display: flex;
-  gap: 4px;
-  min-width: 0;
-}
-
-.dk-runner-facts dt {
-  color: var(--text-3);
-}
-
-.dk-runner-facts dd {
-  margin: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
+/* the state in words, only when it needs a look (ADR-0032) */
 .dk-state {
+  color: var(--text-2);
+  font-size: var(--text-sm);
   font-weight: 550;
-}
-
-.dk-state-running {
-  color: var(--on);
 }
 
 .dk-state-stale,
@@ -292,25 +261,59 @@
   align-items: center;
   justify-content: flex-end;
   gap: var(--space-1);
-  min-width: 112px;
 }
 
-.dk-runner-warnings {
-  margin: 0;
-  padding: 0 var(--space-4) var(--space-2) calc(var(--space-4) + 20px);
+/* a problem: one quiet line, with the button that fixes it */
+.dk-runner-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  margin: calc(-1 * var(--space-2)) 0 0;
+  padding: 0 var(--space-4) var(--space-3) calc(var(--space-4) + 20px);
+  color: var(--text-2);
+  font-size: var(--text-sm);
+}
+
+.dk-runner-line + .dk-runner-line {
+  margin-top: calc(-1 * var(--space-2));
+}
+
+.dk-line-icon {
+  flex: none;
   color: var(--warn);
-  font-size: var(--text-xs);
-  list-style: none;
 }
 
 .dk-warn-error {
   color: var(--err);
 }
 
-.dk-runner-note {
-  padding: 0 var(--space-4) var(--space-3) calc(var(--space-4) + 20px);
-  color: var(--text-2);
-  font-size: var(--text-xs);
+.dk-facts {
+  margin: 0;
+}
+
+.dk-facts-row {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: var(--space-3);
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.dk-facts-row:last-child {
+  border-bottom: 0;
+}
+
+.dk-facts dt {
+  color: var(--text-3);
+  font-size: var(--text-sm);
+}
+
+.dk-facts dd {
+  min-width: 0;
+  margin: 0;
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
 }
 
 .runner-job {
@@ -334,23 +337,12 @@
   padding: 0;
 }
 
-@media (max-width: 900px) {
-  .dk-runner-facts {
-    grid-template-columns: 96px 84px;
-  }
-  .dk-runner-facts > div:nth-child(n + 3) {
-    display: none;
-  }
-}
-
 @media (max-width: 560px) {
   .dk-runner-main {
     grid-template-columns: 8px minmax(0, 1fr) auto;
   }
-  .dk-runner-facts {
-    display: none;
-  }
-  .dk-runner-actions {
-    min-width: 0;
+  .dk-state {
+    grid-column: 2;
+    grid-row: 2;
   }
 }

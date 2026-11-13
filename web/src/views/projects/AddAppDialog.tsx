@@ -8,7 +8,7 @@ import { Icon, Spinner } from "../../components/Icon";
 import { Segmented } from "../../components/Segmented";
 import { suggestAppName, suggestPath, validUrlName } from "../../lib/dekit/newApp";
 import { relPath } from "../../lib/dekit/taskForm";
-import { ArgvEditor, TaskPicker } from "./fields";
+import { CommandField, TaskPicker, taskParent } from "./fields";
 import { SaveReview } from "./SaveReview";
 import { digestOf } from "./TasksPanel";
 
@@ -91,7 +91,7 @@ export function AddAppDialog({ runner, config, onClose, onAdded }: { runner: str
 
   const body = [
     <div key="folder" className="wizard-step">
-      <p className="dialog-text">Where the app lives. It must be inside this project, so dekit can find it.</p>
+      <p className="dialog-text">Where the app lives, inside this project.</p>
       <Field label="Folder" htmlFor={ids.folder} error={!inside ? `Choose a folder inside ${config.root}.` : null}>
         <div className="input-row">
           <input id={ids.folder} className="input mono" value={folder} spellCheck={false} onChange={(e) => setFolder(e.target.value)} data-autofocus />
@@ -113,7 +113,7 @@ export function AddAppDialog({ runner, config, onClose, onAdded }: { runner: str
       {suggestions.status === "error" && <p className="field-error">{suggestions.error}</p>}
       {suggestions.status === "ok" && (
         <>
-          <p className="dialog-text">{suggestions.list.length ? "Found these in the folder. Choose one, or write your own below." : "Nothing Portplane recognises here: write the command below."}</p>
+          <p className="dialog-text">{suggestions.list.length ? "Choose one, or write your own below." : "Nothing Portplane recognises here: write the command below."}</p>
           {suggestions.list.length > 0 && (
             <ul className="suggestions" aria-label="Suggested commands">
               {suggestions.list.map((s) => (
@@ -137,7 +137,7 @@ export function AddAppDialog({ runner, config, onClose, onAdded }: { runner: str
         </>
       )}
       <Field label="Command">
-        <ArgvEditor value={cmd} onChange={(c) => (setCmd(c), setPicked(null))} label="Command" />
+        <CommandField value={cmd} onChange={(c) => (setCmd(c), setPicked(null))} label="Command" />
       </Field>
       <div className="form-inline">
         <label className="form-inline-field" htmlFor={ids.path}>
@@ -175,9 +175,9 @@ export function AddAppDialog({ runner, config, onClose, onAdded }: { runner: str
           />
           <p className="field-hint">
             {urlMode === "wrap"
-              ? "The command becomes portless <name> <command>: portless picks a free port and passes it in PORT (or --port for Vite and Astro)."
+              ? "portless picks a free port and passes it to the app in PORT."
               : urlMode === "alias"
-                ? "For servers that can't take a port, such as php -S or docker compose: a small step registers the name for the port before the app starts."
+                ? "For a server that can't take a port, such as php -S or docker compose."
                 : "The app runs without a .localhost address."}
           </p>
           {urlMode !== "none" && (
@@ -204,7 +204,7 @@ export function AddAppDialog({ runner, config, onClose, onAdded }: { runner: str
     </div>,
     <div key="ready" className="wizard-step">
       {!job && (
-        <Field label="Ready when" htmlFor={ids.ready} hint="Apps that need it wait for this. Suggested from the command; change it if your app prints something else.">
+        <Field label="Ready when" htmlFor={ids.ready} hint="Apps that need it wait for this.">
           <select
             id={ids.ready}
             className="input"
@@ -224,8 +224,8 @@ export function AddAppDialog({ runner, config, onClose, onAdded }: { runner: str
           {ready?.http !== undefined && <input className="input mono form-gap" aria-label="URL" value={ready.http} onChange={(e) => setReady({ http: e.target.value })} />}
         </Field>
       )}
-      <Field label="Needs" hint="Tasks that must be ready (or done, for a step) before it starts, such as an install step.">
-        <TaskPicker value={deps} onChange={setDeps} options={tasks.map((t) => ({ path: t.path, label: typeof t.values.label === "string" ? (t.values.label as string) : (t.path.split("/").pop() ?? t.path) }))} label="Tasks it needs" />
+      <Field label="Needs" hint="Tasks to finish first, such as an install step.">
+        <TaskPicker value={deps} onChange={setDeps} options={tasks.map((t) => ({ path: t.path, label: typeof t.values.label === "string" ? (t.values.label as string) : (t.path.split("/").pop() ?? t.path) }))} label="Tasks it needs" near={taskParent(path.trim())} />
       </Field>
       {config.root !== "host" && (
         <fieldset className="radio-list">
@@ -234,14 +234,14 @@ export function AddAppDialog({ runner, config, onClose, onAdded }: { runner: str
             <input type="radio" name="target" checked={target === "portplane"} onChange={() => setTarget("portplane")} />
             <span>
               <span className="radio-label">Portplane's tasks (.portplane/tasks.yaml)</span>
-              <span className="radio-hint">Keeps your dekit.yaml as you wrote it. Portplane loads the file from dekit.yaml.</span>
+              <span className="radio-hint">Keeps your dekit.yaml as you wrote it.</span>
             </span>
           </label>
           <label className="radio-item">
             <input type="radio" name="target" checked={target === "main"} onChange={() => setTarget("main")} />
             <span>
               <span className="radio-label">dekit.yaml</span>
-              <span className="radio-hint">Next to the tasks you wrote by hand.</span>
+              <span className="radio-hint">Next to the tasks you wrote.</span>
             </span>
           </label>
         </fieldset>

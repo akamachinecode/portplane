@@ -12,23 +12,48 @@ import { TaskForm } from "./TaskForm";
 
 // The project's own settings (plan §4.5): defaults with the task form,
 // the kernel pin, the runner's log, on_init/on_idle hooks with dekit's
-// verbs, fragments under load:, and vars as text.
+// verbs, fragments under load:, and vars as text. Each is folded to one
+// line with its value, opened when the user wants to change it.
 
 const HOOK_VERBS = ["up", "start", "stop", "kill", "veto", "restart", "force-restart", "down", "quit"] as const;
 const TARGET_VERBS = new Set(["start", "stop", "kill", "veto", "restart", "force-restart"]);
 const LOG_LEVELS = ["off", "error", "warn", "info", "debug", "trace"];
 
-function Card({ title, help, children }: { title: string; help?: ReactNode; children: ReactNode }) {
-  const id = useId();
+/** One setting of the file, folded to a line that says its value (ADR-0032). */
+function Card({ title, value, help, children }: { title: string; value: string; help?: ReactNode; children: ReactNode }) {
+  const [open, setOpen] = useState(false);
   return (
-    <section className="settings-card" aria-labelledby={id}>
-      <h4 className="settings-card-title" id={id}>
-        {title}
-      </h4>
-      {help && <p className="settings-card-help">{help}</p>}
-      {children}
-    </section>
+    <details className="settings-card" open={open} onToggle={(e) => setOpen(e.currentTarget.open)}>
+      <summary className="settings-card-head">
+        <Icon name="chevronRight" size={14} className="form-section-chevron" />
+        <h4 className="settings-card-title">{title}</h4>
+        {!open && <span className="settings-card-value">{value}</span>}
+      </summary>
+      <div className="settings-card-body">
+        {help && <p className="settings-card-help">{help}</p>}
+        {children}
+      </div>
+    </details>
   );
+}
+
+function hookText(v: YamlValue | undefined): string {
+  if (v === undefined || v === null) return "Nothing";
+  if (isJs(v)) return "A JavaScript value";
+  if (typeof v === "object" && !Array.isArray(v) && typeof v.command === "string") return typeof v.target === "string" && v.target ? `Runs ${v.command} on ${v.target}` : `Runs ${v.command}`;
+  return "Several commands";
+}
+
+function kernelText(v: YamlValue | undefined): string {
+  if (v === "npm") return "The project's own dekit package";
+  if (v && typeof v === "object" && !Array.isArray(v) && "path" in v) return `The binary at ${String((v as Record<string, YamlValue>).path)}`;
+  return "The dekit you run";
+}
+
+function logText(v: YamlValue | undefined): string {
+  const o = v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, YamlValue>) : {};
+  const parts = [typeof o.level === "string" ? `Level ${o.level}` : "", typeof o.file === "string" ? `to ${o.file}` : ""].filter(Boolean);
+  return parts.length ? parts.join(", ") : "dekit's default";
 }
 
 function KernelCard({ value, onSave }: { value: YamlValue | undefined; onSave(op: EditOp): void }) {
@@ -223,32 +248,41 @@ export function SettingsPanel({ runner, config, os, onSaved }: { runner: string;
   if (!main.editable) {
     return (
       <p className="form-readonly">
-        <Icon name="info" size={15} /> {main.problem}. Use the YAML tab.
+        <Icon name="info" size={15} /> {main.problem}. Change it with View as YAML.
       </p>
     );
   }
+  const defaults = config.settings.defaults && typeof config.settings.defaults === "object" && !Array.isArray(config.settings.defaults) ? Object.keys(config.settings.defaults) : [];
   return (
     <div className="settings-panel">
-      <Card title="Defaults for every task" help={fh("defaults")}>
+      <Card title="Defaults for every task" value={defaults.length ? `Sets ${defaults.join(", ")}` : "None"} help={fh("defaults")}>
         <TaskForm runner={runner} config={config} entry={null} defaults os={os} onSaved={onSaved} />
       </Card>
-      <Card title="Which dekit runs this project" help={<>{fh("kernel")}</>}>
+      <Card title="Which dekit runs this project" value={kernelText(config.settings.kernel)} help={fh("kernel")}>
         <KernelCard key={JSON.stringify(config.settings.kernel ?? null)} value={config.settings.kernel} onSave={save("Pin the kernel")} />
       </Card>
-      <Card title="Fragments" help={fh("load")}>
+      <Card title="Fragments" value={config.load.length === 0 ? "None" : config.load.length === 1 ? config.load[0].file : `${config.load.length} files`} help={fh("load")}>
         <LoadCard config={config} onSave={save("Add a fragment")} />
       </Card>
-      <Card title="When the project loads" help={fh("on_init")}>
+      <Card title="When the project loads" value={hookText(config.settings.on_init)} help={fh("on_init")}>
         <HookCard key={`init${JSON.stringify(config.settings.on_init ?? null)}`} name="on_init" value={config.settings.on_init} text={config.text.on_init} onSave={save("on_init hook")} />
       </Card>
-      <Card title="When everything goes idle" help={fh("on_idle")}>
+      <Card title="When everything goes idle" value={hookText(config.settings.on_idle)} help={fh("on_idle")}>
         <HookCard key={`idle${JSON.stringify(config.settings.on_idle ?? null)}`} name="on_idle" value={config.settings.on_idle} text={config.text.on_idle} onSave={save("on_idle hook")} />
       </Card>
-      <Card title="The runner's own log" help={fh("log")}>
+      <Card title="The runner's own log" value={logText(config.settings.log)} help={fh("log")}>
         <LogCard key={JSON.stringify(config.settings.log ?? null)} value={config.settings.log} onSave={save("Runner log")} />
       </Card>
-      <Card title="Variables for !js" help={<>{fh("vars")} <HelpLink tag="config/js">JavaScript values</HelpLink></>}>
-        {config.text.vars !== undefined ? <VarsCard key={config.text.vars} text={config.text.vars} onSave={save("vars")} /> : <p className="muted">No vars. Add them in the YAML tab when a !js value needs one.</p>}
+      <Card
+        title="Variables for !js"
+        value={config.text.vars !== undefined ? "Set" : "None"}
+        help={
+          <>
+            {fh("vars")} <HelpLink tag="config/js">JavaScript values</HelpLink>
+          </>
+        }
+      >
+        {config.text.vars !== undefined ? <VarsCard key={config.text.vars} text={config.text.vars} onSave={save("vars")} /> : <p className="muted">No vars. Add them with View as YAML when a !js value needs one.</p>}
       </Card>
       {pending && (
         <SaveReview

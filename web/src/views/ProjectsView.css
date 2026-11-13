@@ -92,28 +92,10 @@
   gap: var(--space-4);
 }
 
-.runner-detail-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
-.runner-detail-title {
-  font-size: var(--text-lg);
-  font-weight: 650;
-}
-
 .runner-detail-path {
   color: var(--text-3);
   font-size: 13px;
   overflow-wrap: anywhere;
-}
-
-.runner-detail-actions {
-  display: flex;
-  gap: var(--space-2);
 }
 
 .runner-detail-status {
@@ -123,6 +105,10 @@
   gap: var(--space-2);
   color: var(--text-2);
   font-size: var(--text-sm);
+}
+
+.runner-detail-sep {
+  color: var(--text-3);
 }
 
 .runner-error {
