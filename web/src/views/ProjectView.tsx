@@ -123,8 +123,8 @@ function ProjectBody({ ms, project }: { ms: MachineSnapshot; project: Project })
   const linked = checkoutsText(project);
   const tab = route.view === "project" ? (route.tab ?? "apps") : "apps";
   const tabRoute = (t: "apps" | "config") => ({ view: "project" as const, machine, name: project.name, ...(route.view === "project" && route.runner ? { runner: route.runner } : {}), ...(t === "config" ? { tab: t } : {}) });
+  // the folder is in the line's tooltip and the ⋯ menu (Reveal, Copy): paths stay out of the way (ADR-0032)
   const meta = [
-    repo ? shortenPath(repo, home) : null,
     linked ? (project.repos && project.repos.length > 1 ? linked : `main and ${linked}`) : "main checkout",
     `${total} ${total === 1 ? "app" : "apps"}`,
     !ms.machine.local ? `on ${ms.machine.name}` : null,
@@ -150,11 +150,9 @@ function ProjectBody({ ms, project }: { ms: MachineSnapshot; project: Project })
         </button>
         {/* the name is the page's title, in the toolbar: here only what it is */}
         <div className="project-hero-text">
-          <p className="project-hero-meta">
+          <p className="project-hero-meta" title={repo ? shortenPath(repo, home) : undefined}>
             {meta.map((m, i) => (
-              <span key={i} className={i === 0 && repo ? "mono" : undefined}>
-                {m}
-              </span>
+              <span key={i}>{m}</span>
             ))}
           </p>
         </div>
