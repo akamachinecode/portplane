@@ -25,8 +25,10 @@ export interface Problem {
   severity: Severity;
   title: string;
   detail?: string;
-  /** A path, a command or an error message, shown in monospace. */
+  /** A command or an error message, shown in monospace. */
   code?: string;
+  /** The files or folders it is about: in the title's tooltip, not at rest (ADR-0032: paths move to tooltips). */
+  path?: string;
   machine?: { id: string; name: string };
   fix?: ProblemFix;
   /** Where to read more, e.g. a failed app's detail. */

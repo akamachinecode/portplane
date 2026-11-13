@@ -69,7 +69,7 @@ function machineRunnerProblems(ms: MachineSnapshot, r: RunnersResponse): Problem
       severity: "info",
       title: stale.length === 1 ? `dekit has a stale record for ${stale[0].name}` : `dekit has ${stale.length} stale runner records`,
       detail: "Nothing runs: they're left from a crash or a restart. Cleaning never touches running runners.",
-      code: stale.map((x) => x.root).join("\n"),
+      path: stale.map((x) => x.root).join("\n"),
       machine: where,
       fix: {
         label: "Clean stale records",
@@ -92,7 +92,7 @@ function machineRunnerProblems(ms: MachineSnapshot, r: RunnersResponse): Problem
       detail: r.live
         ? "Restarting the runner switches it without stopping its tasks."
         : "Stop the runner and start it again to switch (dekit can't switch in place on Windows).",
-      code: x.selectedBinary,
+      path: x.selectedBinary,
       machine: where,
       fix: r.live
         ? {

@@ -30,7 +30,7 @@ function ProblemRow({ problem, multiMachine }: { problem: Problem; multiMachine:
         <span className="sr-only">{SEVERITY_LABEL[problem.severity]}:</span>
       </span>
       <div className="problem-body">
-        <p className="problem-title">
+        <p className="problem-title" title={problem.path}>
           {problem.title}
           {multiMachine && problem.machine && <span className="problem-machine">{problem.machine.name}</span>}
         </p>

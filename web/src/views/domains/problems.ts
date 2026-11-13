@@ -117,7 +117,7 @@ function machinePortlessProblems(ms: MachineSnapshot): Problem[] {
       severity: "warning",
       title: "The trusted copy of the local certificate belongs to your user",
       detail: "Any program you run could replace it with another certificate, and your system would trust that one the next time it updates its trust store. Fixing it asks for your password once.",
-      code: ca.systemCopy,
+      path: ca.systemCopy,
       machine: where,
       fix: fix("ca-fix-ownership", "Fix ownership"),
       link: { label: "Certificates", route: domains("certificates") },
