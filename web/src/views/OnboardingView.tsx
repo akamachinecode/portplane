@@ -260,7 +260,8 @@ function OnboardingFlow() {
           return (
             <li key={s.id} className={`tl-item is-${status}`} aria-current={current ? "step" : undefined}>
               <span className="tl-marker" aria-hidden="true">
-                {status === "done" ? <Icon name="check" size={12} /> : current ? <span className="tl-pulse" /> : <span className="tl-num">{i + 1}</span>}
+                {/* done, open or to do: no number, the title's "N of M done" is the one count (ADR-0032 rule 7) */}
+                {status === "done" ? <Icon name="check" size={12} /> : current ? <span className="tl-pulse" /> : null}
               </span>
               <div className="tl-content">
                 {current ? (
