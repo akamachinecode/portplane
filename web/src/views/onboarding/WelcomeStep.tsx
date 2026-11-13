@@ -27,11 +27,18 @@ export function WelcomeStep() {
 
   return (
     <StepLayout
-      icon="wand"
       title="Welcome to Portplane"
-      lead="Portplane runs the dev servers in your project folders and gives each one a stable https://name.localhost address, all from one window."
+      lead="Portplane runs the dev servers in your project folders, each at its own https://name.localhost address."
+      moreLabel="What to expect"
+      more={
+        <ul className="ob-promises">
+          <li>About five minutes, and no terminal.</li>
+          <li>Your password is asked once, by your system, for the HTTPS proxy. Portplane never sees it.</li>
+          <li>Everything ends up as plain dekit and portless setup you can keep using from a terminal.</li>
+        </ul>
+      }
       footer={
-        <StepFooter>
+        <StepFooter status={checking ? "Checking dekit, Node.js, portless and the proxy…" : undefined}>
           <button type="button" className="btn btn-ghost" onClick={() => void already()} disabled={checking} aria-busy={checking || undefined}>
             {checking && <Spinner size={12} />}I already use dekit and portless
           </button>
@@ -58,21 +65,6 @@ export function WelcomeStep() {
           </li>
         ))}
       </ol>
-      <ul className="ob-promises">
-        <li>
-          <Icon name="checkCircle" size={15} />
-          About five minutes, and no terminal.
-        </li>
-        <li>
-          <Icon name="shield" size={15} />
-          Your password is asked once, by your system, for the HTTPS proxy. Portplane never sees it.
-        </li>
-        <li>
-          <Icon name="file" size={15} />
-          Everything ends up as plain dekit and portless setup you can keep using from a terminal.
-        </li>
-      </ul>
-      {checking && <p className="muted ob-note">Checking dekit, Node.js, portless and the proxy…</p>}
     </StepLayout>
   );
 }

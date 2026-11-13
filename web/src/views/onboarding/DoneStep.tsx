@@ -35,9 +35,8 @@ export function DoneStep() {
     const name = scope.ms?.machine.name ?? scope.id;
     return (
       <StepLayout
-        icon="checkCircle"
         title={`${name} is set up`}
-        lead={`Portplane watches ${name}'s folders and shows its apps next to yours. They open here at https://<app>.${scope.id}.localhost, through SSH.`}
+        lead={`Its apps show next to yours and open here at https://<app>.${scope.id}.localhost, through SSH.`}
         footer={
           <StepFooter>
             <button type="button" className="btn btn-primary" onClick={() => void finish()} autoFocus>
@@ -46,17 +45,16 @@ export function DoneStep() {
             </button>
           </StepFooter>
         }
-      >
-        <p className="muted">Its runners, its dekit config and its portless proxy are in Runners, Projects and Domains: pick {name} at the top of each.</p>
-      </StepLayout>
+        moreLabel="Where to find the rest"
+        more={<p>Its runners, its dekit config and its portless proxy are in Runners, Projects and Domains: pick {name} at the top of each.</p>}
+      />
     );
   }
 
   return (
     <StepLayout
-      icon="checkCircle"
-      title="You're all set"
-      lead="Portplane is watching your folders. Three things that help from here:"
+      title="Done"
+      lead="Portplane watches your folders now. Three things that help from here:"
       footer={
         <StepFooter>
           <button type="button" className="btn btn-primary" onClick={() => void finish()} disabled={leaving} aria-busy={leaving || undefined} autoFocus>
@@ -67,48 +65,47 @@ export function DoneStep() {
         </StepFooter>
       }
     >
-      <ol className="ob-tips">
+      <ul className="ob-tips">
         <li className="ob-tip">
-          <span className="ob-tip-icon" aria-hidden="true">
-            <Icon name="search" size={18} />
-          </span>
+          <Icon name="search" size={16} />
           <div>
             <p className="ob-tip-title">
               Press <kbd>{mac ? "⌘" : "Ctrl"}</kbd> <kbd>K</kbd> for anything
             </p>
-            <p className="muted">Go to an app, start or stop it, copy its address or open a setting, from the keyboard.</p>
+            <p className="ob-tip-text">Go to an app, start or stop it, copy its address or open a setting.</p>
           </div>
         </li>
         <li className="ob-tip">
-          <span className="ob-tip-icon" aria-hidden="true">
-            <Icon name="plug" size={18} />
-          </span>
+          <Icon name="plug" size={16} />
           <div className="ob-tip-wide">
             <StartAtLogin />
           </div>
         </li>
         <li className="ob-tip">
-          <span className="ob-tip-icon" aria-hidden="true">
-            <Icon name="monitor" size={18} />
-          </span>
+          <Icon name="monitor" size={16} />
           <div>
             <p className="ob-tip-title">{mac ? "Find it in the menu bar" : "Find it in the tray"}</p>
-            <p className="muted">Closing this window keeps Portplane running there, with your apps and their state one click away.</p>
+            <p className="ob-tip-text">Closing this window keeps Portplane running there.</p>
             {gnomeHint && (
-              <p className="ob-tip-extra">
-                GNOME shows tray icons only with the AppIndicator extension.{" "}
-                {gnomeHint.docs && (
-                  <a href={gnomeHint.docs} target="_blank" rel="noopener noreferrer">
-                    Get the extension
-                    <Icon name="open" size={12} />
-                  </a>
-                )}{" "}
-                On Ubuntu it's already there; on Fedora, <code>sudo dnf install gnome-shell-extension-appindicator</code>, then log out and in.
-              </p>
+              <details className="ob-more">
+                <summary>Don't see it on GNOME?</summary>
+                <div className="ob-more-body">
+                  <p>
+                    GNOME shows tray icons only with the AppIndicator extension.{" "}
+                    {gnomeHint.docs && (
+                      <a href={gnomeHint.docs} target="_blank" rel="noopener noreferrer">
+                        Get the extension
+                        <Icon name="open" size={12} />
+                      </a>
+                    )}{" "}
+                    On Ubuntu it's already there; on Fedora, <code>sudo dnf install gnome-shell-extension-appindicator</code>, then log out and in.
+                  </p>
+                </div>
+              </details>
             )}
           </div>
         </li>
-      </ol>
+      </ul>
     </StepLayout>
   );
 }

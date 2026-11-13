@@ -27,7 +27,8 @@ export function stepDone(step: StepId, f: TimelineFacts): boolean {
   const services = (f.ms?.apps ?? []).filter((a) => a.kind !== "job");
   switch (step) {
     case "welcome":
-      return f.done.has("welcome") || f.done.size > 0;
+      // Read, or gone past: tools or folders that are already there count too.
+      return f.done.size > 0 || f.flow.toolsReady || f.folders.length > 0;
     case "check":
       return Object.keys(f.checks).length > 0 && (f.done.has("check") || problems(Object.values(f.checks) as Requirement[]).length === 0);
     case "install":
@@ -56,7 +57,7 @@ export function stepRecord(step: StepId, f: TimelineFacts): string {
   const projects = new Set(services.map((a) => a.project)).size;
   switch (step) {
     case "welcome":
-      return "Portplane drives dekit, which starts your dev servers, and portless, which gives each one its address.";
+      return "dekit runs your apps, portless gives them addresses";
     case "check": {
       if (!reqs.length) return "Looks at the tools, the proxy, the certificate and your system.";
       const left = problems(reqs).length;

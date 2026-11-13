@@ -7,18 +7,25 @@ import { IconButton } from "../../components/IconButton";
 import { useOnboarding } from "./context";
 import { prevStep } from "./steps";
 
-/** One step's page: icon, title and lead, the content, and its own footer. */
+/**
+ * One step's card (ADR-0032): one heading, one sentence, the controls and
+ * one main button in the footer. Anything longer is behind "more".
+ */
 export function StepLayout({
-  icon,
   title,
   lead,
+  more,
+  moreLabel = "More about this step",
   children,
   footer,
   busy,
 }: {
-  icon: IconName;
   title: ReactNode;
+  /** One sentence. */
   lead?: ReactNode;
+  /** The explanation, folded under the lead. */
+  more?: ReactNode;
+  moreLabel?: string;
   children?: ReactNode;
   footer: ReactNode;
   busy?: boolean;
@@ -34,17 +41,18 @@ export function StepLayout({
   return (
     <section className="ob-step" aria-labelledby={id} aria-busy={busy || undefined}>
       <header className="ob-step-head">
-        <span className="ob-step-icon" aria-hidden="true">
-          <Icon name={icon} size={18} />
-        </span>
-        <div className="ob-step-titles">
-          <h2 className="ob-step-title" id={id} ref={heading} tabIndex={-1}>
-            {title}
-          </h2>
-          {lead && <p className="ob-step-lead">{lead}</p>}
-        </div>
+        <h2 className="ob-step-title" id={id} ref={heading} tabIndex={-1}>
+          {title}
+        </h2>
+        {lead && <p className="ob-step-lead">{lead}</p>}
+        {more && (
+          <details className="ob-more">
+            <summary>{moreLabel}</summary>
+            <div className="ob-more-body">{more}</div>
+          </details>
+        )}
       </header>
-      <div className="ob-step-body">{children}</div>
+      {children && <div className="ob-step-body">{children}</div>}
       <footer className="ob-foot">{footer}</footer>
     </section>
   );

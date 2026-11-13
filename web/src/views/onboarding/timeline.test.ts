@@ -25,6 +25,9 @@ describe("the setup timeline", () => {
     expect(stepDone("start", f)).toBe(true);
     expect(stepDone("install", facts({ flow: { toolsReady: false, proxyReady: true, browsersNeeded: false } }))).toBe(false);
     expect(stepDone("folders", facts({ folders: [] }))).toBe(false);
+    // A setup marked complete without a saved record still shows its welcome as read.
+    expect(stepDone("welcome", facts({ done: new Set() }))).toBe(true);
+    expect(stepDone("welcome", facts({ done: new Set(), folders: [], flow: { toolsReady: false, proxyReady: false, browsersNeeded: null } }))).toBe(false);
   });
 
   it("says in one line what each step found", () => {

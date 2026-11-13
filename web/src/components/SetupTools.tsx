@@ -4,22 +4,40 @@ import { useApp } from "./AppContext";
 import { CommandLine } from "./Controls";
 import { useRemoteCommand } from "./MachineScope";
 import { Icon, Spinner } from "./Icon";
+import "./SetupApps.css";
 
 export type CheckLoad = { status: "loading" } | { status: "error"; message: string } | { status: "ok"; check: SetupCheck };
 
 function RequirementRow({ req, os }: { req: Requirement; os: string | undefined }) {
   const command = useRemoteCommand();
+  if (req.ok) {
+    // What's there takes one line (ADR-0032).
+    return (
+      <li className="req req-ok req-compact">
+        <span className="req-icon">
+          <Icon name="check" size={16} />
+        </span>
+        <div className="req-line">
+          <span className="req-name">{req.name}</span>
+          <span className="sr-only">installed</span>
+          {req.version && <span className="req-version mono">{req.version}</span>}
+          <span className="req-why" title={req.why}>
+            {req.why}
+          </span>
+        </div>
+      </li>
+    );
+  }
   return (
-    <li className={`req${req.ok ? " req-ok" : " req-missing"}`}>
+    <li className="req req-missing">
       <span className="req-icon">
-        <Icon name={req.ok ? "check" : "warning"} size={16} />
+        <Icon name="warning" size={16} />
       </span>
       <div className="req-body">
         <div className="req-line">
           <span className="req-name">{req.name}</span>
-          <span className="sr-only">{req.ok ? "installed" : "missing"}</span>
-          {req.ok && req.version && <span className="req-version mono">{req.version}</span>}
-          {!req.ok && req.privilege && (
+          <span className="sr-only">missing</span>
+          {req.privilege && (
             <span className="tag tag-warn" title="Run this command as an administrator">
               <Icon name="shield" size={11} />
               {privilegeLabel(os)}
@@ -27,15 +45,15 @@ function RequirementRow({ req, os }: { req: Requirement; os: string | undefined 
           )}
         </div>
         <p className="req-why">{req.why}</p>
-        {!req.ok && req.problem && <p className="req-problem">{req.problem}</p>}
-        {!req.ok && req.commands && req.commands.length > 0 && (
+        {req.problem && <p className="req-problem">{req.problem}</p>}
+        {req.commands && req.commands.length > 0 && (
           <div className="req-commands">
             {req.commands.map((c) => (
               <CommandLine key={c} command={command(c)} />
             ))}
           </div>
         )}
-        {!req.ok && req.docs && (
+        {req.docs && (
           <a className="req-docs" href={req.docs} target="_blank" rel="noopener noreferrer">
             Install guide
             <Icon name="open" size={12} />

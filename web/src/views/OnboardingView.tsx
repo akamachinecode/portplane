@@ -263,21 +263,23 @@ function OnboardingFlow() {
                 {status === "done" ? <Icon name="check" size={12} /> : current ? <span className="tl-pulse" /> : <span className="tl-num">{i + 1}</span>}
               </span>
               <div className="tl-content">
-                <button type="button" className="tl-head" disabled={current || !reachable} onClick={() => go(s.id)} aria-expanded={current}>
-                  <span className="tl-title">{labelOf(s.id, remote)}</span>
-                  <span className="tl-record">{stepRecord(s.id, facts)}</span>
-                  {!current && reachable && (
-                    <span className="tl-open">
-                      {status === "done" ? "Open" : "Go"}
-                      <Icon name="chevronRight" size={13} />
-                    </span>
-                  )}
-                  <span className="sr-only">{status === "done" ? " (done)" : current ? " (open)" : " (to do)"}</span>
-                </button>
-                {current && (
+                {current ? (
+                  // The open step: its card says its name, once (ADR-0032).
                   <div className="tl-panel">
                     <View key={step} />
                   </div>
+                ) : (
+                  <button type="button" className="tl-head" disabled={!reachable} onClick={() => go(s.id)}>
+                    <span className="tl-title">{labelOf(s.id, remote)}</span>
+                    <span className="tl-record">{stepRecord(s.id, facts)}</span>
+                    {reachable && (
+                      <span className="tl-open" aria-hidden="true">
+                        {status === "done" ? "Open" : "Go"}
+                        <Icon name="chevronRight" size={13} />
+                      </span>
+                    )}
+                    <span className="sr-only">{status === "done" ? " (done)" : " (to do)"}</span>
+                  </button>
                 )}
               </div>
             </li>

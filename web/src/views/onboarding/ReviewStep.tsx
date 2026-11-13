@@ -70,9 +70,14 @@ export function ReviewStep() {
 
   return (
     <StepLayout
-      icon="file"
       title="Review and write"
-      lead="Here is everything Portplane will write, in plain words and line by line. Generated tasks go to .portplane/tasks.yaml next to your dekit.yaml; tasks you write by hand always win."
+      lead="What Portplane will write, in plain words; the exact lines are one click away."
+      moreLabel="Where it goes"
+      more={
+        <p>
+          Generated tasks go to <code>.portplane/tasks.yaml</code>, next to your <code>dekit.yaml</code>. Tasks you write by hand always win.
+        </p>
+      }
       busy={writing || loading}
       footer={
         <StepFooter status={blockers[0] ?? (nothing ? "Nothing to write: the config is up to date." : "")}>
@@ -110,13 +115,15 @@ export function ReviewStep() {
       )}
       {proposals.map((p) => {
         const lines = describeProposal(p, home);
-        const files = [...p.files].sort((a, b) => Number(b.changed) - Number(a.changed));
+        const files = changedFiles(p);
         return (
           <section key={p.folder} className="ob-review" aria-label={`Changes in ${shortenPath(p.folder, home)}`}>
-            <h2 className="ob-folder-apps-title">
-              <Icon name="folder" size={15} />
-              <span className="mono">{shortenPath(p.folder, home)}</span>
-            </h2>
+            {proposals.length > 1 && (
+              <h3 className="ob-folder-apps-title">
+                <Icon name="folder" size={15} />
+                <span className="mono">{shortenPath(p.folder, home)}</span>
+              </h3>
+            )}
             {lines.length ? (
               <ul className="ob-summary">
                 {lines.map((l) => (
@@ -124,9 +131,18 @@ export function ReviewStep() {
                 ))}
               </ul>
             ) : (
-              <p className="muted">Nothing to change here.</p>
+              <p className="muted">Nothing to change in {shortenPath(p.folder, home)}.</p>
             )}
-            {changedFiles(p).length > 0 && files.map((f) => <FileDiff key={`${f.path}\u0000${p.digest}`} file={f} folder={p.folder} />)}
+            {files.length > 0 && (
+              <details className="ob-more ob-review-lines">
+                <summary>{files.length === 1 ? "See the file line by line" : `See the ${files.length} files line by line`}</summary>
+                <div className="ob-more-body">
+                  {files.map((f) => (
+                    <FileDiff key={`${f.path}\u0000${p.digest}`} file={f} folder={p.folder} />
+                  ))}
+                </div>
+              </details>
+            )}
           </section>
         );
       })}

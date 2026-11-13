@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import type { AppProposal, Proposal } from "../api/types";
 import {
   applyMessage,
+  assignBuckets,
+  bucketGroups,
   cleanName,
   countsText,
   effectiveName,
@@ -16,6 +18,7 @@ import {
   proposalCounts,
   relativePath,
   rescanDelay,
+  shortDir,
   TYPING_DELAY,
   urlForName,
   writeBlocker,
@@ -147,6 +150,44 @@ describe("groupProposalApps", () => {
     ]);
     expect(groups[1].worktrees).toHaveLength(1);
     expect(groupProposalApps([])).toEqual([]);
+  });
+});
+
+describe("buckets", () => {
+  const apps = [
+    ap("shop/web", { status: "unchanged" }),
+    ap("shop/docs", { status: "manual", skipped: true }),
+    ap("shop/api", { status: "new" }),
+    ap("blog/web", { status: "changed" }),
+    ap("blog/old", { status: "skipped", skipped: true }),
+  ];
+
+  it("puts the decisions first and what needs nothing last", () => {
+    const b = bucketGroups(apps, assignBuckets(apps, new Map()));
+    expect(b.map((x) => [x.bucket, x.apps.map((a) => a.task)])).toEqual([
+      ["new", ["shop/api"]],
+      ["changed", ["blog/web"]],
+      ["unchanged", ["shop/web"]],
+      ["skipped", ["blog/old"]],
+      ["manual", ["shop/docs"]],
+    ]);
+  });
+
+  it("keeps an app in the bucket it was first shown in", () => {
+    const first = assignBuckets(apps, new Map());
+    // Unticking shop/api re-scans it as skipped: the row stays among the new ones.
+    const rescanned = apps.map((a) => (a.task === "shop/api" ? { ...a, status: "skipped" as const, skipped: true } : a));
+    const again = assignBuckets([...rescanned, ap("shop/admin")], first);
+    expect(again.get("shop/api")).toBe("new");
+    expect(again.get("shop/admin")).toBe("new");
+    expect(bucketGroups(rescanned, again)[0].apps.map((a) => a.task)).toEqual(["shop/api"]);
+  });
+
+  it("shortens a folder to its last two parts", () => {
+    expect(shortDir("acme/platform/.claude/worktrees/x/apps/web")).toBe("…/apps/web");
+    expect(shortDir("blog/studio")).toBe("blog/studio");
+    expect(shortDir("blog")).toBe("blog");
+    expect(shortDir("")).toBe(".");
   });
 });
 

@@ -1,68 +1,416 @@
-/* Additions to setup's apps list for the guided setup: include all or
-   none per project, and the projects setup can't write tasks for yet. */
+/* The apps a setup scan found (ADR-0032): groups by what writing does to
+   them, one line per app, details on demand. Used by Setup's "Your apps"
+   step and by the "Set up <folder>" dialog. */
 
-.setup-project-head {
+.sa.setup-step > * + * {
+  margin-top: var(--space-4);
+}
+
+/* ---------- what to check, in one line ---------- */
+
+.sa-warn {
+  color: var(--text-2);
+  font-size: var(--text-sm);
+  line-height: 1.55;
+}
+
+.sa-warn > summary {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  width: fit-content;
+  max-width: 100%;
+  padding: 2px 0;
+  cursor: pointer;
+  list-style: none;
+}
+
+.sa-warn > summary::-webkit-details-marker {
+  display: none;
+}
+
+.sa-warn > summary > .icon {
+  flex: none;
+  margin-top: 3px;
+  color: var(--warn);
+}
+
+.sa-warn-why {
+  flex: none;
+  color: var(--accent-text);
+  font-weight: var(--weight-medium);
+}
+
+.sa-warn > summary:hover .sa-warn-why {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.sa-warn[open] .sa-warn-why {
+  display: none;
+}
+
+.sa-warn > ul {
+  max-width: 72ch;
+  margin: var(--space-2) 0 0;
+  padding-left: calc(15px + var(--space-2) + 14px);
+}
+
+.sa-warn li + li {
+  margin-top: var(--space-1);
+}
+
+/* ---------- groups ---------- */
+
+.sa-group {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.sa-group-head {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 4px 12px;
-  padding-right: 14px;
+  gap: 2px var(--space-3);
+  min-height: 44px;
+  padding: var(--space-1) var(--space-4) var(--space-1) var(--space-2);
 }
 
-.setup-project-all {
+.sa-group-title {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-strong);
+}
+
+.sa-group-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  color: var(--text-3);
-  font-size: 13px;
+  gap: var(--space-2);
+  min-height: 32px;
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
 }
 
-.setup-project-all .link-btn:disabled {
+.sa-group-toggle:hover {
+  background: var(--surface-hover);
+}
+
+.sa-group-toggle > .icon {
+  color: var(--text-3);
+}
+
+.sa-group-count {
+  color: var(--text-3);
+  font-weight: var(--weight-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+.sa-group-hint {
+  flex: 1 1 16rem;
+  min-width: 0;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+
+.sa-group-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: auto;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+
+.sa-group-actions .link-btn:disabled {
   color: var(--text-3);
   text-decoration: none;
   cursor: default;
 }
 
-.setup-unsupported {
-  padding: 12px 14px;
-  border: 1px dashed var(--border-strong);
+.sa-group-body {
+  border-top: 1px solid var(--border);
+}
+
+.sa-group-text {
+  max-width: 72ch;
+  padding: var(--space-3) var(--space-4) 0;
+  color: var(--text-2);
+  font-size: var(--text-xs);
+  line-height: 1.55;
+}
+
+/* a project or checkout inside a group, said once above its apps */
+.sa-part + .sa-part {
+  border-top: 1px solid var(--border);
+}
+
+.sa-part-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4) 0;
+  color: var(--text-2);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+}
+
+.sa-part-wt {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--text-3);
+  font-weight: 400;
+}
+
+/* ---------- one line per app ---------- */
+
+.sa-rows {
+  margin: 0;
+  padding: var(--space-1) 0;
+  list-style: none;
+}
+
+.sa-row {
+  padding: 0 var(--space-4);
+}
+
+.sa-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  min-height: 48px;
+  padding: var(--space-1) 0;
+}
+
+.sa-check {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+span.sa-check {
+  cursor: default;
+}
+
+.sa-what {
+  display: flex;
+  flex: 1 1 0;
+  align-items: baseline;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.sa-name {
+  flex: none;
+  max-width: 60%;
+  overflow: hidden;
+  font-weight: var(--weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.is-manual .sa-name {
+  cursor: default;
+}
+
+.sa-meta {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sa-dir {
+  font-family: var(--mono);
+}
+
+.sa .name-field {
+  flex: 0 1 22rem;
+  min-width: 12rem;
+}
+
+.sa-row.is-off .sa-name,
+.sa-row.is-off .sa-meta {
+  color: var(--text-3);
+}
+
+/* Details: a quiet chevron that shows where the pointer or the keyboard is
+   (and always on touch screens); "1 note" when there is something to read. */
+.sa-more-slot {
+  display: flex;
+  flex: none;
+  justify-content: flex-end;
+  width: 4.5rem;
+  margin-left: auto;
+}
+
+.sa-more.link-btn {
+  min-height: 28px;
+  color: var(--text-2);
+}
+
+.sa-more-quiet {
+  opacity: 0;
+  transition: opacity var(--dur-fast);
+}
+
+.sa-row:hover .sa-more-quiet,
+.sa-row:focus-within .sa-more-quiet,
+.sa-more-quiet[aria-expanded="true"] {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .sa-more-quiet {
+    opacity: 1;
+  }
+}
+
+.sa-under {
+  margin: -6px 0 var(--space-2) calc(16px + var(--space-3));
+}
+
+.sa-details {
+  margin: 0 0 var(--space-3) calc(16px + var(--space-3));
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  font-size: var(--text-xs);
+}
+
+.sa-details[hidden] {
+  display: none;
+}
+
+.sa-notes {
+  max-width: 72ch;
+  margin: 0 0 var(--space-3);
+  padding-left: 16px;
+  color: var(--text);
+  line-height: 1.55;
+}
+
+.sa-notes li + li {
+  margin-top: var(--space-1);
+}
+
+.sa-facts {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+}
+
+.sa-facts > div {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr);
+  gap: var(--space-3);
+}
+
+.sa-facts dt {
+  color: var(--text-3);
+}
+
+.sa-facts dd {
+  margin: 0;
+  color: var(--text-2);
+  overflow-wrap: anywhere;
+}
+
+/* ---------- removed ---------- */
+
+.sa-removed .sa-line {
+  min-height: 36px;
+  color: var(--text-2);
+  font-size: var(--text-xs);
+}
+
+.sa-removed .sa-line > .icon {
+  color: var(--err);
+}
+
+.sa-removed .mono {
+  text-decoration: line-through;
+}
+
+/* ---------- nothing found ---------- */
+
+.sa-empty {
+  padding: var(--space-4);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface);
 }
 
-.setup-unsupported-title {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 14px;
-  font-weight: 600;
+.sa-empty-title {
+  margin-bottom: var(--space-1);
+  font-weight: var(--weight-strong);
 }
 
-.setup-unsupported-title .icon {
+@media (max-width: 700px) {
+  .sa-line {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 560px) {
+  .sa-row {
+    padding: 0 var(--space-3);
+  }
+  .sa .name-field {
+    flex-basis: 100%;
+    min-width: 0;
+    margin-left: calc(16px + var(--space-3));
+  }
+  .sa-group-hint {
+    flex-basis: 100%;
+    padding-left: var(--space-8);
+  }
+}
+
+/* ---------- the dialog's tools: what's there takes one line ---------- */
+
+.req-compact {
+  align-items: center;
+  padding-top: 9px;
+  padding-bottom: 9px;
+}
+
+.req-compact .req-line {
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+
+.req-compact .req-name,
+.req-compact .req-version {
+  flex: none;
+}
+
+.req-compact .req-why {
+  min-width: 0;
+  margin: 0 0 0 var(--space-1);
+  overflow: hidden;
   color: var(--text-3);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.setup-unsupported-text {
-  margin-top: 4px;
-  color: var(--text-2);
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.setup-unsupported-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin: 8px 0 0;
-  padding: 0;
-  list-style: none;
-  font-size: 13px;
-}
-
-.setup-unsupported-list li {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
+@media (max-width: 560px) {
+  .req-compact .req-line {
+    flex-wrap: wrap;
+  }
+  .req-compact .req-why {
+    white-space: normal;
+  }
 }

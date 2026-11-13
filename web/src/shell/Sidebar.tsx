@@ -234,7 +234,13 @@ function WorkNav() {
           ))}
           {snapshot && projects.length === 0 && (
             <li className="nav-empty">
-              <a href={href({ view: "settings", section: "folders" })}>Add a folder</a> with your code to see its projects here.
+              {(local?.folders.length ?? 0) > 0 ? (
+                <>No projects in your folders yet.</>
+              ) : (
+                <>
+                  <a href={href({ view: "settings", section: "folders" })}>Add a folder</a> with your code to see its projects here.
+                </>
+              )}
             </li>
           )}
         </Group>

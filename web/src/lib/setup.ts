@@ -150,6 +150,50 @@ export function groupProposalApps(apps: AppProposal[]): ProposalGroup[] {
   }));
 }
 
+/**
+ * Where an app sits in the list (ADR-0032): the decisions first (new,
+ * changed), then what needs nothing (unchanged, left out, set up by hand).
+ */
+export type SetupBucket = "new" | "changed" | "unchanged" | "skipped" | "manual";
+
+export const BUCKET_ORDER: readonly SetupBucket[] = ["new", "changed", "unchanged", "skipped", "manual"];
+
+export function bucketOf(app: AppProposal): SetupBucket {
+  return app.status;
+}
+
+/**
+ * Each app's bucket, keeping the one it had when first shown: ticking or
+ * renaming re-scans and changes its status, but never moves its row.
+ */
+export function assignBuckets(apps: AppProposal[], known: ReadonlyMap<string, SetupBucket>): Map<string, SetupBucket> {
+  const out = new Map(known);
+  for (const a of apps) if (!out.has(a.task)) out.set(a.task, bucketOf(a));
+  return out;
+}
+
+export interface BucketGroup {
+  bucket: SetupBucket;
+  /** The bucket's apps by project, then checkout. */
+  groups: ProposalGroup[];
+  apps: AppProposal[];
+}
+
+/** The non-empty buckets in order, each grouped by project and checkout. */
+export function bucketGroups(apps: AppProposal[], buckets: ReadonlyMap<string, SetupBucket>): BucketGroup[] {
+  return BUCKET_ORDER.map((bucket) => {
+    const list = apps.filter((a) => (buckets.get(a.task) ?? bucketOf(a)) === bucket);
+    return { bucket, apps: list, groups: groupProposalApps(list) };
+  }).filter((b) => b.apps.length > 0);
+}
+
+/** A folder path cut to its last two parts ("…/apps/web"), for one line; the full one goes in a tooltip. */
+export function shortDir(dir: string, keep = 2): string {
+  const parts = dir.split(/[\\/]/).filter(Boolean);
+  if (parts.length === 0) return ".";
+  return parts.length <= keep ? parts.join("/") : `…/${parts.slice(-keep).join("/")}`;
+}
+
 export interface ProposalCounts {
   new: number;
   changed: number;

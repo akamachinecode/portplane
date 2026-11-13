@@ -62,13 +62,14 @@ export function FoldersStep() {
 
   return (
     <StepLayout
-      icon="folder"
-      title="Where do your projects live?"
+      title="Your folders"
       lead={
         scope.remote
-          ? `Pick the folders on ${scope.ms?.machine.name ?? scope.id} that hold your projects. Portplane looks for apps in them, one or two levels down, and you can change them later with Edit machine.`
-          : "Pick the folders that hold your projects. Portplane looks for apps in them, one or two levels down, and you can add more later in Settings."
+          ? `Pick the folders on ${scope.ms?.machine.name ?? scope.id} that hold your projects; you can change them later with Edit machine.`
+          : "Pick the folders that hold your projects; you can add more later in Settings."
       }
+      moreLabel="What Portplane looks for"
+      more={<p>Portplane looks for apps in them, one or two levels down, and reads the dekit.yaml files it finds there.</p>}
       busy={saving}
       footer={
         <StepFooter status={chosen.length ? (chosen.length === 1 ? "One folder chosen." : `${chosen.length} folders chosen.`) : "Choose at least one folder."}>

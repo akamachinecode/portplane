@@ -205,7 +205,7 @@ export function ProxyStep() {
 
   if (!portlessReady) {
     return (
-      <StepLayout icon="shield" title="HTTPS and the proxy" footer={<StepFooter><NextButton label="Skip this step" primary={false} /></StepFooter>}>
+      <StepLayout title="HTTPS and the proxy" footer={<StepFooter><NextButton label="Skip this step" primary={false} /></StepFooter>}>
         <EmptyState
           icon="box"
           title="portless isn't installed yet"
@@ -225,12 +225,22 @@ export function ProxyStep() {
 
   return (
     <StepLayout
-      icon="shield"
       title="HTTPS and the proxy"
       lead={
         remoteName
-          ? `Apps on ${remoteName} get addresses like https://shop.localhost from the portless proxy there; you open them here through Portplane, at https://shop.${scope.id}.localhost. Installing the proxy as a service on ${remoteName} needs your password there once: Portplane shows the command to run over SSH.`
-          : "Your apps get addresses like https://shop.localhost from the portless proxy, which listens on port 443 with a certificate your computer creates and trusts. Installing it as a service needs your password once, so it can use port 443 and start with your computer."
+          ? `The portless proxy on ${remoteName} gives its apps their addresses, and you open them here at https://shop.${scope.id}.localhost.`
+          : "The portless proxy gives your apps addresses like https://shop.localhost."
+      }
+      moreLabel="Why a password"
+      more={
+        remoteName ? (
+          <p>Installing the proxy as a service on {remoteName} needs your password there once: Portplane shows the command to run over SSH.</p>
+        ) : (
+          <p>
+            The proxy listens on port 443 with a certificate your computer creates and trusts. Installing it as a service needs your password once, so it
+            can use port 443 and start with your computer. Your system asks for it; Portplane never sees it.
+          </p>
+        )
       }
       busy={running}
       footer={

@@ -58,10 +58,14 @@ export function startCandidates(ms: MachineSnapshot | undefined, roots: string[]
   return ms.apps.filter((a) => a.kind === "service" && roots.includes(a.runner)).sort((a, b) => a.order - b.order);
 }
 
+/** Above this many projects, only the first one's main app is ticked: a first start is one app to see working, not a wall of them. */
+export const PRESELECT_PROJECTS = 3;
+
 /**
- * The apps to tick at first: one per project and checkout, its main app
- * (the one whose URL has the fewest labels, such as shop.localhost before
- * api.shop.localhost), or the first one.
+ * The apps to tick at first: one per project, its main app in the main
+ * checkout (the one whose URL has the fewest labels, such as shop.localhost
+ * before api.shop.localhost), or the first one. With more than a few
+ * projects, only the first project's (ADR-0032).
  */
 export function preselect(apps: App[]): Set<string> {
   const best = new Map<string, App>();
@@ -72,7 +76,16 @@ export function preselect(apps: App[]): Set<string> {
     if (!cur || labels(a) < labels(cur)) best.set(key, a);
   }
   // Main checkouts only: a worktree's copy can wait.
-  return new Set([...best.values()].filter((a) => !a.worktree || ![...best.values()].some((b) => b.project === a.project && !b.worktree)).map((a) => a.id));
+  const main = [...best.values()].filter((a) => !a.worktree || ![...best.values()].some((b) => b.project === a.project && !b.worktree));
+  const projects = new Set(main.map((a) => `${a.runner}\u0000${a.project}`));
+  return new Set((projects.size > PRESELECT_PROJECTS ? main.slice(0, 1) : main).map((a) => a.id));
+}
+
+/** The apps by project, in order, for the first start's list. */
+export function byProject(apps: App[]): Array<{ project: string; apps: App[] }> {
+  const out = new Map<string, App[]>();
+  for (const a of apps) out.set(a.project, [...(out.get(a.project) ?? []), a]);
+  return [...out.entries()].map(([project, list]) => ({ project, apps: list }));
 }
 
 /** One start per runner, naming its tasks. */

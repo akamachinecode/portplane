@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { App, AppProposal, MachineSnapshot, Proposal } from "../../api/types";
 import { browsersNeedAction, folderRows, hasFixedPorts, missingManagers, proxyOptionsFor } from "./helpers";
 import { setupProblems } from "./problems";
-import { count, describeProposal, firstWorking, nothingToWrite, preselect, startCandidates, startPhase, startTargets } from "./summary";
+import { byProject, count, describeProposal, firstWorking, nothingToWrite, preselect, startCandidates, startPhase, startTargets } from "./summary";
 
 const HOME = "/home/dev";
 const ROOT = `${HOME}/code`;
@@ -69,6 +69,20 @@ describe("first start", () => {
   it("ticks each project's main app, not its worktrees", () => {
     const picked = preselect(startCandidates(ms, [ROOT]));
     expect([...picked].sort()).toEqual([`${ROOT}#blog/site`, `${ROOT}#shop/web`]);
+  });
+
+  it("ticks only the first project's main app when there are many projects", () => {
+    const many = ["a", "b", "c", "d"].flatMap((p, i) => [
+      app({ task: `${p}/api`, project: p, order: i * 2, hostname: `api.${p}.localhost` }),
+      app({ task: `${p}/web`, project: p, order: i * 2 + 1, hostname: `${p}.localhost` }),
+    ]);
+    expect([...preselect(many)]).toEqual([`${ROOT}#a/web`]);
+    expect(byProject(many).map((g) => [g.project, g.apps.length])).toEqual([
+      ["a", 2],
+      ["b", 2],
+      ["c", 2],
+      ["d", 2],
+    ]);
   });
 
   it("starts one target per runner", () => {
