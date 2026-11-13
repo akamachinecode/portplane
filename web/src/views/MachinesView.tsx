@@ -87,6 +87,7 @@ export function MachinesView() {
   return (
     <>
       <ViewHeader
+        section="Settings"
         title="Machines"
         description="This computer and others you reach over SSH, Tailscale included. Their dev servers show next to yours."
         actions={
