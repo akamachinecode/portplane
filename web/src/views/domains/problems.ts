@@ -104,7 +104,7 @@ function machinePortlessProblems(ms: MachineSnapshot): Problem[] {
       severity: remote ? "info" : "warning",
       title: remote ? `${name} doesn't trust its own local certificate` : "Browsers will warn about your .localhost addresses",
       detail: remote
-        ? `Its apps open fine here, but programs on ${name} that call https://….localhost addresses will refuse them. Trusting it there needs your password once, as a command to run over SSH.`
+        ? `Its apps open fine here, but programs on ${name} refuse their addresses. Trusting it needs your password once.`
         : "Your system doesn't trust portless's local certificate authority yet. Trusting it asks for your password once.",
       machine: where,
       fix: fix("trust", "Trust the certificate"),
