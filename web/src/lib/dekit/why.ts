@@ -86,8 +86,8 @@ export function runnerTone(r: Pick<RunnerInfo, "state">): "on" | "starting" | "f
     case "starting":
       return "starting";
     case "failed":
-    case "stale":
       return "failed";
+    // a stale record is a leftover: nothing runs and nothing failed now (Health lists it as a note)
     default:
       return "off";
   }

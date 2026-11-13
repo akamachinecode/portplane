@@ -158,7 +158,8 @@ export function RunnerRow({ runner, home, live, onChanged }: { runner: RunnerInf
 
   const since = sinceText(runner.since, now);
   const confirm = asking ? CONFIRM[asking] : undefined;
-  const lookAt = runner.state === "starting" || runner.state === "stale" || runner.state === "failed";
+  // the word shows when something needs a look; a stale record says what it is in its own line below
+  const lookAt = runner.state === "starting" || runner.state === "failed";
   const otherVersion = runner.version && installed && runner.version !== installed ? runner.version : null;
   // The kernel warning says what restartRequired says: the line below says it once.
   const warnings = runner.restartRequired ? runner.warnings.filter((w) => !w.startsWith("kernel:")) : runner.warnings;

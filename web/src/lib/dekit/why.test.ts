@@ -50,7 +50,7 @@ describe("reload plans", () => {
 
 describe("runners", () => {
   it("tones and durations", () => {
-    expect(runnerTone({ state: "stale" })).toBe("failed");
+    expect(runnerTone({ state: "stale" })).toBe("off");
     expect(runnerTone({ state: "absent" })).toBe("off");
     const now = Date.parse("2026-11-12T12:00:00Z");
     expect(sinceText("2026-11-12T11:59:30Z", now)).toBe("for less than a minute");
