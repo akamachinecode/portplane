@@ -268,9 +268,11 @@ function AddressTable({ rows, empty, onEditAlias }: { rows: AddressRow[]; empty:
                     <From row={row} machine={scope.id} />
                   </td>
                   <td>
+                    {/* live is the green dot and the Open button, as running is in Apps;
+                        the word shows when something needs a look (ADR-0032) */}
                     <span className="inline-state" title={age ? `Live for ${age}` : undefined}>
                       <StateDot state={STATE_DOT[row.state]} />
-                      {STATE_TEXT[row.state]}
+                      <span className={row.state === "live" ? "sr-only" : undefined}>{STATE_TEXT[row.state]}</span>
                     </span>
                   </td>
                   <td className="row-actions-cell">
