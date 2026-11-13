@@ -140,7 +140,7 @@ function AppRowImpl({ app, ms, extras, variant = "list", showProject, placeCell,
   const addressLine = address && (
     <div className="row-line row-addr">
       {href ? (
-        <a className="addr" href={href} target="_blank" rel="noopener" title={withShortcut(`Open ${app.label}`, "o")}>
+        <a className="addr" href={href} target="_blank" rel="noopener" title={withShortcut(`Open ${app.label}${app.port ? `, on port ${app.port}` : ""}`, "o")}>
           {address}
         </a>
       ) : (
@@ -148,7 +148,8 @@ function AppRowImpl({ app, ms, extras, variant = "list", showProject, placeCell,
           {address}
         </span>
       )}
-      {app.port && app.url ? (
+      {/* the list says where to open it; the port, which changes, is for the table (and the details) */}
+      {variant === "table" && app.port && app.url ? (
         <span className="port" title="Internal port">
           <span aria-hidden="true">→ </span>
           {portLabel(app.port)}
