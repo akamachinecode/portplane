@@ -160,10 +160,12 @@
 
 /* Actions show where the pointer or the keyboard is (ADR-0032): a list at
    rest is names, states and addresses. A failed app keeps its actions in
-   view, and so does anything in flight (starting, stopping, a busy button).
-   Touch screens (no hover) show them all, disabled ones as disabled. */
+   view; anything in flight keeps the one that stops it (and a busy button
+   stays). Touch screens (no hover) show them all, disabled ones as
+   disabled. */
 @media (hover: hover) {
   .row:not(:hover, :focus-within, .is-cursor, .is-selected, .row-failed, .row-starting, .row-stopping) .row-actions > :not([aria-busy="true"]),
+  .row:is(.row-starting, .row-stopping):not(:hover, :focus-within, .is-cursor, .is-selected) .row-actions > :not(.row-toggle, [aria-busy="true"]),
   .project-head:not(:hover, :focus-within) .group-actions > :not([aria-busy="true"]),
   .checkout-head:not(:hover, :focus-within) .group-actions > :not([aria-busy="true"]) {
     opacity: 0;

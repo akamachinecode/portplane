@@ -182,6 +182,7 @@ function AppRowImpl({ app, ms, extras, variant = "list", showProject, placeCell,
       )}
       <IconButton
         key="toggle"
+        className="row-toggle"
         icon={alive ? "stop" : "play"}
         tone={alive ? "halt" : "go"}
         label={`${alive ? "Stop" : "Start"} ${app.label}`}
