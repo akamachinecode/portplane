@@ -1,12 +1,13 @@
 import { useEffect, useId, useState, type ReactNode } from "react";
 import type { PortlessAction, PortlessStatus, ProxyOptions } from "../../api/portless";
 import { Field, Switch } from "../../components/Controls";
-import { Icon } from "../../components/Icon";
+import { Icon, type IconName } from "../../components/Icon";
 import { IconButton } from "../../components/IconButton";
+import { Menu, type MenuItem } from "../../components/Menu";
 import { EmptyState, ErrorState, LoadingState } from "../../components/States";
-import { StateDot } from "../../components/StateDot";
 import { cleanTlds, describeOptions, lowPort, normalizeOptions, optionsProblems, proxyAnswers, proxyUrl, sameOptions, tldProblem, tldWarning } from "../../lib/portless";
-import { SettingRow, SettingsGroup } from "../settings/SettingsGroup";
+import { SettingRow } from "../settings/SettingsGroup";
+import { Fact, Fold, Group, ShortPath, StatusLine } from "./Fold";
 import { PlanDialog } from "./PlanDialog";
 import { usePortlessStatus, valueOf } from "./store";
 
@@ -46,129 +47,111 @@ export function usePlan() {
   return { show: (action: PortlessAction, options?: ProxyOptions) => setOpen({ action, options }), dialog };
 }
 
-function ProxyState({ status, plan }: { status: PortlessStatus; plan: (a: PortlessAction) => void }) {
+function Proxy({ status, plan }: { status: PortlessStatus; plan: (a: PortlessAction) => void }) {
   const p = status.proxy;
+  const s = status.service;
+  const prog = status.program;
   const { up, port } = proxyAnswers(status);
+  const broken = !!(s?.installed && prog && (prog.nodeMissing || prog.scriptMissing));
   const example = proxyUrl(`web.${p.tlds[0] ?? "localhost"}`, p);
+  const shield = (admin: boolean, other: IconName): IconName => (admin ? "shield" : other);
+
+  // The one action you'd take now is a button; the others wait in the menu.
+  const main: PortlessAction = !up ? "proxy-start" : broken || (s && !s.installed) ? "service-install" : "proxy-restart";
+  const items: MenuItem[] = [];
+  if (up && main !== "proxy-restart") items.push({ label: "Restart the proxy", icon: "restart", onSelect: () => plan("proxy-restart") });
+  if (up) items.push({ label: "Stop the proxy", icon: shield(status.adminToStop, "stop"), onSelect: () => plan("proxy-stop") });
+  if (s?.installed && main !== "service-install") items.push({ label: "Reinstall the startup service", icon: "shield", onSelect: () => plan("service-install") });
+  if (s?.installed) items.push({ label: "Remove the startup service", icon: "trash", onSelect: () => plan("service-uninstall") });
+  if (!up && s && !s.installed) items.push({ label: "Install the startup service", icon: "shield", onSelect: () => plan("service-install") });
+
+  const button =
+    main === "proxy-start" ? (
+      <button type="button" className="btn btn-primary" onClick={() => plan("proxy-start")}>
+        <Icon name={shield(status.adminToStart, "play")} size={13} />
+        Start the proxy
+      </button>
+    ) : main === "service-install" ? (
+      <button type="button" className={`btn${broken ? " btn-primary" : ""}`} onClick={() => plan("service-install")}>
+        <Icon name="shield" size={13} />
+        {broken ? "Reinstall the service" : "Start it with the computer"}
+      </button>
+    ) : (
+      <button type="button" className="btn" onClick={() => plan("proxy-restart")}>
+        <Icon name="restart" size={13} />
+        Restart
+      </button>
+    );
+
+  const service = !s ? (
+    status.serviceError ? <span className="warn-text">Couldn't ask portless about its startup service: {status.serviceError}</span> : undefined
+  ) : broken ? (
+    <span className="warn-text">The startup service starts a program that no longer exists, as after a Node.js or portless upgrade. Reinstall it.</span>
+  ) : s.installed ? (
+    "Starts with the computer"
+  ) : (
+    "Runs until you stop it or restart the computer"
+  );
+
   return (
-    <SettingsGroup title="Proxy">
-      <SettingRow label="State">
-        <span className="inline-state">
-          <StateDot state={up ? "on" : "failed"} />
-          {up ? `Running on port ${port} with ${p.https ? "HTTPS" : "HTTP"}` : "Not running: your .localhost addresses won't load"}
-        </span>
-      </SettingRow>
+    <Group title="Proxy">
+      <StatusLine
+        state={up ? "on" : "failed"}
+        sub={service}
+        actions={
+          <>
+            {button}
+            {items.length > 0 && <Menu label="More proxy actions" items={items} />}
+          </>
+        }
+      >
+        {up ? `Running on port ${port} with ${p.https ? "HTTPS" : "HTTP"}` : "Not running: your .localhost addresses won't load"}
+      </StatusLine>
       {up && (
-        <SettingRow label="Addresses" description="Every app gets one under each domain; the first is the main one.">
-          <span className="chips">
-            {p.tlds.map((t, i) => (
-              <span key={t} className={`chip mono${i === 0 ? " chip-main" : ""}`}>
-                .{t}
-              </span>
-            ))}
-            <span className="muted mono">{example}</span>
-          </span>
+        <SettingRow label="Addresses">
+          <span className="mono">{example}</span>
+          {p.tlds.length > 1 && <span className="muted"> · also {p.tlds.slice(1).map((t) => `.${t}`).join(", ")}</span>}
         </SettingRow>
       )}
       {(p.lan || p.unprivileged || p.customCert || status.options.wildcard) && (
         <SettingRow label="Modes">
           <span className="chips">
-            {p.lan && <span className="chip">LAN{p.lanIp ? ` · ${p.lanIp}` : ""}</span>}
-            {p.unprivileged && <span className="chip">Unprivileged</span>}
-            {p.customCert && <span className="chip">Own certificate</span>}
-            {status.options.wildcard && <span className="chip">Wildcard subdomains</span>}
+            {p.lan && <span className="dchip">LAN{p.lanIp ? ` · ${p.lanIp}` : ""}</span>}
+            {p.unprivileged && <span className="dchip">Unprivileged</span>}
+            {p.customCert && <span className="dchip">Own certificate</span>}
+            {status.options.wildcard && <span className="dchip">Wildcard subdomains</span>}
           </span>
         </SettingRow>
       )}
-      {p.pid !== undefined && up && (
-        <SettingRow label="Process">
-          <span className="mono">
-            PID {p.pid}
-            {p.asRoot && <span className="muted"> · runs as administrator</span>}
-          </span>
-        </SettingRow>
-      )}
-      <div className="sgroup-foot">
-        {up ? (
-          <>
-            <button type="button" className="btn" onClick={() => plan("proxy-restart")}>
-              <Icon name="restart" size={14} />
-              Restart
-            </button>
-            <button type="button" className="btn" onClick={() => plan("proxy-stop")}>
-              <Icon name={status.adminToStop ? "shield" : "stop"} size={13} />
-              Stop
-            </button>
-          </>
-        ) : (
-          <button type="button" className="btn btn-primary" onClick={() => plan("proxy-start")}>
-            <Icon name={status.adminToStart ? "shield" : "play"} size={13} />
-            Start the proxy
-          </button>
-        )}
-      </div>
-    </SettingsGroup>
-  );
-}
-
-function Service({ status, plan }: { status: PortlessStatus; plan: (a: PortlessAction) => void }) {
-  const s = status.service;
-  const prog = status.program;
-  const missing = prog && (prog.nodeMissing || prog.scriptMissing);
-  return (
-    <SettingsGroup title="Startup service" description="A system service that starts the proxy whenever the computer starts. Installing, changing or removing it asks for your password.">
-      {!s && <p className="muted">{status.serviceError ? `Couldn't ask portless about its service: ${status.serviceError}` : "Unknown."}</p>}
-      {s && (
-        <>
-          <SettingRow label="Installed">
-            <span className="inline-state">
-              <StateDot state={s.installed ? (missing ? "failed" : "on") : "off"} />
-              {s.installed ? `Yes · ${s.managerState}` : "No: the proxy runs only until you stop it or restart"}
-            </span>
-          </SettingRow>
-          {s.installed && prog && (
-            <SettingRow label="Node.js" description={missing ? "The service starts a program that no longer exists, as after a Node.js or portless upgrade. Reinstall it to point it at the ones you have now." : "The Node.js the service starts portless with."}>
-              <span className={`mono path-value${prog.nodeMissing ? " is-missing" : ""}`}>
-                {prog.node}
-                {prog.nodeMissing && <span className="tag tag-warn">missing</span>}
-              </span>
-            </SettingRow>
+      <Fold summary="Details">
+        <dl className="dfacts">
+          {p.pid !== undefined && up && (
+            <Fact label="Process">
+              <span className="mono">PID {p.pid}</span>
+              {p.asRoot && <span className="muted"> · runs as administrator</span>}
+            </Fact>
           )}
-          {s.installed && prog?.scriptMissing && (
-            <SettingRow label="portless">
-              <span className="mono path-value is-missing">
-                {prog.script}
-                <span className="tag tag-warn">missing</span>
-              </span>
-            </SettingRow>
+          <Fact label="Startup service">{s ? (s.installed ? `Installed · ${s.managerState}` : "Not installed") : "Unknown"}</Fact>
+          {s?.installed && prog && (
+            <Fact label="Node.js">
+              <ShortPath path={prog.node} />
+              {prog.nodeMissing && <span className="tag tag-warn">missing</span>}
+            </Fact>
           )}
-          {s.installed && s.entry && (
-            <SettingRow label="Service file">
-              <span className="mono path-value">{s.entry}</span>
-            </SettingRow>
+          {s?.installed && prog?.script && (
+            <Fact label="portless">
+              <ShortPath path={prog.script} />
+              {prog.scriptMissing && <span className="tag tag-warn">missing</span>}
+            </Fact>
           )}
-        </>
-      )}
-      <div className="sgroup-foot">
-        {s?.installed ? (
-          <>
-            <button type="button" className="btn btn-ghost" onClick={() => plan("service-uninstall")}>
-              <Icon name="trash" size={13} />
-              Remove
-            </button>
-            <button type="button" className={`btn${missing ? " btn-primary" : ""}`} onClick={() => plan("service-install")}>
-              <Icon name="shield" size={13} />
-              Reinstall
-            </button>
-          </>
-        ) : (
-          <button type="button" className="btn btn-primary" onClick={() => plan("service-install")}>
-            <Icon name="shield" size={13} />
-            Install the service
-          </button>
-        )}
-      </div>
-    </SettingsGroup>
+          {s?.installed && s.entry && (
+            <Fact label="Service file">
+              <ShortPath path={s.entry} />
+            </Fact>
+          )}
+        </dl>
+      </Fold>
+    </Group>
   );
 }
 
@@ -255,121 +238,116 @@ function Options({ status, plan }: { status: PortlessStatus; plan: (a: PortlessA
   const preview = proxyUrl(`web.${o.lan ? "local" : (cleanTlds(o.tlds)[0] ?? "localhost")}`, { port: o.port, https: o.https });
 
   return (
-    <SettingsGroup
-      title="Options"
-      description={
-        service
-          ? "portless keeps these options in its startup service, so applying them reinstalls the service. That asks for your password."
-          : "These apply the next time the proxy starts. Install the service to keep them across restarts."
-      }
-    >
-      <div className="form-grid proxy-form">
-        <Field label="Port" htmlFor={ids.port} error={problems.port} hint={lowPort(o.port) ? "Ports below 1024 need your password once on Linux; macOS and Windows allow them." : "A port of 1024 or more needs no password, but every URL carries it."}>
-          <div className="port-choice">
-            <input id={ids.port} className="input mono port-input" type="number" min={1} max={65535} value={Number.isFinite(o.port) ? o.port : ""} onChange={(e) => set({ port: e.target.valueAsNumber })} aria-invalid={problems.port ? true : undefined} />
-            <button type="button" className="btn btn-sm btn-ghost" onClick={() => set({ port: o.https ? 443 : 80 })}>
-              Standard ({o.https ? 443 : 80})
+    <div className="sgroup">
+      <div className="sgroup-body">
+        <p className="sgroup-text">{service ? "Applying them reinstalls the startup service, which asks for your password." : "They apply the next time the proxy starts."}</p>
+        <div className="form-grid proxy-form">
+          <Field label="Port" htmlFor={ids.port} error={problems.port} hint={lowPort(o.port) ? "Ports below 1024 need your password once on Linux; macOS and Windows allow them." : "A port of 1024 or more needs no password, but every URL carries it."}>
+            <div className="port-choice">
+              <input id={ids.port} className="input mono port-input" type="number" min={1} max={65535} value={Number.isFinite(o.port) ? o.port : ""} onChange={(e) => set({ port: e.target.valueAsNumber })} aria-invalid={problems.port ? true : undefined} />
+              <button type="button" className="btn btn-sm btn-ghost" onClick={() => set({ port: o.https ? 443 : 80 })}>
+                Standard ({o.https ? 443 : 80})
+              </button>
+              <button type="button" className="btn btn-sm btn-ghost" onClick={() => set({ port: 1355 })}>
+                No password (1355)
+              </button>
+            </div>
+          </Field>
+          <Switch checked={o.https} onChange={(https) => set({ https, port: o.port === 443 && !https ? 80 : o.port === 80 && https ? 443 : o.port })} label="HTTPS" description="Serves every address over HTTPS with portless's local certificate, which your system has to trust once." />
+          {!o.lan && <Domains tlds={cleanTlds(o.tlds)} onChange={(tlds) => set({ tlds })} disabled={false} error={problems.tlds} />}
+          <Switch checked={o.wildcard} onChange={(wildcard) => set({ wildcard })} label="Wildcard subdomains" description="An address no app registered falls back to its closest parent: feature.web.localhost opens web.localhost." />
+          <Switch checked={o.lan} onChange={(lan) => set({ lan, lanIp: lan ? o.lanIp : undefined })} label="Share on your network (LAN)" description="Publishes every app as name.local over mDNS, so phones and other computers on your Wi-Fi can open it. Domains switch to .local." />
+          {o.lan && (
+            <Field label="LAN address" htmlFor={ids.ip} error={problems.lanIp} hint="Leave it empty to follow this machine's address as it changes.">
+              <input id={ids.ip} className="input mono" value={o.lanIp ?? ""} placeholder="192.168.1.20" onChange={(e) => set({ lanIp: e.target.value })} aria-invalid={problems.lanIp ? true : undefined} />
+            </Field>
+          )}
+          <Switch checked={o.unprivileged} onChange={(unprivileged) => set({ unprivileged })} label="Unprivileged" description="Takes a port below 1024 without your password where the system allows it, accepting connections from this computer only. Never writes the hosts file." />
+          <Fold className="proxy-cert" summary="Your own certificate" open={!!(current.certPath || current.keyPath) || undefined}>
+            <p className="field-hint">Serve a certificate you already have (from mkcert or your company, say) instead of portless's own.</p>
+            <Field label="Certificate file" htmlFor={ids.cert} error={problems.certPath}>
+              <input id={ids.cert} className="input mono" value={o.certPath ?? ""} placeholder="/home/dev/certs/dev.pem" onChange={(e) => set({ certPath: e.target.value })} />
+            </Field>
+            <Field label="Key file" htmlFor={ids.key} error={problems.keyPath}>
+              <input id={ids.key} className="input mono" value={o.keyPath ?? ""} placeholder="/home/dev/certs/dev-key.pem" onChange={(e) => set({ keyPath: e.target.value })} />
+            </Field>
+          </Fold>
+          <p className="proxy-preview">
+            Apps will be at <span className="mono">{preview}</span>
+          </p>
+        </div>
+        <div className="sgroup-foot">
+          {changed && (
+            <button type="button" className="btn btn-ghost" onClick={() => setO({ ...current, tlds: cleanTlds(current.tlds) })}>
+              Reset
             </button>
-            <button type="button" className="btn btn-sm btn-ghost" onClick={() => set({ port: 1355 })}>
-              No password (1355)
+          )}
+          {!service && (
+            <button type="button" className="btn" disabled={invalid || !changed} onClick={() => plan(status.proxy.responding ? "proxy-restart" : "proxy-start", normalizeOptions(o))}>
+              {status.proxy.responding ? "Restart with these options" : "Start with these options"}
             </button>
-          </div>
-        </Field>
-        <Switch checked={o.https} onChange={(https) => set({ https, port: o.port === 443 && !https ? 80 : o.port === 80 && https ? 443 : o.port })} label="HTTPS" description="Serves every address over HTTPS with portless's local certificate, which your system has to trust once." />
-        {!o.lan && <Domains tlds={cleanTlds(o.tlds)} onChange={(tlds) => set({ tlds })} disabled={false} error={problems.tlds} />}
-        <Switch checked={o.wildcard} onChange={(wildcard) => set({ wildcard })} label="Wildcard subdomains" description="An address no app registered falls back to its closest parent: feature.web.localhost opens web.localhost." />
-        <Switch checked={o.lan} onChange={(lan) => set({ lan, lanIp: lan ? o.lanIp : undefined })} label="Share on your network (LAN)" description="Publishes every app as name.local over mDNS, so phones and other computers on your Wi-Fi can open it. Domains switch to .local." />
-        {o.lan && (
-          <Field label="LAN address" htmlFor={ids.ip} error={problems.lanIp} hint="Leave it empty to follow this machine's address as it changes.">
-            <input id={ids.ip} className="input mono" value={o.lanIp ?? ""} placeholder="192.168.1.20" onChange={(e) => set({ lanIp: e.target.value })} aria-invalid={problems.lanIp ? true : undefined} />
-          </Field>
-        )}
-        <Switch checked={o.unprivileged} onChange={(unprivileged) => set({ unprivileged })} label="Unprivileged" description="Takes a port below 1024 without your password where the system allows it, accepting connections from this computer only. Never writes the hosts file." />
-        <details className="proxy-cert" open={!!(o.certPath || o.keyPath)}>
-          <summary>Your own certificate</summary>
-          <p className="field-hint">Instead of portless's local certificate authority, serve a certificate you already have (from mkcert or your company, say).</p>
-          <Field label="Certificate file" htmlFor={ids.cert} error={problems.certPath}>
-            <input id={ids.cert} className="input mono" value={o.certPath ?? ""} placeholder="/home/dev/certs/dev.pem" onChange={(e) => set({ certPath: e.target.value })} />
-          </Field>
-          <Field label="Key file" htmlFor={ids.key} error={problems.keyPath}>
-            <input id={ids.key} className="input mono" value={o.keyPath ?? ""} placeholder="/home/dev/certs/dev-key.pem" onChange={(e) => set({ keyPath: e.target.value })} />
-          </Field>
-        </details>
-        <p className="proxy-preview">
-          Apps will be at <span className="mono">{preview}</span>
-        </p>
-      </div>
-      <div className="sgroup-foot">
-        {changed && (
-          <button type="button" className="btn btn-ghost" onClick={() => setO({ ...current, tlds: cleanTlds(current.tlds) })}>
-            Reset
+          )}
+          <button type="button" className="btn" disabled={invalid || (!changed && !!service)} onClick={() => plan("service-install", normalizeOptions(o))} title={describeOptions(normalizeOptions(o))}>
+            <Icon name="shield" size={13} />
+            {service ? "Apply: reinstall the service" : "Install the service with these options"}
           </button>
-        )}
-        {!service && (
-          <button type="button" className="btn" disabled={invalid || !changed} onClick={() => plan(status.proxy.responding ? "proxy-restart" : "proxy-start", normalizeOptions(o))}>
-            {status.proxy.responding ? "Restart with these options" : "Start with these options"}
-          </button>
-        )}
-        <button type="button" className="btn" disabled={invalid || (!changed && !!service)} onClick={() => plan("service-install", normalizeOptions(o))} title={describeOptions(normalizeOptions(o))}>
-          <Icon name="shield" size={13} />
-          {service ? "Apply: reinstall the service" : "Install the service with these options"}
-        </button>
+        </div>
       </div>
-    </SettingsGroup>
+    </div>
   );
 }
 
-/** The proxy, its startup service and its options (plan §5.1). */
 /**
  * What the proxy is, drawn: the browser asks for an address, the proxy
- * answers it with the certificate and passes the request to the app's port.
+ * answers it with the certificate and passes the request to the app's
+ * port. It explains, so it carries no state: the Proxy card says that.
  */
 export function ProxyExplainer({ status }: { status: PortlessStatus }) {
-  const { up, port } = proxyAnswers(status);
   const https = status.proxy.https;
   const tld = status.proxy.tlds[0] ?? "localhost";
   return (
-    <section className="explainer" aria-labelledby="proxy-what">
-      <h2 className="sgroup-title" id="proxy-what">
-        What the proxy does
-      </h2>
+    <>
       <ol className="flow" aria-label="How a request reaches an app">
         <li className="flow-step">
           <span className="flow-kicker">Your browser opens</span>
           <span className="flow-value mono">{https ? "https" : "http"}://web.{tld}</span>
         </li>
-        <li className={`flow-step flow-proxy${up ? " is-up" : " is-down"}`}>
-          <span className="flow-kicker">The proxy answers{up ? ` on :${port}` : ", once it runs"}</span>
+        <li className="flow-step flow-proxy">
+          <span className="flow-kicker">the proxy, on :{status.proxy.port}</span>
           <span className="flow-value">
             <Icon name="shield" size={14} />
             portless{https ? " · HTTPS" : ""}
           </span>
         </li>
         <li className="flow-step">
-          <span className="flow-kicker">and passes it to the app</span>
+          <span className="flow-kicker">passes it to the app</span>
           <span className="flow-value mono">127.0.0.1:4514</span>
         </li>
       </ol>
       <p className="explainer-text">
-        Every app listens on a port that changes from run to run. The proxy is one small server, always on the same port, that knows which
-        name belongs to which port right now: so <span className="mono">web.{tld}</span> always opens <em>web</em>, wherever it listens. It also
-        holds the certificate your browser trusts, which is what gives every address its padlock. Without it running, the apps still run,
-        but their addresses don't load.
+        An app's port changes from run to run. The proxy stays on one port and knows which name belongs to which port right now, so{" "}
+        <span className="mono">web.{tld}</span> always opens <em>web</em>. It also holds the certificate behind the padlock. Without it, apps still run, but their addresses don't load.
       </p>
-    </section>
+    </>
   );
 }
 
+/** The proxy, its startup service and its options (plan §5.1). */
 export function ProxySection() {
   const { show, dialog } = usePlan();
   return (
     <StatusGate>
       {(status) => (
         <>
-          <ProxyExplainer status={status} />
-          <ProxyState status={status} plan={(a) => show(a)} />
-          <Service status={status} plan={(a) => show(a)} />
-          <Options status={status} plan={show} />
+          <Proxy status={status} plan={(a) => show(a)} />
+          <div className="dfolds">
+            <Fold className="dfold-section" summary="How it works">
+              <ProxyExplainer status={status} />
+            </Fold>
+            <Fold className="dfold-section" summary="Advanced options" hint="Port, HTTPS, domains, wildcard, LAN">
+              <Options status={status} plan={show} />
+            </Fold>
+          </div>
           {dialog}
         </>
       )}

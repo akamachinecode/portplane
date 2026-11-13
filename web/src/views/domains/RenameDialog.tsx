@@ -23,20 +23,20 @@ function dirOf(path: string): string {
 function sourceText(info: NameInfo): string {
   switch (info.source) {
     case "fragment":
-      return "The name is in the task Portplane wrote for this app. Portplane changes it there, reloads dekit and restarts the app.";
+      return "Portplane changes it in that file, reloads dekit and restarts the app.";
     case "task":
-      return "The name is in the task's command in your dekit file. Portplane changes only that value and shows you the change first.";
+      return "Portplane changes only that value in the task's command; you see the change first.";
     case "config":
       return info.inferred
-        ? `portless works this name out from the folder (package.json or the folder's name). Portplane writes the new one in ${info.target ?? "portless.json"}.`
-        : `The name is in the project's ${info.target ?? "portless.json"}. Portplane changes it there and restarts the app.`;
+        ? `portless works it out from the folder; Portplane writes the new one in ${info.target ?? "portless.json"}.`
+        : `Portplane changes it in ${info.target ?? "portless.json"} and restarts the app.`;
     case "alias-task":
-      return `The name comes from an alias job (${info.task}). Portplane changes its command, removes the old alias and runs the job again.`;
+      return `Portplane changes the alias job's command (${info.task}), removes the old alias and runs the job again.`;
     case "alias":
-      return "The name is a portless alias. Portplane adds the new one and removes the old one.";
+      return "Portplane adds the new alias and removes the old one.";
     case "compose":
       return info.editable
-        ? `The name is the portless.name label of the ${info.service ?? "service"} service in the project's compose file. Portplane sets that label${info.running ? ", then starts the project again so the new address takes over" : ""}.`
+        ? `Portplane sets the portless.name label of the ${info.service ?? "service"} service${info.running ? ", then starts the project again" : ""}.`
         : "The name comes from a docker compose label.";
     default:
       return "";

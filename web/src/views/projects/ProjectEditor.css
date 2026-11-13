@@ -587,7 +587,8 @@ details[open] > summary > .form-section-chevron {
   font-style: italic;
 }
 
-.chips {
+/* the tags input: names scoped to it (.chips and .chip are portless pages' too) */
+.tag-field {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -600,17 +601,17 @@ details[open] > summary > .form-section-chevron {
   background: var(--surface);
 }
 
-.chips:focus-within {
+.tag-field:focus-within {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
-.chips-list {
+.tag-field-list {
   display: contents;
   list-style: none;
 }
 
-.chip {
+.tag-chip {
   display: inline-flex;
   align-items: center;
   gap: 2px;
@@ -623,7 +624,7 @@ details[open] > summary > .form-section-chevron {
   font-weight: 550;
 }
 
-.chip-x {
+.tag-chip-x {
   display: grid;
   place-items: center;
   width: 18px;
@@ -635,11 +636,11 @@ details[open] > summary > .form-section-chevron {
   cursor: pointer;
 }
 
-.chip-x:hover {
+.tag-chip-x:hover {
   background: var(--mark-bg);
 }
 
-.chips-input.input {
+.tag-field-input.input {
   flex: 1 1 100px;
   height: 24px;
   border: 0;

@@ -125,12 +125,16 @@ export function ShareDialog({ target, kind, on, onClose }: { target: ShareTarget
           )}
           {!preview.problem && (
             <>
-              {preview.warnings.map((w) => (
-                <p key={w} className={`rename-note${preview.public && w.startsWith("Anyone") ? " share-public-warn" : " rename-warn"}`}>
-                  <Icon name="warning" size={13} />
-                  {w}
-                </p>
-              ))}
+              {/* red for what makes an app public; the rest is information, in plain text */}
+              {preview.warnings.map((w) => {
+                const exposure = preview.public && w.startsWith("Anyone");
+                return (
+                  <p key={w} className={`rename-note${exposure ? " share-public-warn" : ""}`}>
+                    <Icon name={exposure ? "warning" : "info"} size={13} />
+                    {w}
+                  </p>
+                );
+              })}
               {preview.public && (
                 <label className="share-confirm" htmlFor={confirmId}>
                   <input id={confirmId} type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} data-autofocus />

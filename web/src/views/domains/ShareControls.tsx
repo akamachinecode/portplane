@@ -7,23 +7,50 @@ import { useApp } from "../../components/AppContext";
 import { Dialog } from "../../components/Dialog";
 import { Icon } from "../../components/Icon";
 import { IconButton } from "../../components/IconButton";
+import { Menu } from "../../components/Menu";
 import { ErrorState, LoadingState } from "../../components/States";
 import { StateDot } from "../../components/StateDot";
 import { href } from "../../lib/router";
-import { readiness, SHARE_BLURBS, SHARE_KINDS, SHARE_TITLES, shareState } from "../../lib/sharing";
-import { Requirements } from "./Requirements";
+import { isPublic, SHARE_KINDS, SHARE_NAMES, shareState } from "../../lib/sharing";
 import { ShareDialog } from "./ShareDialog";
 import { useRefreshOnJobs } from "./store";
 import "./Sharing.css";
 // Its styles live with the Domains view, which may not have loaded (the app detail opens this too).
 import "../DomainsView.css";
 
+/** What each way is called in the Share menu: where the app becomes reachable. */
+const MENU_LABELS: Record<ShareKind, string> = {
+  tailscale: "On your tailnet",
+  funnel: "Publicly, with Tailscale Funnel",
+  ngrok: "Publicly, with ngrok",
+  cloudflare: "Publicly, with Cloudflare",
+};
+
+/** "Share…" and its menu of ways. */
+function ShareMenu({ kinds, disabled, title, onPick }: { kinds: ShareKind[]; disabled?: boolean; title?: string; onPick(kind: ShareKind): void }) {
+  return (
+    <Menu
+      label="Share it"
+      disabled={disabled}
+      title={title}
+      button={
+        <>
+          <Icon name="share" size={13} />
+          Share…
+          <Icon name="chevronDown" size={12} />
+        </>
+      }
+      items={kinds.map((k) => ({ label: MENU_LABELS[k], icon: k === "tailscale" ? "lock" : "globe", onSelect: () => onPick(k) }))}
+    />
+  );
+}
+
 /**
- * One app's shares (plan §5.8): on the tailnet, publicly through Funnel,
- * ngrok or Cloudflare. Each row says how it stands; turning one on or off
- * opens the ShareDialog.
+ * One app's shares (plan §5.8), in one row: how it's shared now, and
+ * "Share…" with the ways to share it. What a way still needs shows once
+ * you pick it, in the ShareDialog, not as a warning on every way.
  */
-export function ShareControls({ ms, app, headingLevel = 3 }: { ms: MachineSnapshot; app: App; headingLevel?: 3 | 4 }) {
+export function ShareControls({ ms, app }: { ms: MachineSnapshot; app: App }) {
   const ctx = useApp();
   const [info, setInfo] = useState<ShareInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -37,70 +64,55 @@ export function ShareControls({ ms, app, headingLevel = 3 }: { ms: MachineSnapsh
   useEffect(load, [ctx.api, ms.machine.id, app.id, local, !!ms.tools.portless]);
   useRefreshOnJobs(load);
 
-  const H = `h${headingLevel}` as const;
   if (!local) return <p className="fact-note">Sharing apps on other machines works from that machine for now.</p>;
   if (!ms.tools.portless) return <p className="fact-note">Sharing goes through portless, which isn't installed here.</p>;
   if (error) return <ErrorState title="Couldn't read how this app is shared" message={error} onRetry={load} />;
   if (!info) return <LoadingState label="Checking sharing…" />;
 
+  const states = SHARE_KINDS.map((kind) => shareState(info, kind));
+  const on = states.filter((s) => s.on);
+  const off = states.filter((s) => !s.on).map((s) => s.kind);
+
   return (
     <div className="share-controls">
-      {!info.editable && info.reason && <p className="fact-note">{info.reason}</p>}
       <ul className="share-rows">
-        {SHARE_KINDS.map((kind) => {
-          const s = shareState(info, kind);
-          const pub = kind !== "tailscale";
-          return (
-            <li key={kind} className={`share-row${s.on ? " is-on" : ""}`}>
-              <div className="share-row-main">
-                <H className="share-row-title">
-                  {SHARE_TITLES[kind]}
-                  {pub && <span className="tag tag-warn share-public-tag">public</span>}
-                </H>
-                <p className="share-row-desc">{SHARE_BLURBS[kind]}</p>
-                {s.on && (
-                  <p className="share-row-state">
-                    <StateDot state={s.url ? "on" : info.running ? "starting" : "off"} />
-                    {s.url ? (
-                      <>
-                        <a className="addr" href={s.url} target="_blank" rel="noopener noreferrer">
-                          {s.url.replace(/^https?:\/\//, "")}
-                        </a>
-                        <IconButton icon="copy" label={`Copy ${s.url}`} onClick={() => void copyWithToast(ctx, s.url!, "the shared address")} />
-                      </>
-                    ) : (
-                      <span className="muted">{info.running ? "On; waiting for portless to report the address" : `On; shared when ${app.label} starts`}</span>
-                    )}
-                  </p>
+        {on.map((s) => (
+          <li key={s.kind} className="share-row is-on">
+            <div className="share-row-main">
+              <p className="share-row-state">
+                <StateDot state={s.url ? "on" : info.running ? "starting" : "off"} />
+                <span>
+                  {SHARE_NAMES[s.kind]}
+                  {isPublic(s.kind) && " · public"}
+                </span>
+                {s.url ? (
+                  <>
+                    <a className="addr" href={s.url} target="_blank" rel="noopener noreferrer">
+                      {s.url.replace(/^https?:\/\//, "")}
+                    </a>
+                    <IconButton icon="copy" label={`Copy ${s.url}`} onClick={() => void copyWithToast(ctx, s.url!, "the shared address")} />
+                  </>
+                ) : (
+                  <span className="muted">{info.running ? "waiting for its address" : `shared when ${app.label} starts`}</span>
                 )}
-                {s.viaEnv && <p className="fact-note">{s.why}</p>}
-                {!s.on && info.editable && s.missing.length > 0 && (
-                  <details className="share-missing">
-                    <summary>
-                      <Icon name="warning" size={13} />
-                      {readiness(s.missing)}
-                    </summary>
-                    <Requirements reqs={s.missing} onChanged={load} />
-                  </details>
-                )}
-              </div>
-              <div className="share-row-action">
-                {s.on && !s.viaEnv && info.editable && (
-                  <button type="button" className="btn btn-sm" onClick={() => setOpen({ kind, on: false })}>
-                    Stop sharing…
-                  </button>
-                )}
-                {!s.on && (
-                  <button type="button" className="btn btn-sm" disabled={!s.canToggle} title={s.canToggle ? undefined : s.why} onClick={() => setOpen({ kind, on: true })}>
-                    <Icon name="share" size={13} />
-                    Share…
-                  </button>
-                )}
-              </div>
-            </li>
-          );
-        })}
+              </p>
+              {s.viaEnv && <p className="fact-note">{s.why}</p>}
+            </div>
+            {!s.viaEnv && info.editable && (
+              <button type="button" className="btn btn-sm" onClick={() => setOpen({ kind: s.kind, on: false })}>
+                Stop sharing…
+              </button>
+            )}
+          </li>
+        ))}
+        {off.length > 0 && (
+          <li className="share-row">
+            <p className="share-row-main muted">{on.length ? "Share it another way too" : "Not shared"}</p>
+            <ShareMenu kinds={off} disabled={!info.editable} title={info.editable ? undefined : info.reason} onPick={(kind) => setOpen({ kind, on: true })} />
+          </li>
+        )}
       </ul>
+      {!info.editable && info.reason && <p className="fact-note">{info.reason}</p>}
       <p className="share-foot">
         <a href={href({ view: "domains", section: "sharing" })}>Everything shared, and what each way needs</a>
       </p>

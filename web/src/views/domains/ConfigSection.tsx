@@ -13,6 +13,7 @@ import { inferHome, shortenPath } from "../../lib/format";
 import { checkConfigText, configText, extraKeys, nameProblem } from "../../lib/portless";
 import { appRoute, href } from "../../lib/router";
 import { SettingsGroup } from "../settings/SettingsGroup";
+import { Fold } from "./Fold";
 import { StatusGate } from "./ProxySection";
 
 type Tri = "default" | "yes" | "no";
@@ -34,13 +35,13 @@ function AppFields({ value, onChange, prefix }: { value: AppConfig; onChange(nex
   const nameErr = value.name ? nameProblem(value.name) : null;
   return (
     <div className="config-fields">
-      <Field label="Name" htmlFor={ids.name} error={nameErr} hint={prefix ? undefined : "The app's address: name.localhost. Empty: portless uses package.json's name."}>
+      <Field label="Name" htmlFor={ids.name} error={nameErr} hint={prefix ? undefined : "Empty: package.json's name."}>
         <input id={ids.name} className="input mono" value={value.name ?? ""} placeholder="web" onChange={(e) => onChange({ ...value, name: e.target.value || undefined })} />
       </Field>
-      <Field label="Script" htmlFor={ids.script} hint={prefix ? undefined : "The package.json script portless runs; dev when empty."}>
+      <Field label="Script" htmlFor={ids.script} hint={prefix ? undefined : "Empty: dev."}>
         <input id={ids.script} className="input mono" value={value.script ?? ""} placeholder="dev" onChange={(e) => onChange({ ...value, script: e.target.value || undefined })} />
       </Field>
-      <Field label="App port" htmlFor={ids.port} hint={prefix ? undefined : "Only when the app ignores the PORT portless gives it."}>
+      <Field label="App port" htmlFor={ids.port} hint={prefix ? undefined : "Only if the app ignores PORT."}>
         <input id={ids.port} className="input mono port-input" type="number" min={1} max={65535} value={value.appPort ?? ""} placeholder="auto" onChange={(e) => onChange({ ...value, appPort: Number.isFinite(e.target.valueAsNumber) ? e.target.valueAsNumber : undefined })} />
       </Field>
       <Field label="Proxy" htmlFor={ids.proxy}>
@@ -60,31 +61,36 @@ function Form({ config, onChange }: { config: ProjectConfig; onChange(next: Proj
   return (
     <div className="form-grid">
       <AppFields value={config} onChange={(v) => onChange({ ...config, ...v })} prefix="" />
-      <Field label="Turborepo" htmlFor={turboId} hint={<>Whether <code>portless</code> at a monorepo root runs the apps through turbo.</>}>
-        <TriSelect id={turboId} value={config.turbo} onChange={(turbo) => onChange({ ...config, turbo })} labels={["Default (when turbo.json exists)", "Yes", "No"]} />
-      </Field>
-      <div className="field">
-        <span className="field-label">Apps of a monorepo</span>
-        <p className="field-hint">
-          For a config at a monorepo's root: settings per app folder, used when <code>portless</code> starts every app at once.
-        </p>
-        {apps.map(([path, value], i) => (
-          <fieldset key={i} className="config-app">
-            <legend className="sr-only">App {path || i + 1}</legend>
-            <div className="config-app-head">
-              <input className="input mono" value={path} placeholder="apps/web" aria-label="App folder" onChange={(e) => setApp(i, e.target.value, value)} />
-              <IconButton icon="close" label={`Remove ${path || "this app"}`} onClick={() => onChange({ ...config, apps: Object.fromEntries(apps.filter((_, j) => j !== i)) })} />
+      {/* only a monorepo's root uses these: folded until it does */}
+      <Fold summary="Monorepo" hint="Turborepo and settings per app folder" open={config.turbo !== undefined || apps.length > 0 || undefined}>
+        <div className="form-grid">
+          <Field label="Turborepo" htmlFor={turboId} hint={<>Whether <code>portless</code> at the root runs the apps through turbo.</>}>
+            <TriSelect id={turboId} value={config.turbo} onChange={(turbo) => onChange({ ...config, turbo })} labels={["Default (when turbo.json exists)", "Yes", "No"]} />
+          </Field>
+          <div className="field">
+            <span className="field-label">Apps of a monorepo</span>
+            <p className="field-hint">
+              Used when <code>portless</code> starts every app at once.
+            </p>
+            {apps.map(([path, value], i) => (
+              <fieldset key={i} className="config-app">
+                <legend className="sr-only">App {path || i + 1}</legend>
+                <div className="config-app-head">
+                  <input className="input mono" value={path} placeholder="apps/web" aria-label="App folder" onChange={(e) => setApp(i, e.target.value, value)} />
+                  <IconButton icon="close" label={`Remove ${path || "this app"}`} onClick={() => onChange({ ...config, apps: Object.fromEntries(apps.filter((_, j) => j !== i)) })} />
+                </div>
+                <AppFields value={value} onChange={(v) => setApp(i, path, v)} prefix={`apps.${path}.`} />
+              </fieldset>
+            ))}
+            <div>
+              <button type="button" className="btn btn-sm" onClick={() => onChange({ ...config, apps: { ...(config.apps ?? {}), "": {} } })} disabled={apps.some(([p]) => !p)}>
+                <Icon name="plus" size={13} />
+                Add an app folder
+              </button>
             </div>
-            <AppFields value={value} onChange={(v) => setApp(i, path, v)} prefix={`apps.${path}.`} />
-          </fieldset>
-        ))}
-        <div>
-          <button type="button" className="btn btn-sm" onClick={() => onChange({ ...config, apps: { ...(config.apps ?? {}), "": {} } })} disabled={apps.some(([p]) => !p)}>
-            <Icon name="plus" size={13} />
-            Add an app folder
-          </button>
+          </div>
         </div>
-      </div>
+      </Fold>
     </div>
   );
 }
@@ -172,6 +178,19 @@ function Editor({ place, home }: { place: ConfigPlace; home: string | undefined 
             <>No portless config here yet: portless names the app from {configs.packageName ? <span className="mono">{configs.packageName}</span> : "the folder"}.</>
           )}{" "}
           {both && "This folder also has a \"portless\" key in package.json, which portless ignores while portless.json exists."}
+          {place.apps.length > 0 && (
+            <>
+              {" "}
+              Used by{" "}
+              {place.apps.map((a, i) => (
+                <span key={a.id}>
+                  {i > 0 && ", "}
+                  <a href={href(appRoute(machine, a.id, "url"))}>{a.label}</a>
+                </span>
+              ))}
+              .
+            </>
+          )}
         </>
       }
     >
@@ -252,18 +271,6 @@ function Editor({ place, home }: { place: ConfigPlace; home: string | undefined 
           </button>
         )}
       </div>
-      {place.apps.length > 0 && (
-        <p className="field-hint">
-          Used by{" "}
-          {place.apps.map((a, i) => (
-            <span key={a.id}>
-              {i > 0 && ", "}
-              <a href={href(appRoute(machine, a.id, "url"))}>{a.label}</a>
-            </span>
-          ))}
-          . portless reads the config when an app starts.
-        </p>
-      )}
     </SettingsGroup>
   );
 }
@@ -300,7 +307,7 @@ function Places() {
       {places.length > 1 && (
         <div className="config-places" role="group" aria-label="Folders">
           {places.map((p) => (
-            <button key={p.dir} type="button" className={`chip chip-btn${p.dir === place.dir ? " is-on" : ""}`} aria-pressed={p.dir === place.dir} onClick={() => setSelected(p.dir)}>
+            <button key={p.dir} type="button" className={`dchip dchip-btn${p.dir === place.dir ? " is-on" : ""}`} aria-pressed={p.dir === place.dir} onClick={() => setSelected(p.dir)}>
               <span className="mono">{shortenPath(p.dir, home)}</span>
               <span className="muted"> · {p.wins || "no config"}</span>
             </button>

@@ -271,12 +271,12 @@ export function Chips({ value, onChange, label, suggestions = [] }: { value: str
     setText("");
   };
   return (
-    <div className="chips">
-      <ul className="chips-list" aria-label={label}>
+    <div className="tag-field">
+      <ul className="tag-field-list" aria-label={label}>
         {value.map((t) => (
-          <li key={t} className="chip">
+          <li key={t} className="tag-chip">
             {t}
-            <button type="button" className="chip-x" aria-label={`Remove ${t}`} onClick={() => onChange(value.filter((x) => x !== t))}>
+            <button type="button" className="tag-chip-x" aria-label={`Remove ${t}`} onClick={() => onChange(value.filter((x) => x !== t))}>
               <Icon name="close" size={11} />
             </button>
           </li>
@@ -284,7 +284,7 @@ export function Chips({ value, onChange, label, suggestions = [] }: { value: str
       </ul>
       <input
         id={id}
-        className="input chips-input"
+        className="input tag-field-input"
         value={text}
         placeholder={value.length ? "" : "Add a tag"}
         aria-label={`Add to ${label}`}
