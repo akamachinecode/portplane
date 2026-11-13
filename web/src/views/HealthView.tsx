@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { errorText } from "../api/errors";
+import { LOCAL_MACHINE } from "../api/machine";
 import { useApp } from "../components/AppContext";
 import { Icon, Spinner, type IconName } from "../components/Icon";
 import type { MachineSnapshot } from "../api/types";
@@ -32,7 +33,8 @@ function ProblemRow({ problem, multiMachine }: { problem: Problem; multiMachine:
       <div className="problem-body">
         <p className="problem-title" title={problem.path}>
           {problem.title}
-          {multiMachine && problem.machine && <span className="problem-machine">{problem.machine.name}</span>}
+          {/* the machine, when it's another one: "This computer" on every row would say it again and again */}
+          {multiMachine && problem.machine && problem.machine.id !== LOCAL_MACHINE && <span className="problem-machine">{problem.machine.name}</span>}
         </p>
         {problem.detail && <p className="problem-detail">{problem.detail}</p>}
         {problem.code && <code className="problem-code">{problem.code}</code>}
