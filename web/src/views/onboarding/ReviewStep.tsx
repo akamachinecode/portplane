@@ -9,7 +9,7 @@ import { LoadingState } from "../../components/States";
 import { inferHome, shortenPath } from "../../lib/format";
 import { applyMessage, changedFiles, NO_EDITS, writeBlocker } from "../../lib/setup";
 import { useOnboarding } from "./context";
-import { StepFooter, StepLayout } from "./parts";
+import { More, StepFooter, StepLayout } from "./parts";
 import { describeProposal, nothingToWrite } from "./summary";
 
 /** Step 7: the exact changes, in plain words and as a diff, then write. */
@@ -134,14 +134,11 @@ export function ReviewStep() {
               <p className="muted">Nothing to change in {shortenPath(p.folder, home)}.</p>
             )}
             {files.length > 0 && (
-              <details className="ob-more ob-review-lines">
-                <summary>{files.length === 1 ? "See the file line by line" : `See the ${files.length} files line by line`}</summary>
-                <div className="ob-more-body">
-                  {files.map((f) => (
-                    <FileDiff key={`${f.path}\u0000${p.digest}`} file={f} folder={p.folder} />
-                  ))}
-                </div>
-              </details>
+              <More label={files.length === 1 ? "See the file line by line" : `See the ${files.length} files line by line`} className="ob-review-lines">
+                {files.map((f) => (
+                  <FileDiff key={`${f.path}\u0000${p.digest}`} file={f} folder={p.folder} />
+                ))}
+              </More>
             )}
           </section>
         );

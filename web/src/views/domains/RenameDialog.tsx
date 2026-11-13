@@ -10,14 +10,10 @@ import { JobCard } from "../../components/JobCard";
 import { ErrorState, LoadingState } from "../../components/States";
 import { previewHostname, renameProblem, SOURCE_LABELS } from "../../lib/portless";
 import { TYPING_DELAY } from "../../lib/setup";
+import { dirOf } from "../../lib/dekit/taskForm";
 import { ChangeFold } from "./Fold";
 // Its styles live with the Domains view, which may not have loaded (the app detail opens this too).
 import "../DomainsView.css";
-
-function dirOf(path: string): string {
-  const i = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
-  return i > 0 ? path.slice(0, i) : path;
-}
 
 /** Where the name lives, and what Portplane does with it, in a sentence. */
 function sourceText(info: NameInfo): string {
@@ -258,7 +254,7 @@ export function RenameDialog({ machine, appId, route, label, runner, onClose }: 
                   {applyError}
                 </p>
               )}
-              {ready && <ChangeFold files={preview.files} steps={preview.steps} folderOf={(path) => runner ?? dirOf(path)} />}
+              {ready && <ChangeFold files={preview.files} steps={preview.steps} runner={runner} />}
             </>
           )}
         </div>

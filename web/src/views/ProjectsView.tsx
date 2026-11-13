@@ -5,10 +5,11 @@ import { useApp } from "../components/AppContext";
 import { MachineScope } from "../components/MachineScope";
 import { Icon, Spinner } from "../components/Icon";
 import { Menu } from "../components/Menu";
+import { Count } from "../components/ProjectCard";
 import { EmptyState, LoadingState } from "../components/States";
 import { StateDot } from "../components/StateDot";
 import { ViewHeader } from "../components/ViewHeader";
-import { indexApps, projectApps, serviceCounts, visibleApps, worktreeApps } from "../lib/apps";
+import { indexApps, projectApps, visibleApps, worktreeApps } from "../lib/apps";
 import { inferHome, shortenPath, stateLabel } from "../lib/format";
 import { appsFingerprint } from "../lib/pending";
 import { checkoutKey, checkoutName } from "../lib/projects";
@@ -47,16 +48,6 @@ export function runnerEntries(snapshot: Snapshot): RunnerEntry[] {
   });
 }
 
-function Counts({ apps }: { apps: App[] }) {
-  const { running, total } = serviceCounts(apps);
-  return (
-    <span className={running > 0 ? "count count-live" : "count"}>
-      {running}/{total}
-      <span className="sr-only"> running</span>
-    </span>
-  );
-}
-
 function RunnerLink({ entry, current, multiMachine }: { entry: RunnerEntry; current: boolean; multiMachine: boolean }) {
   const { ms, runner, projects, apps } = entry;
   const failed = apps.some((a) => a.state === "failed");
@@ -73,7 +64,7 @@ function RunnerLink({ entry, current, multiMachine }: { entry: RunnerEntry; curr
           <span>
             {projects.length} {projects.length === 1 ? "project" : "projects"}
           </span>
-          <Counts apps={apps} />
+          <Count apps={apps} />
         </span>
       </a>
     </li>
@@ -92,7 +83,7 @@ function ProjectBlock({ ms, project }: { ms: MachineSnapshot; project: Project }
     <section className="proj" aria-label={project.name}>
       <header className="proj-head">
         <h3 className="proj-name">{project.name}</h3>
-        <Counts apps={apps} />
+        <Count apps={apps} />
         <span className="spacer" />
         {canAct && (
           <button

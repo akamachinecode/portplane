@@ -16,11 +16,6 @@ import "./Sharing.css";
 // Its styles live with the Domains view, which may not have loaded (the app detail opens this too).
 import "../DomainsView.css";
 
-function dirOf(path: string): string {
-  const i = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
-  return i > 0 ? path.slice(0, i) : path;
-}
-
 export interface ShareTarget {
   machine: string;
   appId: string;
@@ -143,7 +138,7 @@ export function ShareDialog({ target, kind, on, onClose }: { target: ShareTarget
                   </span>
                 </label>
               )}
-              <ChangeFold files={preview.files} steps={preview.steps} folderOf={(path) => target.runner ?? dirOf(path)} />
+              <ChangeFold files={preview.files} steps={preview.steps} runner={target.runner} />
             </>
           )}
           {applyError && (

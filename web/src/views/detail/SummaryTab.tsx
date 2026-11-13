@@ -3,6 +3,7 @@ import type { App } from "../../api/types";
 import { copyWithToast } from "../../components/appActions";
 import { useApp } from "../../components/AppContext";
 import { ExcerptPanel } from "../../components/ExcerptPanel";
+import { Fold } from "../../components/Fold";
 import { Icon } from "../../components/Icon";
 import { IconButton } from "../../components/IconButton";
 import { StateDot } from "../../components/StateDot";
@@ -112,11 +113,7 @@ export function SummaryTab({ ms, app }: DetailTabProps) {
       </dl>
       <WhySection ms={ms} app={app} />
       {/* for the curious and for bug reports: folded (ADR-0032) */}
-      <details className="tech-details">
-        <summary className="tech-summary">
-          <Icon name="chevronRight" size={14} className="tech-chevron" />
-          Technical details
-        </summary>
+      <Fold summary="Technical details" className="tech-details">
         <dl className="facts facts-tech">
           <Row label="dekit state">
             {app.rawState ?? stateLabel(app.state)}
@@ -157,7 +154,7 @@ export function SummaryTab({ ms, app }: DetailTabProps) {
           </Row>
         </dl>
         {(deps.length > 0 || dependents.length > 0) && <DepGraph ms={ms} app={app} />}
-      </details>
+      </Fold>
       <DekitHelpHost />
     </div>
   );

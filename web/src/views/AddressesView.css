@@ -36,7 +36,7 @@
 
 .filter-count {
   color: var(--text-3);
-  font-size: 13px;
+  font-size: var(--text-xs);
   font-variant-numeric: tabular-nums;
 }
 

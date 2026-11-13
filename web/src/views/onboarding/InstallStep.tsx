@@ -8,7 +8,7 @@ import { copyWithToast } from "../../components/appActions";
 import { Icon, Spinner } from "../../components/Icon";
 import { JobCard } from "../../components/JobCard";
 import { useJobEnd, useOnboarding } from "./context";
-import { Mark, NextButton, StepFooter, StepLayout } from "./parts";
+import { Mark, More, NextButton, StepFooter, StepLayout } from "./parts";
 import { statusOf } from "./steps";
 
 const NAMES: Record<ToolId, string> = { dekit: "dekit", node: "Node.js 24", portless: "portless" };
@@ -175,12 +175,9 @@ function ToolCard({ install, main }: { install: Install; main: boolean }) {
               </fieldset>
             )}
             {method === plan.method && (
-              <details className="ob-more">
-                <summary>Where it comes from</summary>
-                <div className="ob-more-body">
-                  <PlanDetails plan={plan} />
-                </div>
-              </details>
+              <More label="Where it comes from">
+                <PlanDetails plan={plan} />
+              </More>
             )}
           </>
         )

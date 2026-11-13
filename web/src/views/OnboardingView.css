@@ -50,7 +50,7 @@
   border-radius: 50%;
   background: var(--bg);
   color: var(--text-3);
-  font-size: 13px;
+  font-size: var(--text-xs);
   font-weight: var(--weight-strong);
   font-variant-numeric: tabular-nums;
 }
@@ -281,7 +281,7 @@
 }
 
 .ob-note {
-  font-size: 13px;
+  font-size: var(--text-xs);
   line-height: 1.5;
 }
 
@@ -312,11 +312,6 @@
 
 .ob-mark-warn {
   color: var(--warn);
-}
-
-/* a note is not a state: grey, like the ⓘ everywhere else (ADR-0032) */
-.ob-mark-info {
-  color: var(--text-3);
 }
 
 .ob-mark-busy {
@@ -446,20 +441,20 @@
 
 .ob-check-version {
   color: var(--text-2);
-  font-size: 13px;
+  font-size: var(--text-xs);
   font-weight: 400;
 }
 
 .ob-check-detail {
   margin-top: 2px;
   color: var(--text-2);
-  font-size: 13px;
+  font-size: var(--text-xs);
 }
 
 .ob-check-problem {
   margin-top: 2px;
   color: var(--text);
-  font-size: 13px;
+  font-size: var(--text-xs);
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
@@ -477,7 +472,7 @@
   gap: 3px;
   width: max-content;
   color: var(--accent-text);
-  font-size: 13px;
+  font-size: var(--text-xs);
   font-weight: 500;
 }
 
@@ -557,7 +552,7 @@
   flex: 1;
   min-width: 0;
   color: var(--text-2);
-  font-size: 13px;
+  font-size: var(--text-xs);
   text-align: right;
 }
 
@@ -590,7 +585,7 @@
   padding: 10px 12px;
   border-radius: var(--radius-sm);
   background: var(--surface-2);
-  font-size: 13px;
+  font-size: var(--text-xs);
 }
 
 .ob-plan > div {
@@ -613,7 +608,7 @@
   overflow-x: auto;
   border-radius: var(--radius-sm);
   background: var(--code-bg);
-  font-size: 13px;
+  font-size: var(--text-xs);
   white-space: pre;
 }
 
@@ -667,7 +662,7 @@
   display: block;
   margin-top: 2px;
   color: var(--text-2);
-  font-size: 13px;
+  font-size: var(--text-xs);
   line-height: 1.5;
 }
 
@@ -683,7 +678,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--code-bg);
-  font-size: 13px;
+  font-size: var(--text-xs);
 }
 
 .ob-priv-title {
@@ -844,7 +839,7 @@
 }
 
 .ob-browser-store {
-  font-size: 13px;
+  font-size: var(--text-xs);
   font-weight: 400;
 }
 
@@ -915,12 +910,12 @@
 .ob-folder-path {
   flex: 1;
   min-width: 0;
-  font-size: 14px;
+  font-size: var(--text-sm);
   overflow-wrap: anywhere;
 }
 
 .ob-folder-count {
-  font-size: 13px;
+  font-size: var(--text-xs);
 }
 
 .ob-folder-add {
@@ -1113,7 +1108,7 @@
   overflow: auto;
   border-radius: var(--radius-sm);
   background: var(--code-bg);
-  font-size: 13px;
+  font-size: var(--text-xs);
   line-height: 1.5;
   white-space: pre-wrap;
 }

@@ -7,7 +7,7 @@ import { navigate } from "../../lib/router";
 import { useShell } from "../../shell/ShellContext";
 import { StartAtLogin } from "../settings/GeneralSection";
 import { useOnboarding } from "./context";
-import { StepFooter, StepLayout } from "./parts";
+import { More, StepFooter, StepLayout } from "./parts";
 
 /** Step 9: three things worth knowing, then the apps. */
 export function DoneStep() {
@@ -87,21 +87,18 @@ export function DoneStep() {
             <p className="ob-tip-title">{mac ? "Find it in the menu bar" : "Find it in the tray"}</p>
             <p className="ob-tip-text">Closing this window keeps Portplane running there.</p>
             {gnomeHint && (
-              <details className="ob-more">
-                <summary>Don't see it on GNOME?</summary>
-                <div className="ob-more-body">
-                  <p>
-                    GNOME shows tray icons only with the AppIndicator extension.{" "}
-                    {gnomeHint.docs && (
-                      <a href={gnomeHint.docs} target="_blank" rel="noopener noreferrer">
-                        Get the extension
-                        <Icon name="open" size={12} />
-                      </a>
-                    )}{" "}
-                    On Ubuntu it's already there; on Fedora, <code>sudo dnf install gnome-shell-extension-appindicator</code>, then log out and in.
-                  </p>
-                </div>
-              </details>
+              <More label="Don't see it on GNOME?">
+                <p>
+                  GNOME shows tray icons only with the AppIndicator extension.{" "}
+                  {gnomeHint.docs && (
+                    <a href={gnomeHint.docs} target="_blank" rel="noopener noreferrer">
+                      Get the extension
+                      <Icon name="open" size={12} />
+                    </a>
+                  )}{" "}
+                  On Ubuntu it's already there; on Fedora, <code>sudo dnf install gnome-shell-extension-appindicator</code>, then log out and in.
+                </p>
+              </More>
             )}
           </div>
         </li>

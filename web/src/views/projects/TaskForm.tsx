@@ -16,6 +16,7 @@ import {
   isJs,
   mountOf,
   relPath,
+  taskLabel,
   toDraft,
   validateDraft,
   type FormKey,
@@ -191,7 +192,7 @@ export function TaskForm({ runner, config, entry, defaults, os, headingLevel = 4
     .filter((p) => defaults || p !== entry!.path)
     .map((p) => {
       const t = config.tasks.find((x) => x.path === p);
-      return { path: p, label: typeof t?.values.label === "string" ? (t.values.label as string) : (p.split("/").pop() ?? p) };
+      return { path: p, label: taskLabel(p, t?.values) };
     });
 
   const save = () => {

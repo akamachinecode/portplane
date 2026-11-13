@@ -118,29 +118,31 @@ export function TasksPanel({
 
   // A folder (or group) that holds one linked worktree's tasks: its name and branch.
   const apps = useMemo(() => (ms?.apps ?? []).filter((a) => a.runner === runner), [ms, runner]);
-  const worktreeFor = (path: string): { name: string; branch?: string } | undefined => {
-    const prefix = path.replace(/\/$/, "") + "/";
-    const under = apps.filter((a) => a.task.startsWith(prefix));
-    const names = new Set(under.map((a) => a.worktree ?? ""));
-    return under.length && names.size === 1 && under[0].worktree ? { name: under[0].worktree, branch: under[0].branch } : undefined;
-  };
-  const [folded, setFolded] = useState<Set<string>>(() => new Set());
-  const [touched, setTouched] = useState<Set<string>>(() => new Set());
+  // Worked out once per folder until the apps change (it scans every app of the runner).
+  const worktreeFor = useMemo(() => {
+    const known = new Map<string, { name: string; branch?: string } | undefined>();
+    return (path: string) => {
+      if (!known.has(path)) {
+        const prefix = path.replace(/\/$/, "") + "/";
+        const under = apps.filter((a) => a.task.startsWith(prefix));
+        const names = new Set(under.map((a) => a.worktree ?? ""));
+        known.set(path, under.length && names.size === 1 && under[0].worktree ? { name: under[0].worktree, branch: under[0].branch } : undefined);
+      }
+      return known.get(path);
+    };
+  }, [apps]);
+  // What the user folded or opened, by folder; the rest follows the default.
+  const [foldChoice, setFoldChoice] = useState<ReadonlyMap<string, boolean>>(() => new Map());
   // Worktree folders start folded, unless the open task is inside.
   const isFolded = (path: string) => {
-    if (touched.has(path)) return folded.has(path);
+    const chosen = foldChoice.get(path);
+    if (chosen !== undefined) return chosen;
     const prefix = path.replace(/\/$/, "") + "/";
     return !!worktreeFor(path) && !(selected && selected.startsWith(prefix));
   };
   const toggleFold = (path: string) => {
     const now = isFolded(path);
-    setTouched((s) => new Set(s).add(path));
-    setFolded((s) => {
-      const n = new Set(s);
-      if (now) n.delete(path);
-      else n.add(path);
-      return n;
-    });
+    setFoldChoice((m) => new Map(m).set(path, !now));
   };
   const keysIn = (file: string) => new Set(config.tasks.filter((t) => t.file === file).map((t) => t.key));
 
@@ -180,6 +182,7 @@ export function TasksPanel({
           const folders = rows.filter((t) => t.folder);
           const hiddenBy = (t: TaskEntry) => folders.find((f) => f !== t && t.path.startsWith(f.path.replace(/\/$/, "") + "/") && isFolded(f.path));
           const shownTasks = rows.filter((t) => !hiddenBy(t));
+          const indexOf = new Map(tasks.map((t, i) => [t, i]));
           return (
             <section key={file.path} className="task-tree-file">
               <p className="task-tree-file-name" title={file.path}>
@@ -194,7 +197,7 @@ export function TasksPanel({
               ) : (
                 <ul className="task-tree-list">
                   {shownTasks.map((t) => {
-                    const i = tasks.indexOf(t);
+                    const i = indexOf.get(t) ?? -1;
                     const depth = folders.filter((f) => f !== t && t.path.startsWith(f.path.replace(/\/$/, "") + "/")).length;
                     const items = i < 0 ? [] : menuFor(t, i, tasks.length);
                     const parentFolder = folders.filter((f) => f !== t && t.key.startsWith(f.key.replace(/\/$/, "") + "/")).sort((a, b) => b.key.length - a.key.length)[0];

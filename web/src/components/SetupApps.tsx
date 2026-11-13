@@ -1,4 +1,4 @@
-import { useId, useRef, useState, type ReactNode } from "react";
+import { useId, useMemo, useRef, useState, type ReactNode } from "react";
 import type { AppProposal, Proposal } from "../api/types";
 import {
   assignBuckets,
@@ -327,14 +327,20 @@ export function SetupApps({
   /** Ticks or unticks every app of a group at once ("All / None"). */
   onIncludeAll?(tasks: string[], include: boolean): void;
 }) {
-  // Each app keeps the group it was first shown in, so a tick never moves its row.
+  // Each app keeps the group it was first shown in, so a tick never moves its
+  // row. The groups depend on the apps only, not on what is typed: worked out
+  // once per scan, not on every keystroke.
   const known = useRef(new Map<string, SetupBucket>());
-  known.current = assignBuckets(proposal.apps, known.current);
-  const buckets = bucketGroups(proposal.apps, known.current);
+  const { buckets, projects, checkouts } = useMemo(() => {
+    known.current = assignBuckets(proposal.apps, known.current);
+    return {
+      buckets: bucketGroups(proposal.apps, known.current),
+      projects: [...new Set(proposal.apps.map((a) => a.project))],
+      checkouts: new Set(proposal.apps.map((a) => `${a.project}\u0000${a.worktree ?? ""}`)),
+    };
+  }, [proposal.apps]);
   const clashes = nameClashes(proposal.apps, edits);
   const decisions = buckets.some((b) => b.bucket === "new" || b.bucket === "changed");
-  const projects = [...new Set(proposal.apps.map((a) => a.project))];
-  const checkouts = new Set(proposal.apps.map((a) => `${a.project}\u0000${a.worktree ?? ""}`));
   const removed = proposal.change.removed;
   const unsupported = proposal.unsupported ?? [];
 

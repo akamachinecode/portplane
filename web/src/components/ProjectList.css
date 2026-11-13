@@ -164,8 +164,8 @@
    stays). Touch screens (no hover) show them all, disabled ones as
    disabled. */
 @media (hover: hover) {
-  .row:not(:hover, :focus-within, .is-cursor, .is-selected, .row-failed, .row-starting, .row-stopping) .row-actions > :not([aria-busy="true"]),
-  .row:is(.row-starting, .row-stopping):not(:hover, :focus-within, .is-cursor, .is-selected) .row-actions > :not(.row-toggle, [aria-busy="true"]),
+  .row:not(:hover, :focus-within, .is-cursor, .is-selected, .row-failed, .row-starting, .row-stopping) .row-actions > :not([aria-busy="true"], .is-pinned),
+  .row:is(.row-starting, .row-stopping):not(:hover, :focus-within, .is-cursor, .is-selected) .row-actions > :not(.row-toggle, [aria-busy="true"], .is-pinned),
   .project-head:not(:hover, :focus-within) .group-actions > :not([aria-busy="true"]),
   .checkout-head:not(:hover, :focus-within) .group-actions > :not([aria-busy="true"]) {
     opacity: 0;

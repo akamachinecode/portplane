@@ -14,7 +14,7 @@
 .req-fix {
   margin-top: 2px;
   color: var(--text-2);
-  font-size: 13px;
+  font-size: var(--text-xs);
 }
 
 .req-body .cmd {
@@ -322,17 +322,17 @@
   align-items: center;
   gap: 0 4px;
   color: var(--text-2);
-  font-size: 13px;
+  font-size: var(--text-xs);
 }
 
 .compose-file {
-  font-size: 13px;
+  font-size: var(--text-xs);
   overflow-wrap: anywhere;
 }
 
 .compose-project .fact-note {
   color: var(--text-2);
-  font-size: 13px;
+  font-size: var(--text-xs);
 }
 
 .compose-image {
@@ -402,7 +402,7 @@
 
 .lan-option-desc {
   color: var(--text-2);
-  font-size: 13px;
+  font-size: var(--text-xs);
 }
 
 .lan-custom {
@@ -466,7 +466,7 @@
 
 .lan-app-route {
   flex-basis: 100%;
-  font-size: 13px;
+  font-size: var(--text-xs);
 }
 
 .phone {
@@ -519,7 +519,7 @@
 }
 
 .phone-step-text {
-  font-size: 13px;
+  font-size: var(--text-xs);
   overflow-wrap: anywhere;
 }
 
@@ -553,7 +553,7 @@
   margin: 0;
   padding-left: 18px;
   color: var(--text-2);
-  font-size: 13px;
+  font-size: var(--text-xs);
 }
 
 .phone-trust li + li {
@@ -603,7 +603,7 @@
 }
 
 .qr-hint {
-  font-size: 13px;
+  font-size: var(--text-xs);
   text-align: center;
 }
 

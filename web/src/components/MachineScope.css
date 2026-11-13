@@ -22,7 +22,7 @@
   background: var(--surface);
   color: var(--text);
   font: inherit;
-  font-size: 14px;
+  font-size: var(--text-sm);
   text-overflow: ellipsis;
   cursor: pointer;
 }

@@ -338,6 +338,11 @@ export function relPath(from: string, to: string): string {
   return rel || ".";
 }
 
+/** What a task is called: its label, else the last part of its path. */
+export function taskLabel(path: string, values?: Record<string, unknown>): string {
+  return typeof values?.label === "string" ? values.label : (path.split("/").pop() ?? path);
+}
+
 /** The folder of a file path. */
 export function dirOf(file: string): string {
   const i = Math.max(file.lastIndexOf("/"), file.lastIndexOf("\\"));

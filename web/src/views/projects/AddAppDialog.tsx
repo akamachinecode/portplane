@@ -7,7 +7,7 @@ import { Dialog } from "../../components/Dialog";
 import { Icon, Spinner } from "../../components/Icon";
 import { Segmented } from "../../components/Segmented";
 import { suggestAppName, suggestPath, validUrlName } from "../../lib/dekit/newApp";
-import { relPath } from "../../lib/dekit/taskForm";
+import { relPath, taskLabel } from "../../lib/dekit/taskForm";
 import { CommandField, TaskPicker, taskParent } from "./fields";
 import { SaveReview } from "./SaveReview";
 import { digestOf } from "./TasksPanel";
@@ -225,7 +225,7 @@ export function AddAppDialog({ runner, config, onClose, onAdded }: { runner: str
         </Field>
       )}
       <Field label="Needs" hint="Tasks to finish first, such as an install step.">
-        <TaskPicker value={deps} onChange={setDeps} options={tasks.map((t) => ({ path: t.path, label: typeof t.values.label === "string" ? (t.values.label as string) : (t.path.split("/").pop() ?? t.path) }))} label="Tasks it needs" near={taskParent(path.trim())} />
+        <TaskPicker value={deps} onChange={setDeps} options={tasks.map((t) => ({ path: t.path, label: taskLabel(t.path, t.values) }))} label="Tasks it needs" near={taskParent(path.trim())} />
       </Field>
       {config.root !== "host" && (
         <fieldset className="radio-list">

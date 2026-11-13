@@ -5,7 +5,7 @@ import { Icon, Spinner, type IconName } from "../components/Icon";
 import type { MachineSnapshot } from "../api/types";
 import { ViewHeader } from "../components/ViewHeader";
 import { href } from "../lib/router";
-import type { Problem, Severity } from "../shell/health";
+import { splitProblems, type Problem, type Severity } from "../shell/health";
 import { SnapshotGate } from "../shell/SnapshotGate";
 import { useShell } from "../shell/ShellContext";
 import { DoctorSection } from "./domains/DoctorSection";
@@ -98,8 +98,7 @@ export function HealthView() {
   // One count everywhere (ADR-0032): the problems (errors and warnings) are
   // what the sidebar's badge, the Apps line and this title count; notes are
   // listed apart and counted nowhere.
-  const attention = problems.filter((p) => p.severity !== "info");
-  const notes = problems.filter((p) => p.severity === "info");
+  const { attention, notes } = splitProblems(problems);
   const serious = attention.length;
   const multiMachine = (snapshot?.machines.length ?? 0) > 1;
   const checking = check.state.status === "loading" || doctor.state.status === "loading";

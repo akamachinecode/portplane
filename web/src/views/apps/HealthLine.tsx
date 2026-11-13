@@ -1,5 +1,6 @@
 import { Icon } from "../../components/Icon";
 import { href } from "../../lib/router";
+import { splitProblems } from "../../shell/health";
 import { useShell } from "../../shell/ShellContext";
 
 /**
@@ -11,9 +12,9 @@ import { useShell } from "../../shell/ShellContext";
  */
 export function HealthLine() {
   const { problems } = useShell();
-  const list = problems.filter((p) => p.severity !== "info");
+  const { attention: list, tone: worst } = splitProblems(problems);
   if (list.length === 0) return null;
-  const tone = list.some((p) => p.severity === "error") ? "error" : "warn";
+  const tone = worst === "error" ? "error" : "warn";
   const n = list.length;
   const what = n === 1 ? "1 problem" : `${n} problems`;
   const named = list.slice(0, 2).map((p) => (p.machine && !p.title.includes(p.machine.name) && p.machine.id !== "local" ? `${p.title} (${p.machine.name})` : p.title));

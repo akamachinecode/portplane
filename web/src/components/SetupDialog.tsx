@@ -106,7 +106,8 @@ export function SetupDialog({ folder, onClose }: { folder: string; onClose(): vo
   const missing = check.status === "ok" ? missingRequirements(check.check) : [];
   const available = (s: Step) => s !== "files" || scan.proposal !== null;
   const done = (s: Step) => (s === "tools" ? ready && step !== "tools" : s === "apps" ? step === "files" : false);
-  const title = `Set up ${shortenPath(folder, inferHome([folder]))}`;
+  const where = shortenPath(folder, inferHome([folder]));
+  const title = `Set up ${where}`;
 
   const stepper = (
     <nav className="steps" aria-label="Setup steps">
@@ -223,7 +224,7 @@ export function SetupDialog({ folder, onClose }: { folder: string; onClose(): vo
           ) : (
             !scan.error && (
               <p className="dialog-loading">
-                <Spinner /> Looking for apps in <span className="mono">{shortenPath(folder, inferHome([folder]))}</span>…
+                <Spinner /> Looking for apps in <span className="mono">{where}</span>…
               </p>
             )
           )}

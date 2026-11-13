@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef } from "react";
-import type { App, MachineSnapshot, Project, Target, Verb } from "../api/types";
+import type { App, MachineSnapshot, Project, Target, Verb, Worktree } from "../api/types";
 import { projectFoldKey, worktreeFoldKey, type Folds } from "../hooks/useFolds";
 import { indexApps, isAlive, projectApps, runningUrls, serviceCounts, worktreeApps } from "../lib/apps";
 import { inferHome, shortenPath } from "../lib/format";
@@ -22,6 +22,11 @@ interface GroupActionsProps {
   apps: App[];
   targets: Target[];
   withOpen: boolean;
+}
+
+/** Whether a checkout shows a header: a linked worktree always says which it is; the main checkout only next to others. */
+function hasHead(multi: boolean, wt: Worktree): boolean {
+  return multi || !!wt.name;
 }
 
 /** Open all running, start all, stop all, for a project or a worktree. */
@@ -137,9 +142,8 @@ function CheckoutSection({
   const linked = !!wt.name;
   const name = checkoutName(project, wt);
   const foldKey = worktreeFoldKey(ms.machine.id, project.runner, project.name, checkoutKey(wt));
-  // A linked worktree always says which it is; the main checkout only next
-  // to others. Only a checkout with a header can fold: there'd be no way back.
-  const head = multi || linked;
+  // Only a checkout with a header can fold: there'd be no way back.
+  const head = hasHead(multi, wt);
   const folded = head && !forceOpen && !!folds?.isFolded(foldKey, !only && foldedByDefault(wt, byId));
   const path = usePath(ms, wt.path);
   const listId = `rows-${foldKey}`.replace(/[^\w-]/g, "_");
@@ -210,8 +214,7 @@ export function ProjectCard({
   const headingId = `p-${ms.machine.id}-${project.runner}-${project.name}`.replace(/[^\w-]/g, "_");
   const listId = `${headingId}-list`;
   const meta = checkoutsText(project);
-  // the checkouts that show a header (see CheckoutSection): the main one only next to others
-  const checkoutHeads = group.worktrees.some((wt) => group.multi || !!wt.worktree.name);
+  const checkoutHeads = group.worktrees.some((wt) => hasHead(group.multi, wt.worktree));
   const body = !folded && (
     <div className="project-body" id={listId}>
       {group.worktrees.map((wt) => (
@@ -233,7 +236,7 @@ export function ProjectCard({
   if (headless) return <div className="project project-headless">{body}</div>;
   // A project with one app in one checkout is one row, not a heading over a
   // row that repeats it (ADR-0032). The project's page is in the sidebar.
-  const only = group.worktrees.length === 1 && !group.multi && !group.worktrees[0].worktree.name ? group.worktrees[0].entries : null;
+  const only = group.worktrees.length === 1 && !hasHead(group.multi, group.worktrees[0].worktree) ? group.worktrees[0].entries : null;
   if (only && only.length === 1 && apps.length === 1) {
     const e = only[0];
     return (

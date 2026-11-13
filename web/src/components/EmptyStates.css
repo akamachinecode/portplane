@@ -7,7 +7,7 @@
 .first-run-manual {
   margin-top: 18px;
   color: var(--text-2);
-  font-size: 13px;
+  font-size: var(--text-xs);
 }
 
 .first-run-manual summary {

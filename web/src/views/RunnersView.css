@@ -132,7 +132,7 @@
 .dk-runner-path {
   overflow: hidden;
   color: var(--text-3);
-  font-size: 13px;
+  font-size: var(--text-xs);
   text-overflow: ellipsis;
   white-space: nowrap;
 }

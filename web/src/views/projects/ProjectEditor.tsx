@@ -7,6 +7,7 @@ import { Dialog } from "../../components/Dialog";
 import { Icon } from "../../components/Icon";
 import { Menu, type MenuItem } from "../../components/Menu";
 import { ErrorState, LoadingState } from "../../components/States";
+import { taskLabel } from "../../lib/dekit/taskForm";
 import { appRoute, navigate } from "../../lib/router";
 import { DekitHelpHost } from "../runners/DekitHelp";
 import { AddAppDialog } from "./AddAppDialog";
@@ -132,7 +133,7 @@ export function ProjectEditor({ runner, up, os, only }: { runner: string; up: bo
         <RunCommandDialog
           runner={runner}
           initialCwd={wantDialog.cwd}
-          tasks={(config?.tasks ?? []).filter((t) => !t.folder).map((t) => ({ path: t.path, label: typeof t.values.label === "string" ? (t.values.label as string) : (t.path.split("/").pop() ?? t.path) }))}
+          tasks={(config?.tasks ?? []).filter((t) => !t.folder).map((t) => ({ path: t.path, label: taskLabel(t.path, t.values) }))}
           onClose={() => openProjectDialog(null)}
           onStarted={(path) => {
             const app = local?.apps.find((a) => a.runner === runner && a.task === path);

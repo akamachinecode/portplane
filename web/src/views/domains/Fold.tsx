@@ -1,31 +1,18 @@
 import { useId, type ReactNode } from "react";
 import type { FileChange } from "../../api/types";
 import { FileDiff } from "../../components/FileDiff";
-import { Icon } from "../../components/Icon";
+import { dirOf } from "../../lib/dekit/taskForm";
+import { Fold } from "../../components/Fold";
 import { inferHome, shortenPath } from "../../lib/format";
 import { StateDot } from "../../components/StateDot";
+
+export { Fold };
 
 type DotState = Parameters<typeof StateDot>[0]["state"];
 
 // The calm pieces portless's pages share (ADR-0032): a fold for details on
-// demand, a titled group with room for its actions, and one status line.
-
-/**
- * Folded content under a quiet summary: "Details", "How it works". A
- * native <details>, so the keyboard and screen readers know it.
- */
-export function Fold({ summary, hint, open, className, children }: { summary: ReactNode; hint?: ReactNode; open?: boolean; className?: string; children: ReactNode }) {
-  return (
-    <details className={`dfold${className ? ` ${className}` : ""}`} open={open}>
-      <summary className="dfold-summary">
-        <Icon name="chevronRight" size={14} className="dfold-chevron" />
-        <span className="dfold-title">{summary}</span>
-        {hint && <span className="dfold-hint">{hint}</span>}
-      </summary>
-      <div className="dfold-body">{children}</div>
-    </details>
-  );
-}
+// demand (shared, in components/Fold.tsx), a titled group with room for its
+// actions, and one status line.
 
 /**
  * A titled block like SettingsGroup (the same look), with its actions on
@@ -89,13 +76,13 @@ export function ShortPath({ path }: { path: string }) {
  * What a change writes and runs, folded (ADR-0032): the dialog says what it
  * does in a sentence; the diff and the steps are there for whoever checks.
  */
-export function ChangeFold({ files, steps, folderOf }: { files: FileChange[]; steps: string[]; folderOf(path: string): string }) {
+export function ChangeFold({ files, steps, runner }: { files: FileChange[]; steps: string[]; /** The runner's folder, else each file's own */ runner?: string }) {
   if (files.length === 0 && steps.length === 0) return null;
   const names = files.map((f) => f.path.split(/[/\\]/).pop() ?? f.path);
   return (
     <Fold summary="What changes" hint={names.length ? names.join(", ") : undefined} className="change-fold">
       {files.map((f) => (
-        <FileDiff key={f.path} file={f} folder={folderOf(f.path)} />
+        <FileDiff key={f.path} file={f} folder={runner ?? dirOf(f.path)} />
       ))}
       {steps.length > 0 && (
         <ol className="rename-steps">

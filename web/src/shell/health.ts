@@ -195,12 +195,17 @@ export function collectProblems(snapshot: Snapshot): Problem[] {
 
 /** What the sidebar badge counts: errors and warnings. */
 export function problemBadge(problems: Problem[]): { count: number; tone: "error" | "warning" | null } {
-  let count = 0;
-  let error = false;
-  for (const p of problems) {
-    if (p.severity === "info") continue;
-    count++;
-    if (p.severity === "error") error = true;
-  }
-  return { count, tone: count === 0 ? null : error ? "error" : "warning" };
+  const { attention, tone } = splitProblems(problems);
+  return { count: attention.length, tone };
+}
+
+/**
+ * The problems (errors and warnings) apart from the notes, and how bad the
+ * worst is: what the sidebar's badge, the Apps line and the Health page all
+ * count (ADR-0032: one count of problems; notes are counted nowhere).
+ */
+export function splitProblems(problems: Problem[]): { attention: Problem[]; notes: Problem[]; tone: "error" | "warning" | null } {
+  const attention = problems.filter((p) => p.severity !== "info");
+  const notes = problems.filter((p) => p.severity === "info");
+  return { attention, notes, tone: attention.length === 0 ? null : attention.some((p) => p.severity === "error") ? "error" : "warning" };
 }

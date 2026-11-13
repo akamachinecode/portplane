@@ -45,16 +45,21 @@ export function StepLayout({
           {title}
         </h2>
         {lead && <p className="ob-step-lead">{lead}</p>}
-        {more && (
-          <details className="ob-more">
-            <summary>{moreLabel}</summary>
-            <div className="ob-more-body">{more}</div>
-          </details>
-        )}
+        {more && <More label={moreLabel}>{more}</More>}
       </header>
       {children && <div className="ob-step-body">{children}</div>}
       <footer className="ob-foot">{footer}</footer>
     </section>
+  );
+}
+
+/** A quiet link that unfolds more: where something comes from, the exact lines, a fix for one desktop. */
+export function More({ label, className, children }: { label: ReactNode; className?: string; children: ReactNode }) {
+  return (
+    <details className={`ob-more${className ? ` ${className}` : ""}`}>
+      <summary>{label}</summary>
+      <div className="ob-more-body">{children}</div>
+    </details>
   );
 }
 

@@ -3,7 +3,7 @@ import type { DoctorReport, Finding, FixKind } from "../../api/portless";
 import { Icon, Spinner, type IconName } from "../../components/Icon";
 import { ErrorState, LoadingState } from "../../components/States";
 import { useNow } from "../../hooks/useNow";
-import { inferHome, shortenPath } from "../../lib/format";
+import { ShortPath } from "./Fold";
 import { doctorSummary, FIX_LABELS, groupFindings, routeAge } from "../../lib/portless";
 import { PlanDialog } from "./PlanDialog";
 import { StatusGate } from "./ProxySection";
@@ -94,8 +94,8 @@ function Report({ report, running, run, at }: { report: DoctorReport; running: b
         {report.stateDir && (
           <div>
             <dt>State folder</dt>
-            <dd className="mono" title={report.stateDir}>
-              {shortenPath(report.stateDir, inferHome([report.stateDir]))}
+            <dd>
+              <ShortPath path={report.stateDir} />
             </dd>
           </div>
         )}
