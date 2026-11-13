@@ -57,15 +57,7 @@ export function FoldersSection() {
   };
 
   return (
-    <SettingsGroup
-      title="Folders"
-      description={
-        <>
-          Portplane reads the <code>dekit.yaml</code> files in these folders, and marks open ports that serve from inside them.{" "}
-          <strong>Set up</strong> finds the apps in a folder and writes that config for you.
-        </>
-      }
-    >
+    <SettingsGroup>
       {loadError ? (
         <ErrorState title="Couldn't load the folders" message={loadError} onRetry={() => setAttempt((n) => n + 1)} />
       ) : draft === null ? (

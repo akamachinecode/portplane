@@ -37,7 +37,7 @@ export function NotificationsGroup({ prefs }: { prefs: Preferences }) {
     }
   };
   return (
-    <SettingsGroup title="Notifications" description="System notifications, also while the window is closed. Tell me when:">
+    <SettingsGroup>
       {KINDS.map((k) => (
         <Switch
           key={k.kind}
