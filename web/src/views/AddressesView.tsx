@@ -160,9 +160,8 @@ function AddressesBody({ picker }: { picker: ReactNode }) {
   );
 }
 
-function idleLabel(n: number, others: number): string {
-  const what = `${n} ${n === 1 ? "address" : "addresses"} of stopped apps`;
-  return others ? what : `${what}: nothing is running`;
+function idleLabel(n: number): string {
+  return `${n} ${n === 1 ? "address" : "addresses"} of stopped apps`;
 }
 
 function From({ row, machine }: { row: AddressRow; machine: string }) {
@@ -319,14 +318,15 @@ function AddressTable({ rows, empty, onEditAlias }: { rows: AddressRow[]; empty:
               </th>
             </tr>
           </thead>
-          <tbody>{active.map(renderRow)}</tbody>
-          {idle.length > 0 && (
+          {/* with nothing running there is nothing to fold them under: they are the list */}
+          <tbody>{(active.length ? active : idle).map(renderRow)}</tbody>
+          {active.length > 0 && idle.length > 0 && (
             <tbody className="addr-idle-group">
               <tr className="addr-idle-head">
                 <td colSpan={5}>
                   <button type="button" className="addr-idle-toggle" aria-expanded={showIdle} onClick={() => setShowIdle((x) => !x)}>
                     <Icon name="chevronRight" size={14} className="addr-idle-chevron" />
-                    {idleLabel(idle.length, active.length)}
+                    {idleLabel(idle.length)}
                   </button>
                 </td>
               </tr>
