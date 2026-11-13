@@ -108,6 +108,25 @@ export function sinceText(iso: string | undefined, now: number): string {
 
 // ---- reload plans ----
 
+/** dekit's task keys in the words the task form uses; anything else keeps its key. */
+const FIELD_WORDS: Record<string, string> = {
+  cmd: "command",
+  script: "script",
+  cwd: "folder",
+  env: "environment",
+  add_path: "PATH",
+  deps: "dependencies",
+  tags: "tags",
+  label: "label",
+  type: "kind",
+  autostart: "start with the project",
+  autorestart: "restart",
+  ready: "ready check",
+  stop: "stop",
+  scrollback_len: "lines kept",
+  log: "output file",
+};
+
 /** What a reload does to one task, in words. */
 export function changeText(c: TaskChange): string {
   switch (c.kind) {
@@ -116,9 +135,10 @@ export function changeText(c: TaskChange): string {
     case "removed":
       return c.apply ? "Gone from the config: removed" : c.reason === "running" ? "Gone from the config, but it's running: kept until you stop it" : `Gone from the config: kept (${c.reason ?? "changed here"})`;
     default: {
-      const keys = (c.fields ?? []).map((f) => f.key);
+      const words = (c.fields ?? []).map((f) => FIELD_WORDS[f.key] ?? f.key).join(", ");
       const conflict = (c.fields ?? []).some((f) => f.conflict);
-      return `${keys.length ? keys.join(", ") : "Settings"} changed${conflict ? " here and in the file: kept as it runs" : ""}`;
+      const what = words ? words.charAt(0).toUpperCase() + words.slice(1) : "Settings";
+      return `${what} changed${conflict ? " here and in the file: kept as it runs" : ""}`;
     }
   }
 }

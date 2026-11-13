@@ -36,7 +36,7 @@ describe("reload plans", () => {
   it("says what a reload does", () => {
     expect(changeText({ path: "worker", kind: "added", apply: true })).toMatch(/added/);
     expect(changeText({ path: "api", kind: "removed", apply: false, reason: "running" })).toMatch(/running: kept/);
-    expect(changeText({ path: "web", kind: "changed", apply: true, fields: [{ key: "cmd", base: null, here: null, config: null, conflict: false, take: true }] })).toBe("cmd changed");
+    expect(changeText({ path: "web", kind: "changed", apply: true, fields: [{ key: "cmd", base: null, here: null, config: null, conflict: false, take: true }] })).toBe("Command changed");
   });
   it("restarts only running tasks a reload changed", () => {
     const changes = [
