@@ -160,6 +160,18 @@
   gap: var(--space-1);
 }
 
+/* as in every list (ADR-0032): a runner's actions show where the pointer
+   or the keyboard is; a busy one, an open menu and touch screens keep them */
+@media (hover: hover) {
+  .dk-runner:not(:hover, :focus-within) .dk-runner-actions > :not([aria-busy="true"]) {
+    opacity: 0;
+  }
+}
+
+.dk-runner-actions > * {
+  transition: opacity var(--dur-fast);
+}
+
 /* a problem: one quiet line, with the button that fixes it */
 .dk-runner-line {
   display: flex;
