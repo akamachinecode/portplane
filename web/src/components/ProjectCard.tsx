@@ -200,6 +200,8 @@ export function ProjectCard({
   const headingId = `p-${ms.machine.id}-${project.runner}-${project.name}`.replace(/[^\w-]/g, "_");
   const listId = `${headingId}-list`;
   const meta = checkoutsText(project);
+  // the checkouts that show a header (see CheckoutSection): the main one only next to others
+  const checkoutHeads = group.worktrees.some((wt) => group.multi || !!wt.worktree.name);
   const body = !folded && (
     <div className="project-body" id={listId}>
       {group.worktrees.map((wt) => (
@@ -241,7 +243,8 @@ export function ProjectCard({
           </a>
         </h3>
         <span className="spacer" />
-        <Count apps={apps} />
+        {/* open, its checkouts' headers count their own apps: the project's sum would say it twice (ADR-0032) */}
+        {(folded || !checkoutHeads) && <Count apps={apps} />}
         <GroupActions
           ms={ms}
           name={project.name}
