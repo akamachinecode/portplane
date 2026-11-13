@@ -422,21 +422,19 @@ code {
   line-height: inherit;
 }
 
+/* a count is a quiet number, like the sidebar's, not a filled pill (ADR-0032) */
 .count {
   display: inline-block;
   flex: none;
-  padding: 0 6px;
-  border-radius: 999px;
-  background: var(--surface-2);
   color: var(--text-2);
-  font-size: 12px;
+  font-family: var(--mono);
+  font-size: 13px;
   font-weight: 500;
   line-height: 18px;
   font-variant-numeric: tabular-nums;
 }
 
 .count-live {
-  background: var(--on-soft);
   color: var(--on);
 }
 
