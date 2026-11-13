@@ -242,7 +242,7 @@ function Options({ status, plan }: { status: PortlessStatus; plan: (a: PortlessA
       <div className="sgroup-body">
         <p className="sgroup-text">{service ? "Applying them reinstalls the startup service, which asks for your password." : "They apply the next time the proxy starts."}</p>
         <div className="form-grid proxy-form">
-          <Field label="Port" htmlFor={ids.port} error={problems.port} hint={lowPort(o.port) ? "Ports below 1024 need your password once on Linux; macOS and Windows allow them." : "A port of 1024 or more needs no password, but every URL carries it."}>
+          <Field label="Port" htmlFor={ids.port} error={problems.port} hint={lowPort(o.port) ? "Ports below 1024 need your password once on Linux; macOS and Windows allow them." : "A port of 1024 or more needs no password, but every address carries it."}>
             <div className="port-choice">
               <input id={ids.port} className="input mono port-input" type="number" min={1} max={65535} value={Number.isFinite(o.port) ? o.port : ""} onChange={(e) => set({ port: e.target.valueAsNumber })} aria-invalid={problems.port ? true : undefined} />
               <button type="button" className="btn btn-sm btn-ghost" onClick={() => set({ port: o.https ? 443 : 80 })}>
@@ -256,7 +256,7 @@ function Options({ status, plan }: { status: PortlessStatus; plan: (a: PortlessA
           <Switch checked={o.https} onChange={(https) => set({ https, port: o.port === 443 && !https ? 80 : o.port === 80 && https ? 443 : o.port })} label="HTTPS" description="Serves every address over HTTPS with portless's local certificate, which your system has to trust once." />
           {!o.lan && <Domains tlds={cleanTlds(o.tlds)} onChange={(tlds) => set({ tlds })} disabled={false} error={problems.tlds} />}
           <Switch checked={o.wildcard} onChange={(wildcard) => set({ wildcard })} label="Wildcard subdomains" description="An address no app registered falls back to its closest parent: feature.web.localhost opens web.localhost." />
-          <Switch checked={o.lan} onChange={(lan) => set({ lan, lanIp: lan ? o.lanIp : undefined })} label="Share on your network (LAN)" description="Publishes every app as name.local over mDNS, so phones and other computers on your Wi-Fi can open it. Domains switch to .local." />
+          <Switch checked={o.lan} onChange={(lan) => set({ lan, lanIp: lan ? o.lanIp : undefined })} label="Share on your network (LAN)" description="Publishes every app as name.local over mDNS, so phones and other computers on your Wi-Fi can open it. Addresses switch to .local." />
           {o.lan && (
             <Field label="LAN address" htmlFor={ids.ip} error={problems.lanIp} hint="Leave it empty to follow this machine's address as it changes.">
               <input id={ids.ip} className="input mono" value={o.lanIp ?? ""} placeholder="192.168.1.20" onChange={(e) => set({ lanIp: e.target.value })} aria-invalid={problems.lanIp ? true : undefined} />

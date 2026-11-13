@@ -31,10 +31,10 @@ export function FirstRun() {
       <h3 id="first-run-title" className="panel-title">
         Set up Portplane
       </h3>
-      <p className="panel-text">The guided setup finds the apps in your project folders and gives each one an address, in about five minutes.</p>
+      <p className="panel-text">Setup finds the apps in your project folders and gives each one an address, in about five minutes.</p>
       <a className="btn btn-primary first-run-start" href={href({ view: "onboarding", step })}>
         <Icon name="wand" size={14} />
-        {step === "welcome" ? "Start the guided setup" : "Continue the guided setup"}
+        {step === "welcome" ? "Start Setup" : "Continue Setup"}
       </a>
       <details className="first-run-manual">
         <summary>Or just add a folder</summary>

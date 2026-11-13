@@ -9,7 +9,7 @@ export const SHARE_KINDS: ShareKind[] = ["tailscale", "funnel", "ngrok", "cloudf
 
 /** What each share is called on its switch. */
 export const SHARE_TITLES: Record<ShareKind, string> = {
-  tailscale: "Share on my tailnet",
+  tailscale: "Share on your tailnet",
   funnel: "Share publicly with Tailscale Funnel",
   ngrok: "Share publicly with ngrok",
   cloudflare: "Share publicly with Cloudflare",

@@ -84,7 +84,7 @@ function RunnersBody({ picker }: { picker: ReactNode }) {
         Runners are dekit's supervisors, one per project.{" "}
         {name ? (
           <>
-            Install it on {name} from its <a href={href({ view: "onboarding", machine: scope.id })}>guided setup</a>.
+            Install it on {name} in its <a href={href({ view: "onboarding", machine: scope.id })}>Setup</a>.
           </>
         ) : (
           <>
@@ -127,7 +127,7 @@ function RunnersBody({ picker }: { picker: ReactNode }) {
               A runner appears for each folder with a <code>dekit.yaml</code>.{" "}
               {name ? (
                 <>
-                  Set up a folder on {name} from its <a href={href({ view: "onboarding", machine: scope.id })}>guided setup</a>.
+                  Set up a folder on {name} in its <a href={href({ view: "onboarding", machine: scope.id })}>Setup</a>.
                 </>
               ) : (
                 <>

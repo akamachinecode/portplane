@@ -260,7 +260,7 @@ function settingsCommands(ctx: CommandContext): Command[] {
   });
   out.push({
     id: "onboarding.open",
-    title: "Open the guided setup",
+    title: "Open Setup",
     group: "Settings",
     icon: "wand",
     keywords: ["onboarding", "guided setup", "first run"],

@@ -69,7 +69,7 @@ export function prevStep(step: StepId): StepId {
   return STEP_IDS[Math.max(0, stepIndex(step) - 1)];
 }
 
-/** Where "Fix everything" goes: the first step with work left. */
+/** Where "Start fixing" goes: the first step with work left. */
 export function firstFixStep(flow: Flow): StepId {
   if (!flow.toolsReady || flow.pathNeeded) return "install";
   if (!flow.proxyReady) return "proxy";

@@ -64,7 +64,6 @@ function CheckRow({ id, req, pending, error }: { id: RequirementId; req?: Requir
         <p className="ob-check-name">
           {req.name}
           {req.version && <span className="ob-check-version mono">{req.version}</span>}
-          {req.fix && FIXABLE.has(req.fix) && s !== "info" && <span className="tag">Portplane can fix this</span>}
           {req.privilege && s !== "info" && (
             <span className="tag tag-warn" title="Asks for your administrator password">
               <Icon name="shield" size={11} />
@@ -127,8 +126,8 @@ export function CheckStep() {
         <StepFooter status={status}>
           {anyFix ? (
             <button type="button" className="btn btn-primary" onClick={() => go(firstFixStep(flow))} disabled={running && known.length < 3}>
-              <Icon name="wand" size={14} />
-              Fix everything
+              Start fixing
+              <Icon name="chevronRight" size={14} />
             </button>
           ) : (
             <NextButton disabled={running && known.length < 3} />

@@ -13,7 +13,7 @@ const KINDS: Array<{ kind: Kind; label: string; description: string }> = [
   { kind: "failures", label: "An app crashes or a job fails", description: "So you know before you reload the page. Click it to see the app." },
   { kind: "recoveries", label: "A failed app runs again", description: "After a fix, or when dekit restarts it." },
   { kind: "jobs", label: "A job finishes", description: "Installs and other long operations Portplane runs." },
-  { kind: "config", label: "A dekit.yaml changes", description: "dekit applies a changed file on a reload; open the project to review and reload it." },
+  { kind: "config", label: "A dekit.yaml changes", description: "Open the project to review the change and apply it." },
 ];
 
 /**

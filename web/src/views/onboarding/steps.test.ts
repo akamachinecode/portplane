@@ -30,7 +30,7 @@ describe("steps", () => {
     expect(prevStep("welcome")).toBe("welcome");
   });
 
-  it("sends Fix everything to the first step with work", () => {
+  it("sends Start fixing to the first step with work", () => {
     expect(firstFixStep({ ...ready, toolsReady: false })).toBe("install");
     expect(firstFixStep({ ...ready, proxyReady: false })).toBe("proxy");
     expect(firstFixStep({ ...ready, browsersNeeded: true })).toBe("browsers");

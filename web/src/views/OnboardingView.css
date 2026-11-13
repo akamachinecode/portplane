@@ -314,7 +314,11 @@
   color: var(--warn);
 }
 
-.ob-mark-info,
+/* a note is not a state: grey, like the ⓘ everywhere else (ADR-0032) */
+.ob-mark-info {
+  color: var(--text-3);
+}
+
 .ob-mark-busy {
   color: var(--accent);
 }

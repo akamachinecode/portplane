@@ -42,7 +42,7 @@ function Hosts({ hosts }: { hosts: HostsView }) {
                 </>
               }
             >
-              {hosts.inSync ? (hosts.block ? "In sync with your routes" : "Nothing to write") : hosts.block ? "Out of date" : "Missing"}
+              {hosts.inSync ? (hosts.block ? "In sync with your addresses" : "Nothing to write") : hosts.block ? "Out of date" : "Missing"}
             </StatusLine>
             {hosts.missing.length > 0 && (
               <SettingRow label="Missing" description="Routes the block doesn't list yet.">

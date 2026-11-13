@@ -27,7 +27,7 @@ import "./ProjectEditor.css";
 
 function ReloadDialog({ runner, reload, onClose }: { runner: string; reload: Reload; onClose(): void }) {
   return (
-    <Dialog open onClose={onClose} title="Review and reload" size="md">
+    <Dialog open onClose={onClose} title="Apply to the running project" size="md">
       <ReloadStep runner={runner} reload={reload} onDone={onClose} />
     </Dialog>
   );
@@ -89,7 +89,7 @@ export function ProjectEditor({ runner, up, os, only }: { runner: string; up: bo
           title={changes === 0 ? "The new order of tasks isn't running yet" : changes === 1 ? "1 saved change isn't running yet" : `${changes} saved changes aren't running yet`}
           action={
             <button type="button" className="btn btn-sm" onClick={() => setReviewing(true)}>
-              Review and reload
+              Review and apply
             </button>
           }
         />

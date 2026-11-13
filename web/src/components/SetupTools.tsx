@@ -95,7 +95,7 @@ export function SetupTools({ load, rechecking }: { load: CheckLoad; rechecking: 
           </>
         ) : (
           <>
-            Install what's missing, then check again. The guided setup (Settings, General) can install the tools for you, without a terminal.
+            Install what's missing, then check again. Setup can install the tools for you, without a terminal.
           </>
         )}
       </p>

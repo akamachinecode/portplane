@@ -39,7 +39,7 @@ export function AliasDialog({ draft, routes, onClose }: { draft: AliasDraft; rou
   const problem = nameProblem(name, tld) ?? (host === "portplane.localhost" ? "portplane.localhost is Portplane's own address." : null);
   const portProblem = Number.isInteger(port) && port >= 1 && port <= 65535 ? null : "Pick a port between 1 and 65535.";
   const holder = routes.find((r) => r.hostname === host && r.hostname !== draft.from);
-  const clash = holder && !force ? `${host} already points to ${holder.owner?.label ?? `port ${holder.port}`}. Turn on “Replace the existing route” to take it over.` : null;
+  const clash = holder && !force ? `${host} already points to ${holder.owner?.label ?? `port ${holder.port}`}. Turn on “Replace the existing address” to take it over.` : null;
 
   const save = async () => {
     setTouched(true);
@@ -119,7 +119,7 @@ export function AliasDialog({ draft, routes, onClose }: { draft: AliasDraft; rou
           </div>
         )}
         {/* only when the name is taken: a choice nobody needs otherwise */}
-        {(holder || force) && <Switch checked={force} onChange={setForce} label="Replace the existing route" description="Take the name over. If a running app holds it, portless stops that app's portless process." />}
+        {(holder || force) && <Switch checked={force} onChange={setForce} label="Replace the existing address" description="Take the name over. If a running app holds it, portless stops that app's portless process." />}
         {host && !problem && Number.isFinite(port) && (
           <p className="proxy-preview">
             <span className="mono">{status ? proxyUrl(host, status.proxy) : `https://${host}`}</span> → <span className="mono">127.0.0.1:{port}</span>

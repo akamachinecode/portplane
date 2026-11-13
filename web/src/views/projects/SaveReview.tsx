@@ -88,7 +88,7 @@ export function ReloadStep({ runner, reload, onDone, saved }: { runner: string; 
     <div className="review-step">
       <p className="review-lead">
         {saved && <Icon name="checkCircle" size={15} />}
-        {saved ? "Saved. A reload makes the runner do this:" : "A reload makes the runner do this:"}
+        {saved ? "Saved. Applying it makes the runner do this:" : "Applying makes the runner do this:"}
       </p>
       <ReloadPlanList plan={reload.plan} />
       {reload.errors.length > 0 && (

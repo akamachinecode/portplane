@@ -517,9 +517,9 @@ func aliasError(err error) (int, error) {
 	msg := err.Error()
 	switch {
 	case strings.Contains(msg, "already registered by a running process"):
-		return http.StatusConflict, errors.New("a running app already uses that name: pick another, or turn on “Replace the existing route” to take it over (that app's portless process is stopped)")
+		return http.StatusConflict, errors.New("a running app already uses that name: pick another, or turn on “Replace the existing address” to take it over (that app's portless process is stopped)")
 	case strings.Contains(msg, "is a static alias"):
-		return http.StatusConflict, errors.New("another alias already uses that name: pick another, or turn on “Replace the existing route”")
+		return http.StatusConflict, errors.New("another alias already uses that name: pick another, or turn on “Replace the existing address”")
 	case strings.Contains(msg, "No alias found"):
 		return http.StatusNotFound, errors.New("there is no alias with that name any more")
 	}
