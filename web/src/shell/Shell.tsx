@@ -169,7 +169,7 @@ export function Shell() {
       <Sidebar onSearch={() => setPalette(true)} />
       <ToolbarSlot value={slot}>
         <div
-          className="shell-body"
+          className={`shell-body${NARROW.has(route.view) ? " is-narrow" : ""}`}
           ref={body}
           onScroll={(e) => {
             // a line under the toolbar once the page scrolls under it

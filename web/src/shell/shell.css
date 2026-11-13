@@ -565,6 +565,13 @@ html:has(.shell) body {
   min-width: 0;
 }
 
+/* a narrow page's title and actions sit over its column, on the same
+   edges, as in Linear's settings: one left edge to read down */
+.shell-body.is-narrow .toolbar-slot {
+  max-width: var(--page-narrow-w);
+  margin-inline: auto;
+}
+
 .toolbar-view {
   display: flex;
   flex: 1;
