@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/akamachinecode/portplane/compare/v0.7.0...v0.8.0) (2026-11-13)
+
+
+### Features
+
+* calm by default, with each fact said once, details on demand and type that is easy to read ([#34](https://github.com/akamachinecode/portplane/issues/34)) ([a32d2ef](https://github.com/akamachinecode/portplane/commit/a32d2efba4ee3e14b515380047d935a234286290))
+
 ## [0.7.0](https://github.com/akamachinecode/portplane/compare/v0.6.0...v0.7.0) (2026-11-12)
 
 
