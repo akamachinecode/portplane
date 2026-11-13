@@ -219,6 +219,17 @@ export function ProjectCard({
     </div>
   );
   if (headless) return <div className="project project-headless">{body}</div>;
+  // A project with one app in one checkout is one row, not a heading over a
+  // row that repeats it (ADR-0032). The project's page is in the sidebar.
+  const only = group.worktrees.length === 1 && !group.multi && !group.worktrees[0].worktree.name ? group.worktrees[0].entries : null;
+  if (only && only.length === 1 && apps.length === 1) {
+    const e = only[0];
+    return (
+      <article className="project project-single" aria-label={project.name}>
+        <EntryRows entries={only} extras={extras} showProject={e.app.label !== project.name} />
+      </article>
+    );
+  }
   return (
     <article className={`project${folded ? " is-folded" : ""}`} aria-labelledby={headingId}>
       <header className="project-head">

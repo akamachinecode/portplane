@@ -94,8 +94,8 @@ export function FoldersSection() {
                         unsaved
                       </span>
                     )}
-                    <button type="button" className="btn btn-sm btn-ghost" aria-label={`Remove ${f}`} onClick={() => setDraft(draft.filter((x) => x !== f))}>
-                      Remove
+                    <button type="button" className="icon-btn" aria-label={`Remove ${f}`} title={`Remove ${f}`} onClick={() => setDraft(draft.filter((x) => x !== f))}>
+                      <Icon name="close" size={14} />
                     </button>
                   </li>
                 );
@@ -108,17 +108,18 @@ export function FoldersSection() {
               {saveError}
             </p>
           )}
-          <div className="sgroup-foot">
-            {changed && (
+          {/* Save and Discard only once there is something to save (ADR-0032) */}
+          {changed && (
+            <div className="sgroup-foot">
               <button type="button" className="btn btn-ghost" onClick={() => setDraft(saved)} disabled={saving}>
                 Discard changes
               </button>
-            )}
-            <button type="button" className="btn btn-primary" onClick={save} disabled={!changed || saving} aria-busy={saving || undefined}>
-              {saving && <Spinner />}
-              Save
-            </button>
-          </div>
+              <button type="button" className="btn btn-primary" onClick={save} disabled={saving} aria-busy={saving || undefined}>
+                {saving && <Spinner />}
+                Save
+              </button>
+            </div>
+          )}
         </>
       )}
     </SettingsGroup>

@@ -20,6 +20,11 @@
   overflow: hidden;
 }
 
+/* one app: the row is the card */
+.project-single .rows > .row:first-child {
+  border-top: 0;
+}
+
 .project-head {
   --entity-ring: var(--surface);
   display: flex;

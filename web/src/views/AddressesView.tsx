@@ -13,7 +13,7 @@ import { EmptyState, ErrorState, LoadingState } from "../components/States";
 import { StateDot } from "../components/StateDot";
 import { ViewHeader } from "../components/ViewHeader";
 import { useNow } from "../hooks/useNow";
-import { addressRows, addressSummary, filterCounts, KIND_NAMES, matchesFilter, type AddressRow } from "../lib/addresses";
+import { addressRows, filterCounts, KIND_NAMES, matchesFilter, type AddressRow } from "../lib/addresses";
 import { routeAge } from "../lib/portless";
 import { ADDRESS_FILTERS, appRoute, href, navigate, type AddressFilter } from "../lib/router";
 import { useShell } from "../shell/ShellContext";
@@ -95,7 +95,7 @@ function AddressesBody({ picker }: { picker: ReactNode }) {
     <>
       <ViewHeader
         title="Addresses"
-        summary={routes ? addressSummary(rows) : undefined}
+        // no count in the title: the filters count, and a stale address has its own notice
         description={
           <>
             Every <code>.localhost</code> address {scope.remote ? `on ${scope.ms?.machine.name ?? scope.id}` : "on this computer"} and where it sends each request. An app keeps its
@@ -118,7 +118,7 @@ function AddressesBody({ picker }: { picker: ReactNode }) {
         {() => (
           <>
             <div className="filter-bar" role="tablist" aria-label="Show">
-              {ADDRESS_FILTERS.map((f) => (
+              {ADDRESS_FILTERS.filter((f) => f === "all" || f === filter || counts[f] > 0).map((f) => (
                 <button key={f} type="button" role="tab" aria-selected={f === filter} className="filter-chip" onClick={() => go(f)}>
                   {FILTER_LABELS[f]}
                   <span className="filter-count">{counts[f]}</span>
@@ -160,6 +160,11 @@ function AddressesBody({ picker }: { picker: ReactNode }) {
   );
 }
 
+function idleLabel(n: number, others: number): string {
+  const what = `${n} ${n === 1 ? "address" : "addresses"} of stopped apps`;
+  return others ? what : `${what}: nothing is running`;
+}
+
 function From({ row, machine }: { row: AddressRow; machine: string }) {
   const app = row.app;
   if (app) {
@@ -167,7 +172,7 @@ function From({ row, machine }: { row: AddressRow; machine: string }) {
       <a className="from-app" href={href(appRoute(machine, app.id))}>
         <span className="from-project">{[app.project, app.worktree].filter(Boolean).join(" · ")}</span>
         <span className="from-sep">/</span>
-        <span className="from-name">{app.label}</span>
+        <span className="from-name">{app.worktree ? app.label.replace(/ \([^)]*\)$/, "") : app.label}</span>
       </a>
     );
   }
@@ -192,6 +197,7 @@ function AddressTable({ rows, empty, onEditAlias }: { rows: AddressRow[]; empty:
   const ms = scope.ms;
   const { put } = useMachineResources().routes;
   const now = useNow(true, 30_000);
+  const [showIdle, setShowIdle] = useState(false);
   const [rename, setRename] = useState<{ appId: string; machine: string; route?: string; label: string; runner?: string } | null>(null);
   const [share, setShare] = useState<App | null>(null);
   const [removing, setRemoving] = useState<AddressRow | null>(null);
@@ -231,31 +237,11 @@ function AddressTable({ rows, empty, onEditAlias }: { rows: AddressRow[]; empty:
     return items;
   };
 
-  if (!rows.length) {
-    return (
-      <EmptyState icon="link" title="Nothing here yet">
-        {empty}
-      </EmptyState>
-    );
-  }
-
-  return (
-    <>
-      <div className="table-wrap">
-        <table className="table addr-table">
-          <thead>
-            <tr>
-              <th scope="col">Address</th>
-              <th scope="col">Sends to</th>
-              <th scope="col">From</th>
-              <th scope="col">State</th>
-              <th scope="col">
-                <span className="sr-only">Actions</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => {
+  // What answers now comes first; the names kept for stopped apps fold
+  // under one line (ADR-0032): with dozens of apps they were most of the page.
+  const active = rows.filter((r) => r.state !== "off");
+  const idle = rows.filter((r) => r.state === "off");
+  const renderRow = (row: AddressRow) => {
               const app = row.app;
               const live = row.state === "live";
               const url = remote && app?.remoteUrl ? app.remoteUrl : (row.url ?? `https://${row.hostname}`);
@@ -275,7 +261,7 @@ function AddressTable({ rows, empty, onEditAlias }: { rows: AddressRow[]; empty:
                       {row.route && <SharedLinks r={row.route} />}
                     </span>
                   </td>
-                  <td className="mono addr-port">{row.port ? `:${row.port}` : <span className="muted">—</span>}</td>
+                  <td className="mono addr-port">{row.port ? `:${row.port}` : <span className="sr-only">No port while it's off</span>}</td>
                   <td className="addr-from">
                     {/* an app's row needs no label; anything else says what it is */}
                     {!app && <span className="tag">{KIND_NAMES[row.kind]}</span>}
@@ -306,8 +292,45 @@ function AddressTable({ rows, empty, onEditAlias }: { rows: AddressRow[]; empty:
                   </td>
                 </tr>
               );
-            })}
-          </tbody>
+            };
+
+  if (!rows.length) {
+    return (
+      <EmptyState icon="link" title="Nothing here yet">
+        {empty}
+      </EmptyState>
+    );
+  }
+
+  return (
+    <>
+      <div className="table-wrap">
+        <table className="table addr-table">
+          <thead>
+            <tr>
+              <th scope="col">Address</th>
+              <th scope="col">Sends to</th>
+              <th scope="col">From</th>
+              <th scope="col">State</th>
+              <th scope="col">
+                <span className="sr-only">Actions</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>{active.map(renderRow)}</tbody>
+          {idle.length > 0 && (
+            <tbody className="addr-idle-group">
+              <tr className="addr-idle-head">
+                <td colSpan={5}>
+                  <button type="button" className="addr-idle-toggle" aria-expanded={showIdle} onClick={() => setShowIdle((x) => !x)}>
+                    <Icon name="chevronRight" size={14} className="addr-idle-chevron" />
+                    {idleLabel(idle.length, active.length)}
+                  </button>
+                </td>
+              </tr>
+              {showIdle && idle.map(renderRow)}
+            </tbody>
+          )}
         </table>
       </div>
       {rename && <RenameDialog {...rename} onClose={() => setRename(null)} />}

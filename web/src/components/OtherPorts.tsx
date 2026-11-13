@@ -75,16 +75,23 @@ function PortRow({ port, ms, home }: { port: Port; ms: MachineSnapshot; home: st
   // port.url names a portless alias when one points here; it is only
   // meaningful on the machine that reported it.
   const href = (local && port.url) || `http://localhost:${port.port}`;
+  // A process started from / or ~ says nothing about where it belongs.
+  const where = dir === "/" || dir === "~" ? undefined : dir;
   return (
     <li className="port-row">
-      <span className="port-num">:{port.port}</span>
+      {local ? (
+        <a className="port-num" href={href} target="_blank" rel="noopener" title={`Open ${port.route ?? `localhost:${port.port}`}`}>
+          :{port.port}
+        </a>
+      ) : (
+        <span className="port-num">:{port.port}</span>
+      )}
       <span className="port-proc" title={port.pid ? `pid ${port.pid}` : undefined}>
         {port.process || "unknown"}
       </span>
       <span className="port-where" title={port.dir}>
         {port.project && <span className="port-project">{port.project}</span>}
-        {dir && <span className="port-dir mono">{dir}</span>}
-        {!port.project && !dir && <span className="port-dir">—</span>}
+        {where && <span className="port-dir mono">{where}</span>}
       </span>
       <span className="port-link">
         {ALL_INTERFACES.has(port.address) && (
@@ -95,7 +102,7 @@ function PortRow({ port, ms, home }: { port: Port; ms: MachineSnapshot; home: st
         {local && ms.tools.portless && !port.route && (
           <button
             type="button"
-            className="btn btn-sm btn-ghost"
+            className="btn btn-sm btn-ghost port-give"
             title={`Give port ${port.port} a stable .localhost address with a portless alias`}
             onClick={() => {
               requestIntent({ kind: "new-alias", port: port.port, name: suggestName(port.process) });
@@ -107,9 +114,11 @@ function PortRow({ port, ms, home }: { port: Port; ms: MachineSnapshot; home: st
           </button>
         )}
         {local ? (
-          <a href={href} target="_blank" rel="noopener" className="addr">
-            {port.route ?? `localhost:${port.port}`}
-          </a>
+          port.route && (
+            <a href={href} target="_blank" rel="noopener" className="addr">
+              {port.route}
+            </a>
+          )
         ) : (
           ms.machine.status === "online" && <RemoteOpen machine={ms.machine.id} machineName={ms.machine.name} port={port.port} />
         )}

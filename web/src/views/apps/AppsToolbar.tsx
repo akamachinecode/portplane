@@ -1,7 +1,6 @@
 import { useMemo, type RefObject } from "react";
 import type { AppsLayout as LayoutPref, Snapshot } from "../../api/types";
 import { Icon } from "../../components/Icon";
-import { Segmented } from "../../components/Segmented";
 import { filterOptions, hasFilters, NO_FILTERS, SORTS, stateFilter, type AppEntry, type AppFilters, type SelectBy, type SortKey, type StateFilter } from "./model";
 import { PopMenu, type PopSection } from "./PopMenu";
 
@@ -12,7 +11,7 @@ const LAYOUTS = [
   { value: "table" as LayoutPref, label: "Table", icon: "table" as const },
 ];
 
-/** Search, filters, "Select…", sort and the layout switch, above the apps. */
+/** Search, then Filter (states, machines, projects, tags) and View (sort, list or table, select), above the apps. */
 export function AppsToolbar({
   snapshot,
   order,
@@ -55,7 +54,7 @@ export function AppsToolbar({
   const shownBy = (pred: (e: AppEntry) => boolean) => order.filter(pred).length;
   const selectSections: PopSection[] = [
     {
-      items: [{ kind: "action", label: "All shown", hint: String(order.length), disabled: order.length === 0, onSelect: () => onSelectBy({ kind: "all" }) }],
+      items: [{ kind: "action", label: "Every app shown", hint: String(order.length), disabled: order.length === 0, onSelect: () => onSelectBy({ kind: "all" }) }],
     },
     {
       title: "By state",
@@ -80,7 +79,13 @@ export function AppsToolbar({
     },
   ];
 
-  const sortLabel = SORTS.find((s) => s.value === sort)?.label ?? "Activity";
+  const filterSections: PopSection[] = [
+    { title: "State", ...check(filters.states, filters.states, "states", options.states) },
+    ...(options.machines.length > 1 ? [{ title: "Machine", ...check(filters.machines, filters.machines, "machines", options.machines) }] : []),
+    ...(options.projects.length > 1 ? [{ title: "Project", ...check(filters.projects, filters.projects, "projects", options.projects) }] : []),
+    ...(options.tags.length > 0 ? [{ title: "Tag", ...check(filters.tags, filters.tags, "tags", options.tags) }] : []),
+  ].filter((sec) => sec.items.length > 0);
+  const activeFilters = filters.states.length + filters.machines.length + filters.projects.length + filters.tags.length;
   return (
     <div className="apps-toolbar" role="search">
       <label className="apps-search">
@@ -111,44 +116,47 @@ export function AppsToolbar({
           /
         </kbd>
       </label>
+      {/* Two buttons instead of seven (ADR-0032): what to show, and how. */}
       <div className="apps-filters" role="group" aria-label="Filters">
-        <PopMenu label="Filter by state" button={countLabel("State", filters.states.length)} active={filters.states.length > 0} sections={[check(filters.states, filters.states, "states", options.states)]} />
-        {options.machines.length > 1 && (
-          <PopMenu label="Filter by machine" button={countLabel("Machine", filters.machines.length)} active={filters.machines.length > 0} sections={[check(filters.machines, filters.machines, "machines", options.machines)]} />
-        )}
         <PopMenu
-          label="Filter by project"
-          button={countLabel("Project", filters.projects.length)}
-          active={filters.projects.length > 0}
-          sections={[check(filters.projects, filters.projects, "projects", options.projects)]}
-          empty="No projects yet."
+          label="Filter apps"
+          button={
+            <>
+              <Icon name="filter" size={14} />
+              {countLabel("Filter", activeFilters)}
+            </>
+          }
+          buttonTitle="Show only some states, projects or tags"
+          active={activeFilters > 0}
+          sections={filterSections}
+          empty="Nothing to filter by yet."
+          footer={activeFilters > 0 ? { label: "Clear filters", onSelect: () => onFilters({ ...NO_FILTERS, query: filters.query }) } : undefined}
         />
-        {options.tags.length > 0 && (
-          <PopMenu label="Filter by tag" button={countLabel("Tag", filters.tags.length)} active={filters.tags.length > 0} sections={[check(filters.tags, filters.tags, "tags", options.tags)]} />
-        )}
         {hasFilters(filters) && (
           <button type="button" className="btn btn-sm btn-ghost apps-clear" onClick={() => onFilters(NO_FILTERS)}>
             <Icon name="close" size={13} />
-            Clear filters
+            Clear
           </button>
         )}
       </div>
       <span className="spacer" />
       <div className="apps-view-controls">
-        <PopMenu label="Select apps" button={<span>Select</span>} buttonTitle="Select apps by state, project or tag" sections={selectSections} align="end" />
         <PopMenu
-          label="Sort apps"
+          label="View options"
           button={
             <>
               <Icon name="sort" size={14} />
-              <span>{sortLabel}</span>
+              <span>View</span>
             </>
           }
-          buttonTitle="Sort the apps"
+          buttonTitle="Sort, show as a list or a table, select apps"
           align="end"
-          sections={[{ items: SORTS.map((s) => ({ kind: "radio", label: s.label, description: s.description, checked: s.value === sort, onSelect: () => onSort(s.value) })) }]}
+          sections={[
+            { title: "Sort by", items: SORTS.map((s) => ({ kind: "radio" as const, label: s.label, description: s.description, checked: s.value === sort, onSelect: () => onSort(s.value) })) },
+            { title: "Show as", items: LAYOUTS.map((l) => ({ kind: "radio" as const, label: l.label, checked: l.value === layout, onSelect: () => onLayout(l.value) })) },
+            ...selectSections.map((sec, i) => ({ ...sec, title: i === 0 ? "Select" : sec.title ? `Select ${sec.title.toLowerCase()}` : undefined })),
+          ]}
         />
-        <Segmented label="Show apps as" value={layout} options={LAYOUTS} onChange={onLayout} />
       </div>
     </div>
   );

@@ -11,7 +11,7 @@ import { dekitCommand, displayHost, inferHome, shellQuote, shortenPath, stateLab
 import { appRoute, href as routeHref } from "../../lib/router";
 import type { DetailTabProps } from "../AppDetail";
 import { DekitHelpHost } from "../runners/DekitHelp";
-import { WhySection } from "./WhySection";
+import { DepGraph, WhySection } from "./WhySection";
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -156,6 +156,7 @@ export function SummaryTab({ ms, app }: DetailTabProps) {
             </p>
           </Row>
         </dl>
+        {(deps.length > 0 || dependents.length > 0) && <DepGraph ms={ms} app={app} />}
       </details>
       <DekitHelpHost />
     </div>

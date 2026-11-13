@@ -1024,6 +1024,27 @@ a.addr:hover {
   padding: 6px 12px;
 }
 
+/* "Give it an address" where the pointer or the keyboard is */
+.port-row:not(:hover, :focus-within) .port-give {
+  opacity: 0;
+}
+
+@media (hover: none) {
+  .port-row .port-give {
+    opacity: 1;
+  }
+}
+
+a.port-num {
+  text-decoration: none;
+}
+
+a.port-num:hover {
+  color: var(--accent-text);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .port-row + .port-row {
   border-top: 1px solid var(--border);
 }

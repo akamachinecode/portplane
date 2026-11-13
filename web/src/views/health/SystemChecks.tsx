@@ -83,9 +83,9 @@ export function requirementRow(r: Requirement): CheckRow {
 export function snapshotRows(ms: MachineSnapshot): CheckRow[] {
   const rows: CheckRow[] = ms.runners.map((r) => ({
     id: `runner|${r.root}`,
-    tone: !r.up ? "warn" : r.error ? "warn" : "ok",
+    tone: !r.up ? "idle" : r.error ? "warn" : "ok",
     title: `Runner for ${r.name}`,
-    detail: !r.up ? "Not running: its apps can't start." : r.error ? r.error : "Running",
+    detail: !r.up ? "Stopped: it starts with the first app you start." : r.error ? r.error : "Running",
     link: { label: "Runners", route: { view: "runners" } },
   }));
   const { running, total } = serviceCounts(ms.apps);

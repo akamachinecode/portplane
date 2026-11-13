@@ -122,9 +122,12 @@ function machineProblems(ms: MachineSnapshot): Problem[] {
       if (!r.up) {
         out.push({
           id: `runner-down|${machine.id}|${r.root}`,
-          severity: "warning",
-          title: `dekit isn't running for ${r.name}`,
-          detail: "Its apps can't start until the runner is up.",
+          // Not a problem: dekit starts a folder's runner with the first app
+          // started there. Starting it by hand also brings up the apps that
+          // start on their own.
+          severity: "info",
+          title: `dekit's runner for ${r.name} is stopped`,
+          detail: "It starts by itself with the first app you start. Start it now to bring up the apps set to start on their own.",
           code: r.root,
           machine: where,
           fix: { label: "Start runner", run: (ctx) => startRunner(ctx, machine.id, r.root), pendingKey: runnerKey(machine.id, r.root) },
