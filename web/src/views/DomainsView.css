@@ -12,7 +12,6 @@
   margin-bottom: var(--space-4);
 }
 
-.with-subnav-main > .table-wrap + .section-foot,
 .with-subnav-main > .sgroup + .table-wrap {
   margin-top: var(--space-3);
 }
@@ -35,11 +34,6 @@
   flex: 1 1 260px;
   min-width: 0;
   color: var(--text-2);
-  font-size: var(--text-sm);
-}
-
-.section-foot {
-  margin-top: var(--space-3);
   font-size: var(--text-sm);
 }
 
@@ -96,12 +90,6 @@
   gap: var(--space-2);
   font-size: 13px;
   overflow-wrap: anywhere;
-}
-
-.path-value.is-missing {
-  color: var(--err);
-  text-decoration: line-through;
-  text-decoration-color: color-mix(in srgb, var(--err) 50%, transparent);
 }
 
 .path-value .tag {
@@ -453,15 +441,6 @@
 
 /* ---- routes ---- */
 
-.routes-table .owner-cell {
-  min-width: 140px;
-  white-space: normal;
-}
-
-.routes-table tr.is-stale td {
-  color: var(--text-2);
-}
-
 .row-actions-cell {
   width: 1%;
   text-align: right;
@@ -761,7 +740,7 @@ pre.hosts-block {
   min-width: 0;
 }
 
-.group-actions {
+.group-head-actions {
   display: flex;
   flex: none;
   align-items: center;
@@ -773,7 +752,7 @@ pre.hosts-block {
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2) var(--space-4);
-  min-height: 60px;
+  min-height: var(--row-h);
 }
 
 .status-line-text {

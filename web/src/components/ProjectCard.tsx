@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef } from "react";
 import type { App, MachineSnapshot, Project, Target, Verb } from "../api/types";
 import { projectFoldKey, worktreeFoldKey, type Folds } from "../hooks/useFolds";
 import { indexApps, isAlive, projectApps, runningUrls, serviceCounts, worktreeApps } from "../lib/apps";
@@ -27,7 +28,8 @@ interface GroupActionsProps {
 export function GroupActions({ ms, name, keyBase, apps, targets, withOpen }: GroupActionsProps) {
   const { api, pending } = useApp();
   const machine = ms.machine.id;
-  const { running, total } = serviceCounts(apps);
+  const services = apps.filter((a) => a.kind !== "job");
+  const allAlive = services.length > 0 && services.every((a) => isAlive(a.state));
   const anyAlive = apps.some((a) => isAlive(a.state));
   const urls = runningUrls(apps, ms.machine);
   const inFlight = pending.has(keyBase + "start") || pending.has(keyBase + "stop");
@@ -39,9 +41,17 @@ export function GroupActions({ ms, name, keyBase, apps, targets, withOpen }: Gro
   const act = (verb: Verb) => pending.run(keyBase + verb, fingerprint, () => Promise.all(targets.map((t) => api.act(t, verb))).then(() => undefined));
 
   // Only what can be done now: Start all while something is off, Stop all
-  // while something runs (ADR-0032).
+  // while something runs (ADR-0032). When the button that had the keyboard
+  // goes (Start all, once everything runs), the keyboard stays in the group.
+  const wrap = useRef<HTMLDivElement>(null);
+  const hadFocus = useRef(false);
+  hadFocus.current = !!wrap.current?.contains(document.activeElement);
+  useLayoutEffect(() => {
+    const w = wrap.current;
+    if (hadFocus.current && w && !w.contains(document.activeElement)) w.querySelector<HTMLElement>("button")?.focus();
+  });
   return (
-    <div className="group-actions">
+    <div className="group-actions" ref={wrap}>
       {withOpen && urls.length > 0 && (
         <IconButton
           icon="open"
@@ -50,7 +60,7 @@ export function GroupActions({ ms, name, keyBase, apps, targets, withOpen }: Gro
           onClick={() => pending.run(keyBase + "open", null, () => api.open(machine, urls))}
         />
       )}
-      {canAct && !(total > 0 && running === total) && (
+      {canAct && !allAlive && (
         <IconButton icon="play" tone="go" label={`Start all in ${name}`} pending={pending.has(keyBase + "start")} busy={inFlight} onClick={() => act("start")} />
       )}
       {canAct && anyAlive && (
@@ -65,7 +75,7 @@ export function Count({ apps }: { apps: App[] }) {
   const { running, total } = serviceCounts(apps);
   if (running === 0) return null;
   return (
-    <span className={running > 0 ? "count count-live" : "count"} title={`${running} of ${total} running`}>
+    <span className="count count-live" title={`${running} of ${total} running`}>
       <span className="sr-only">{`${running} of ${total} running`}</span>
       <span aria-hidden="true">
         {running}/{total}

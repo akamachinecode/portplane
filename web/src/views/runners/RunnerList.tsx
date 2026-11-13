@@ -236,7 +236,7 @@ export function RunnerRow({ runner, home, live, onChanged }: { runner: RunnerInf
           open
           title={confirm.title(runnerName(runner, remoteName))}
           confirmLabel={confirm.label}
-          tone={asking === "stop" ? "danger" : "primary"}
+          tone={asking === "stop" || asking === "down" ? "danger" : "primary"}
           busy={busy}
           error={error}
           onClose={() => setAsking(null)}

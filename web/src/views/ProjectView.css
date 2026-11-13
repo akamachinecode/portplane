@@ -14,55 +14,6 @@
   color: var(--warn);
 }
 
-.project-facts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3) var(--space-8);
-  margin: 0 0 var(--space-4);
-}
-
-.project-facts > div {
-  min-width: 0;
-}
-
-.project-facts dt {
-  color: var(--text-3);
-  font-size: var(--text-xs);
-}
-
-.project-facts dd {
-  margin: 2px 0 0;
-  overflow: hidden;
-  color: var(--text);
-  font-size: var(--text-sm);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.project-facts dd.mono,
-.project-facts dd .mono {
-  font-size: 13px;
-}
-
-.project-facts a {
-  color: var(--accent-text);
-  text-decoration: none;
-}
-
-.project-facts a:hover {
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-.project-hint {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin: 0 0 var(--space-3);
-  color: var(--text-3);
-  font-size: var(--text-xs);
-}
-
 /* ---------- the project's head and tabs (ADR-0028) ---------- */
 
 .project-hero {
@@ -78,13 +29,6 @@
 
 .project-hero-text {
   min-width: 0;
-}
-
-.project-hero-name {
-  font-size: var(--text-2xl);
-  font-weight: var(--weight-strong);
-  letter-spacing: -0.022em;
-  line-height: 1.2;
 }
 
 .project-hero-meta {

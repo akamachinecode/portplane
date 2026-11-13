@@ -38,11 +38,6 @@
 }
 
 /* A command that runs on another machine over SSH, with its note. */
-.remote-command-note {
-  margin: 0;
-  color: var(--text-2);
-  font-size: var(--text-sm);
-}
 
 @media (max-width: 760px) {
   .machine-picker-select {

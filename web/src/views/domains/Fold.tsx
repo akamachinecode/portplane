@@ -43,7 +43,7 @@ export function Group({ title, description, actions, children, id: forced }: { t
           </h2>
           {description && <p className="sgroup-desc">{description}</p>}
         </div>
-        {actions && <div className="group-actions">{actions}</div>}
+        {actions && <div className="group-head-actions">{actions}</div>}
       </header>
       <div className="sgroup-body">{children}</div>
     </section>

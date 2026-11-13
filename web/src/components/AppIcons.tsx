@@ -15,10 +15,10 @@ export function projectOf(ms: MachineSnapshot, app: App): Project | undefined {
   return ms.projects.find((p) => p.name === app.project && (p.runner === app.runner || p.runners?.includes(app.runner))) ?? ms.projects.find((p) => p.name === app.project);
 }
 
-/** A project's icon. */
-export function ProjectIcon({ ms, project, size = 18, state }: { ms: MachineSnapshot; project: Project; size?: number; state?: State }) {
+/** A project's icon: a project has no state of its own, so no dot (ADR-0032). */
+export function ProjectIcon({ ms, project, size = 18 }: { ms: MachineSnapshot; project: Project; size?: number }) {
   const prefs = useChoices();
-  return <EntityIcon name={project.name} choice={iconChoice(prefs, projectIconKey(ms.machine.id, project))} place={projectIconPlace(ms, project)} size={size} state={state} />;
+  return <EntityIcon name={project.name} choice={iconChoice(prefs, projectIconKey(ms.machine.id, project))} place={projectIconPlace(ms, project)} size={size} />;
 }
 
 /** An app's icon: its own favicon, else its project's icon. */

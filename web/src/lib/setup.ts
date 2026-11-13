@@ -194,31 +194,6 @@ export function shortDir(dir: string, keep = 2): string {
   return parts.length <= keep ? parts.join("/") : `…/${parts.slice(-keep).join("/")}`;
 }
 
-export interface ProposalCounts {
-  new: number;
-  changed: number;
-  unchanged: number;
-  manual: number;
-  skipped: number;
-  removed: number;
-}
-
-export function proposalCounts(p: Proposal): ProposalCounts {
-  const c: ProposalCounts = { new: 0, changed: 0, unchanged: 0, manual: 0, skipped: 0, removed: p.change.removed.length };
-  for (const a of p.apps) c[a.status]++;
-  return c;
-}
-
-/** "3 new · 1 changed · 2 removed": what writing would do to the tasks. */
-export function countsText(c: ProposalCounts): string {
-  const parts: string[] = [];
-  if (c.new) parts.push(`${c.new} new`);
-  if (c.changed) parts.push(`${c.changed} changed`);
-  if (c.removed) parts.push(`${c.removed} removed`);
-  if (c.unchanged) parts.push(`${c.unchanged} unchanged`);
-  return parts.length ? parts.join(" · ") : "no tasks";
-}
-
 export function changedFiles(p: Proposal): FileChange[] {
   return p.files.filter((f) => f.changed);
 }

@@ -5,7 +5,6 @@ import {
   assignBuckets,
   bucketGroups,
   cleanName,
-  countsText,
   effectiveName,
   groupProposalApps,
   invalidNames,
@@ -15,7 +14,6 @@ import {
   NO_EDITS,
   overridesFor,
   overridesKey,
-  proposalCounts,
   relativePath,
   rescanDelay,
   shortDir,
@@ -188,18 +186,6 @@ describe("buckets", () => {
     expect(shortDir("blog/studio")).toBe("blog/studio");
     expect(shortDir("blog")).toBe("blog");
     expect(shortDir("")).toBe(".");
-  });
-});
-
-describe("counts", () => {
-  it("counts statuses and removed tasks", () => {
-    const p = proposal([ap("a/x"), ap("a/y", { status: "changed" }), ap("a/z", { status: "unchanged" }), ap("a/w", { status: "manual", skipped: true })], {
-      change: { added: ["a/x"], changed: ["a/y"], removed: ["a/old", "a/older"] },
-    });
-    const c = proposalCounts(p);
-    expect(c).toEqual({ new: 1, changed: 1, unchanged: 1, manual: 1, skipped: 0, removed: 2 });
-    expect(countsText(c)).toBe("1 new · 1 changed · 2 removed · 1 unchanged");
-    expect(countsText(proposalCounts(proposal([])))).toBe("no tasks");
   });
 });
 

@@ -149,12 +149,6 @@
   font-weight: var(--weight-medium);
 }
 
-.health-text {
-  margin: calc(-1 * var(--space-2)) 0 var(--space-4);
-  color: var(--text-2);
-  font-size: var(--text-sm);
-}
-
 .all-clear {
   display: flex;
   align-items: flex-start;
@@ -186,9 +180,9 @@
 
 .board-group-title {
   margin: 0 0 var(--space-2) 2px;
-  color: var(--text-3);
-  font-size: 13px;
-  font-weight: var(--weight-medium);
+  color: var(--text-2);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-strong);
 }
 
 .board {

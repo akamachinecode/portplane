@@ -79,13 +79,6 @@ export function sortShares(shares: ShareView[]): ShareView[] {
   return [...shares].sort((a, b) => Number(b.public) - Number(a.public) || a.hostname.localeCompare(b.hostname) || a.kind.localeCompare(b.kind));
 }
 
-/** "Ready", "1 thing missing", "3 things missing". */
-export function readiness(reqs: Requirement[]): string {
-  const n = reqs.filter((r) => !r.ok).length;
-  if (n === 0) return "Ready";
-  return `${n} ${n === 1 ? "thing" : "things"} missing`;
-}
-
 // ---- LAN ----
 
 /** The proxy options with LAN mode on (and a pinned address) or off. */

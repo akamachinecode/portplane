@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { mockSnapshot } from "../api/mock";
 import type { RouteView } from "../api/portless";
-import { addressRows, addressSummary, filterCounts, matchesFilter } from "./addresses";
+import { addressRows, filterCounts, matchesFilter } from "./addresses";
 
 const local = mockSnapshot("default").machines[0];
 const web = local.apps.find((a) => a.task === "my-monorepo/web")!;
@@ -52,6 +52,5 @@ describe("addressRows", () => {
     expect(counts.aliases).toBe(1);
     expect(counts.shared).toBe(1);
     expect(rows.filter((r) => matchesFilter(r, "apps")).every((r) => r.kind === "app" || r.kind === "terminal")).toBe(true);
-    expect(addressSummary(rows)).toMatch(/live · 1 stale$/);
   });
 });

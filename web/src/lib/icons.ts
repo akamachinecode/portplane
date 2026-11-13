@@ -57,16 +57,6 @@ export function initialsOf(name: string): string {
   return letters.toLocaleUpperCase();
 }
 
-/** A tint (1–8) for a name, the same every time. */
-export function tintOf(name: string): number {
-  let h = 2166136261;
-  for (const c of name.toLowerCase()) {
-    h ^= c.codePointAt(0)!;
-    h = Math.imul(h, 16777619);
-  }
-  return ((h >>> 0) % TINTS) + 1;
-}
-
 /** Where to look for an image: the folder to start from and the folder to stop at (the checkout). */
 export interface IconPlace {
   machine: string;

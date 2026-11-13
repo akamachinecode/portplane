@@ -63,6 +63,8 @@
   --shadow-card: none;
   --shadow-panel: 0 1px 2px light-dark(rgb(16 18 24 / 4%), transparent);
   --shadow-pop: var(--shadow-2);
+  /* a footer that stays at the bottom while the page scrolls under it */
+  --shadow-sticky: 0 -8px 16px -12px light-dark(rgb(16 18 24 / 18%), rgb(0 0 0 / 60%));
 
   /* type: Inter at 14px for the UI, Geist Mono for addresses and commands.
      Nothing is smaller than 12px, nothing is set in capitals and text keeps
@@ -2032,54 +2034,6 @@ a.port-num:hover {
   align-items: center;
   gap: 8px 12px;
   padding: 4px 2px;
-}
-
-.add-machine {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  margin-top: 36px;
-  padding: 14px 16px;
-  border: 1px dashed var(--border-strong);
-  border-radius: var(--radius);
-  background: transparent;
-  color: var(--text-2);
-  text-align: left;
-  cursor: pointer;
-  transition: background-color var(--dur-fast), border-color var(--dur-fast);
-}
-
-.add-machine:hover {
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent-soft) 50%, transparent);
-}
-
-.add-machine-icon {
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
-  background: var(--accent-soft);
-  color: var(--accent);
-}
-
-.add-machine-text {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.add-machine-title {
-  color: var(--text);
-  font-weight: 600;
-}
-
-.add-machine-hint {
-  color: var(--text-3);
-  font-size: 13px;
 }
 
 .cand-section > * + * {

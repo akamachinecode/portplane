@@ -229,7 +229,7 @@ function OutputPanel({ ms, app }: DetailTabProps) {
       <div className="out-bar">
         <span className={`out-status out-status-${status}`} role="status">
           {status === "retrying" ? <Spinner size={12} /> : <span className="out-dot" aria-hidden="true" />}
-          {status === "live" ? "Live" : status === "paused" ? "Paused" : status === "stopped" ? "Last output (stopped)" : "Reconnecting…"}
+          {status === "live" ? "Live" : status === "paused" ? "Paused" : status === "stopped" ? "Last output" : "Reconnecting…"}
         </span>
         <span className="out-bar-spacer" />
         <IconButton icon="search" label={`Find in the output (${mac ? "⌘F" : "Ctrl F"})`} onClick={openFind} disabled={blank} />

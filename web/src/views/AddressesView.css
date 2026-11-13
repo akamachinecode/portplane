@@ -145,7 +145,7 @@
   width: 92px;
 }
 
-.addr-table td:not(.row-actions-cell) {
+.addr-table tr:not(.addr-idle-head) > td:not(.row-actions-cell) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -184,6 +184,8 @@
   font: inherit;
   text-align: left;
   cursor: pointer;
+  /* the ring inside the row: the cell clips anything outside */
+  outline-offset: -2px;
 }
 
 .addr-idle-toggle:hover {

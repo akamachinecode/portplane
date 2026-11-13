@@ -1,16 +1,3 @@
-.runners-machine + .runners-machine {
-  margin-top: var(--space-6);
-}
-
-.runners-note {
-  padding: var(--space-2) 0;
-  font-size: var(--text-sm);
-}
-
-.runners-note a {
-  color: var(--accent-text);
-}
-
 .runner-rows {
   margin: 0;
   padding: 0;
@@ -20,96 +7,6 @@
   background: var(--surface);
   box-shadow: var(--shadow-1);
   list-style: none;
-}
-
-.runner-row {
-  display: grid;
-  grid-template-columns: 8px minmax(0, 1fr) 56px 56px 88px;
-  align-items: center;
-  gap: var(--space-3);
-  min-height: var(--row-h);
-  padding: var(--row-pad-y) var(--space-3) var(--row-pad-y) var(--space-4);
-}
-
-.runner-row + .runner-row {
-  border-top: 1px solid var(--border);
-}
-
-.runner-row-text {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0 var(--space-2);
-  min-width: 0;
-}
-
-.runner-row-name {
-  color: inherit;
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.runner-row-name:hover {
-  color: var(--accent-text);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-.runner-row-path {
-  overflow: hidden;
-  color: var(--text-3);
-  font-size: 13px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.runner-row-error {
-  flex-basis: 100%;
-  color: var(--err);
-  font-size: var(--text-xs);
-}
-
-.runner-row-state {
-  color: var(--text-2);
-  font-size: var(--text-xs);
-}
-
-.is-down .runner-row-state {
-  color: var(--text-3);
-}
-
-.runner-row-apps {
-  color: var(--text-2);
-  font-size: var(--text-xs);
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-.runner-row-action {
-  display: flex;
-  justify-content: flex-end;
-}
-
-@media (max-width: 560px) {
-  .runner-row {
-    grid-template-columns: 8px minmax(0, 1fr) auto;
-    grid-template-areas:
-      "dot text action"
-      ". meta meta";
-  }
-  .runner-row > .dot {
-    grid-area: dot;
-  }
-  .runner-row-text {
-    grid-area: text;
-  }
-  .runner-row-action {
-    grid-area: action;
-  }
-  .runner-row-state,
-  .runner-row-apps {
-    display: none;
-  }
 }
 
 /* ---- the dekit center (M5.3) ---- */
@@ -330,11 +227,6 @@
 
 .runner-job .runner-job-dismiss {
   align-self: flex-end;
-}
-
-.runner-job-all {
-  margin-top: var(--space-4);
-  padding: 0;
 }
 
 @media (max-width: 560px) {

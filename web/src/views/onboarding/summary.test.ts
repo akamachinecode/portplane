@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { App, AppProposal, MachineSnapshot, Proposal } from "../../api/types";
-import { browsersNeedAction, folderRows, hasFixedPorts, missingManagers, proxyOptionsFor } from "./helpers";
+import { browsersNeedAction, folderRows, missingManagers, proxyOptionsFor } from "./helpers";
 import { setupProblems } from "./problems";
 import { byProject, count, describeProposal, firstWorking, nothingToWrite, preselect, startCandidates, startPhase, startTargets } from "./summary";
 
@@ -123,11 +123,6 @@ describe("helpers", () => {
     expect(missingManagers([p], { npm: "10", pnpm: "", yarn: "", bun: "" }, () => false)).toEqual(["pnpm", "yarn"]);
     expect(missingManagers([p], { npm: "10", pnpm: "", yarn: "", bun: "" }, (t) => t === "a")).toEqual(["yarn"]);
     expect(missingManagers([p], undefined, () => false)).toEqual([]);
-  });
-
-  it("spots dev scripts with a fixed port", () => {
-    expect(hasFixedPorts(proposal({ apps: [ap({ notes: ["The dev script pins port 4516, which would win over portless."] })] }))).toBe(true);
-    expect(hasFixedPorts(proposal({ apps: [ap({})] }))).toBe(false);
   });
 
   it("lists saved folders first, and ticks the busiest suggestion on a first run", () => {

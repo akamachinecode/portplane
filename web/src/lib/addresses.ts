@@ -104,9 +104,3 @@ export function filterCounts(rows: AddressRow[]): Record<AddressFilter, number> 
   return out;
 }
 
-/** "4 live · 1 stale" for the toolbar. */
-export function addressSummary(rows: AddressRow[]): string {
-  const live = rows.filter((r) => r.state === "live").length;
-  const stale = rows.filter((r) => r.state === "stale").length;
-  return [`${live} live`, stale ? `${stale} stale` : ""].filter(Boolean).join(" · ");
-}

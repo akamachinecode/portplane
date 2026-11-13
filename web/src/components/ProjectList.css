@@ -59,12 +59,6 @@
   text-underline-offset: 3px;
 }
 
-.project-meta {
-  flex: none;
-  color: var(--text-3);
-  font-size: var(--text-xs);
-}
-
 .fold {
   display: inline-grid;
   flex: none;
@@ -166,11 +160,18 @@
 
 /* Actions show where the pointer or the keyboard is (ADR-0032): a list at
    rest is names, states and addresses. A failed app keeps its actions in
-   view, and so does anything in flight. Touch screens show them all. */
-.row:not(:hover, :focus-within, .is-cursor, .is-selected, .row-failed) .row-actions > :not([aria-busy="true"]),
-.project-head:not(:hover, :focus-within) .group-actions > :not([aria-busy="true"]),
-.checkout-head:not(:hover, :focus-within) .group-actions > :not([aria-busy="true"]) {
-  opacity: 0;
+   view, and so does anything in flight (starting, stopping, a busy button).
+   Touch screens (no hover) show them all, disabled ones as disabled. */
+@media (hover: hover) {
+  .row:not(:hover, :focus-within, .is-cursor, .is-selected, .row-failed, .row-starting, .row-stopping) .row-actions > :not([aria-busy="true"]),
+  .project-head:not(:hover, :focus-within) .group-actions > :not([aria-busy="true"]),
+  .checkout-head:not(:hover, :focus-within) .group-actions > :not([aria-busy="true"]) {
+    opacity: 0;
+  }
+
+  .apps:not(.has-selection) .row:not(:hover, :focus-within, .is-cursor, .is-selected) .row-check {
+    opacity: 0;
+  }
 }
 
 .row-actions > *,
@@ -180,17 +181,6 @@
 
 .row-check {
   transition: opacity var(--dur-fast);
-}
-
-.apps:not(.has-selection) .row:not(:hover, :focus-within, .is-cursor, .is-selected) .row-check {
-  opacity: 0;
-}
-
-@media (hover: none) {
-  .row :is(.row-actions > *, .row-check),
-  .group-actions > * {
-    opacity: 1 !important;
-  }
 }
 
 .project-head .group-actions,

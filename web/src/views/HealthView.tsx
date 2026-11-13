@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { errorText } from "../api/errors";
 import { useApp } from "../components/AppContext";
 import { Icon, Spinner, type IconName } from "../components/Icon";
@@ -92,6 +93,8 @@ export function HealthView() {
   // so their findings join the page (they need a few seconds, so not at start).
   const doctor = usePortlessDoctor(!!local?.tools.portless);
   const check = useSystemCheck(true);
+  // "Every check" is folded; Run diagnostics (the palette) opens it to show its result.
+  const [allOpen, setAllOpen] = useState(false);
   // One count everywhere (ADR-0032): the problems (errors and warnings) are
   // what the sidebar's badge, the Apps line and this title count; notes are
   // listed apart and counted nowhere.
@@ -158,7 +161,7 @@ export function HealthView() {
               </section>
             )}
             {/* every check that runs, folded: it is the record, not the news */}
-            <details className="health-section health-all">
+            <details className="health-section health-all" open={allOpen} onToggle={(e) => setAllOpen(e.currentTarget.open)}>
               <summary className="health-all-summary">
                 <Icon name="chevronRight" size={14} className="health-all-chevron" />
                 <span className="health-title">Every check</span>
@@ -177,7 +180,7 @@ export function HealthView() {
                   <h3 className="health-subtitle" id="health-doctor">
                     portless doctor
                   </h3>
-                  <DoctorSection />
+                  <DoctorSection onRun={() => setAllOpen(true)} />
                 </section>
               )}
               {snap.machines.some((m) => !m.machine.local) && (

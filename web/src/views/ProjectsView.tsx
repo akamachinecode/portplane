@@ -206,7 +206,7 @@ function RunnerDetail({ entry }: { entry: RunnerEntry }) {
         </a>
         <p className="runner-detail-status">
           <StateDot state={runner.up ? "on" : "off"} />
-          <span>{runner.up ? "Running" : "Not running: its apps can't start until it does"}</span>
+          <span>{runner.up ? "Running" : "Stopped: it starts with the first app you start"}</span>
           <span className="runner-detail-sep" aria-hidden="true">
             ·
           </span>

@@ -66,7 +66,7 @@ describe("worktreeApps", () => {
 });
 
 describe("serviceCounts", () => {
-  it("counts alive services and leaves jobs out", () => {
+  it("counts services that are up and leaves jobs out", () => {
     const apps = [
       app({ state: "on" }),
       app({ state: "starting" }),
@@ -75,7 +75,7 @@ describe("serviceCounts", () => {
       app({ kind: "job", state: "starting" }),
       app({ kind: "job", state: "done" }),
     ];
-    expect(serviceCounts(apps)).toEqual({ running: 2, total: 4 });
+    expect(serviceCounts(apps)).toEqual({ running: 1, total: 4 });
   });
 });
 

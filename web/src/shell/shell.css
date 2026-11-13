@@ -230,10 +230,6 @@ html:has(.shell) body {
   list-style: none;
 }
 
-.nav-list-gap {
-  margin-top: var(--space-4);
-}
-
 .nav-item {
   position: relative;
   display: flex;
@@ -394,10 +390,6 @@ html:has(.shell) body {
 
 .nav-count.is-live {
   color: var(--on);
-}
-
-.nav-project-failed .nav-count {
-  color: var(--err);
 }
 
 .nav-empty {
@@ -651,8 +643,10 @@ html:has(.shell) body {
   color: var(--text-3);
 }
 
+/* open: pressed, like the other toggles; green is for state and the main action */
 .view-about.is-on {
-  color: var(--accent-text);
+  background: var(--surface-2);
+  color: var(--text);
 }
 
 /* jobs */

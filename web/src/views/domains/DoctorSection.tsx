@@ -109,10 +109,17 @@ function Report({ report, running, run, at }: { report: DoctorReport; running: b
   );
 }
 
-/** portless doctor as a checklist, with a fix for each failure (plan §5.8). */
-export function DoctorSection() {
+/**
+ * portless doctor as a checklist, with a fix for each failure (plan §5.8).
+ * `onRun` tells the page it was asked to run (the palette's Run
+ * diagnostics), so a page that folds it can show the result.
+ */
+export function DoctorSection({ onRun }: { onRun?(): void } = {}) {
   const { state, reload } = usePortlessDoctor(true);
-  useIntent("run-doctor", () => void reload());
+  useIntent("run-doctor", () => {
+    onRun?.();
+    void reload();
+  });
   const report = valueOf(state);
   const running = state.status === "loading";
   return (

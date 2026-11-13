@@ -438,7 +438,7 @@ details[open] > summary > .form-section-chevron {
   padding: var(--space-3) 0;
   border-top: 1px solid var(--border);
   background: var(--bg);
-  box-shadow: 0 -8px 16px -12px light-dark(rgb(16 18 24 / 18%), rgb(0 0 0 / 60%));
+  box-shadow: var(--shadow-sticky);
 }
 
 .form-dirty {

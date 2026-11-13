@@ -44,7 +44,8 @@ export function serviceCounts(apps: App[]): { running: number; total: number } {
   for (const a of apps) {
     if (a.kind === "job") continue;
     total++;
-    if (isAlive(a.state)) running++;
+    // running means up, as everywhere else (the sidebar's Apps count, the tray): starting is not yet
+    if (a.state === "on") running++;
   }
   return { running, total };
 }
