@@ -199,7 +199,7 @@ function RunnerDetail({ entry }: { entry: RunnerEntry }) {
           </div>
           <div className="runner-detail-actions">
             {!runner.up && ms.tools.dekit && (
-              <button type="button" className="btn btn-primary" aria-busy={busy || undefined} disabled={busy} onClick={() => void startRunner(ctx, ms.machine.id, runner.root)}>
+              <button type="button" className="btn" aria-busy={busy || undefined} disabled={busy} onClick={() => void startRunner(ctx, ms.machine.id, runner.root)}>
                 {busy ? <Spinner /> : <Icon name="play" size={13} />}
                 Start runner
               </button>

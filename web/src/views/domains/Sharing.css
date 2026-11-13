@@ -14,7 +14,7 @@
 .req-fix {
   margin-top: 2px;
   color: var(--text-2);
-  font-size: 12.5px;
+  font-size: 13px;
 }
 
 .req-body .cmd {
@@ -95,7 +95,7 @@
 
 .share-row-desc {
   color: var(--text-2);
-  font-size: 12.5px;
+  font-size: 13px;
 }
 
 .share-row-state {
@@ -118,7 +118,7 @@
 
 .share-missing {
   margin-top: var(--space-1);
-  font-size: 12.5px;
+  font-size: 13px;
 }
 
 .share-missing > summary {
@@ -228,7 +228,7 @@
   display: inline-block;
   min-width: 140px;
   max-width: 200px;
-  font-size: 12px;
+  font-size: 13px;
   text-align: left;
   white-space: normal;
 }
@@ -265,13 +265,13 @@
 
 .provider-state {
   color: var(--text-2);
-  font-size: 12.5px;
+  font-size: 13px;
 }
 
 .provider-where,
 .provider-note {
   color: var(--text-2);
-  font-size: 12.5px;
+  font-size: 13px;
 }
 
 .provider-where .mono {
@@ -323,17 +323,17 @@
   align-items: center;
   gap: 0 4px;
   color: var(--text-2);
-  font-size: 12.5px;
+  font-size: 13px;
 }
 
 .compose-file {
-  font-size: 12.5px;
+  font-size: 13px;
   overflow-wrap: anywhere;
 }
 
 .compose-project .fact-note {
   color: var(--text-2);
-  font-size: 12.5px;
+  font-size: 13px;
 }
 
 .compose-image {
@@ -403,7 +403,7 @@
 
 .lan-option-desc {
   color: var(--text-2);
-  font-size: 12.5px;
+  font-size: 13px;
 }
 
 .lan-custom {
@@ -454,7 +454,7 @@
 
 .lan-app-route {
   flex-basis: 100%;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .phone {
@@ -507,7 +507,7 @@
 }
 
 .phone-step-text {
-  font-size: 12.5px;
+  font-size: 13px;
   overflow-wrap: anywhere;
 }
 
@@ -519,7 +519,7 @@
 .phone-fingerprint {
   display: block;
   margin-top: 2px;
-  font-size: 11px;
+  font-size: 12px;
   word-break: break-all;
 }
 
@@ -531,7 +531,7 @@
   margin: 0;
   padding-left: 18px;
   color: var(--text-2);
-  font-size: 12.5px;
+  font-size: 13px;
 }
 
 .phone-trust li + li {
@@ -581,7 +581,7 @@
 }
 
 .qr-hint {
-  font-size: 12.5px;
+  font-size: 13px;
   text-align: center;
 }
 

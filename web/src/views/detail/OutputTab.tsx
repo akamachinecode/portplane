@@ -1,3 +1,4 @@
+import { isAlive } from "../../lib/apps";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import type { Api } from "../../api/client";
 import { errorText, isAbort } from "../../api/errors";
@@ -219,7 +220,8 @@ function OutputPanel({ ms, app }: DetailTabProps) {
     );
   }
 
-  const status = paused ? "paused" : error ? "retrying" : "live";
+  // "Live" only while the app runs: a stopped app's output is its last screen.
+  const status = paused ? "paused" : error ? "retrying" : isAlive(app.state) ? "live" : "stopped";
   const since = lastOk ? new Date(lastOk).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" }) : null;
 
   return (
@@ -227,7 +229,7 @@ function OutputPanel({ ms, app }: DetailTabProps) {
       <div className="out-bar">
         <span className={`out-status out-status-${status}`} role="status">
           {status === "retrying" ? <Spinner size={12} /> : <span className="out-dot" aria-hidden="true" />}
-          {status === "live" ? "Live" : status === "paused" ? "Paused" : "Reconnecting…"}
+          {status === "live" ? "Live" : status === "paused" ? "Paused" : status === "stopped" ? "Last output (stopped)" : "Reconnecting…"}
         </span>
         <span className="out-bar-spacer" />
         <IconButton icon="search" label={`Find in the output (${mac ? "⌘F" : "Ctrl F"})`} onClick={openFind} disabled={blank} />

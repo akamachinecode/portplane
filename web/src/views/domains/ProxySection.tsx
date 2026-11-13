@@ -310,7 +310,7 @@ function Options({ status, plan }: { status: PortlessStatus; plan: (a: PortlessA
             {status.proxy.responding ? "Restart with these options" : "Start with these options"}
           </button>
         )}
-        <button type="button" className="btn btn-primary" disabled={invalid || (!changed && !!service)} onClick={() => plan("service-install", normalizeOptions(o))} title={describeOptions(normalizeOptions(o))}>
+        <button type="button" className="btn" disabled={invalid || (!changed && !!service)} onClick={() => plan("service-install", normalizeOptions(o))} title={describeOptions(normalizeOptions(o))}>
           <Icon name="shield" size={13} />
           {service ? "Apply: reinstall the service" : "Install the service with these options"}
         </button>

@@ -6,7 +6,7 @@ import { copyWithToast } from "../components/appActions";
 import { useApp } from "../components/AppContext";
 import { ConfirmDialog } from "../components/Dialog";
 import { Icon } from "../components/Icon";
-import { IconButton, IconSlot } from "../components/IconButton";
+import { IconSlot } from "../components/IconButton";
 import { MachinePicker, MachineScope, RemoteStatusBanner, useMachineChoice, useMachineScope } from "../components/MachineScope";
 import { Menu, type MenuItem } from "../components/Menu";
 import { EmptyState, ErrorState, LoadingState } from "../components/States";
@@ -214,6 +214,23 @@ function AddressTable({ rows, empty, onEditAlias }: { rows: AddressRow[]; empty:
     }
   };
 
+  const addressMenu = (row: AddressRow, url: string): MenuItem[] => {
+    const app = row.app;
+    const items: MenuItem[] = [{ label: "Copy address", icon: "copy", onSelect: () => void copyWithToast(ctx, url, "the address") }];
+    if (app && ms) {
+      items.push({ label: "Share…", icon: "share", onSelect: () => setShare(app) });
+      items.push({ label: "Change the address…", icon: "pencil", onSelect: () => setRename({ appId: app.id, machine: ms.machine.id, label: app.label, runner: app.runner }) });
+      items.push({ label: "Show the app", icon: "panelRight", onSelect: () => navigate(appRoute(ms.machine.id, app.id)) });
+    } else if (row.kind === "compose" && row.state === "live" && ms) {
+      items.push({ label: "Change the address…", icon: "pencil", onSelect: () => setRename({ appId: "", route: row.hostname, machine: ms.machine.id, label: row.hostname }) });
+    } else if (row.kind === "alias" && row.port) {
+      const port = row.port;
+      items.push({ label: "Edit alias…", icon: "pencil", onSelect: () => onEditAlias({ from: row.hostname, name: row.hostname.replace(/\.[^.]+$/, ""), port }) });
+    }
+    if (row.kind === "alias") items.push({ label: "Remove alias…", icon: "trash", onSelect: () => setRemoving(row) });
+    return items;
+  };
+
   if (!rows.length) {
     return (
       <EmptyState icon="link" title="Nothing here yet">
@@ -243,7 +260,6 @@ function AddressTable({ rows, empty, onEditAlias }: { rows: AddressRow[]; empty:
               const live = row.state === "live";
               const url = remote && app?.remoteUrl ? app.remoteUrl : (row.url ?? `https://${row.hostname}`);
               const age = live ? routeAge(row.registeredAt, now) : null;
-              const userAlias = row.kind === "alias";
               return (
                 <tr key={row.hostname} className={`addr-row is-${row.state}`}>
                   <td className="addr-cell">
@@ -261,17 +277,18 @@ function AddressTable({ rows, empty, onEditAlias }: { rows: AddressRow[]; empty:
                   </td>
                   <td className="mono addr-port">{row.port ? `:${row.port}` : <span className="muted">—</span>}</td>
                   <td className="addr-from">
-                    <span className="tag">{KIND_NAMES[row.kind]}</span>
+                    {/* an app's row needs no label; anything else says what it is */}
+                    {!app && <span className="tag">{KIND_NAMES[row.kind]}</span>}
                     <From row={row} machine={scope.id} />
                   </td>
                   <td>
-                    <span className="inline-state">
+                    <span className="inline-state" title={age ? `Live for ${age}` : undefined}>
                       <StateDot state={STATE_DOT[row.state]} />
                       {STATE_TEXT[row.state]}
-                      {age && <span className="muted"> · {age}</span>}
                     </span>
                   </td>
                   <td className="row-actions-cell">
+                    {/* the same two slots on every row: open (while live), then ⋯ with the rest */}
                     <span className="table-actions">
                       {!live ? (
                         <IconSlot />
@@ -284,18 +301,7 @@ function AddressTable({ rows, empty, onEditAlias }: { rows: AddressRow[]; empty:
                           <Icon name="open" />
                         </a>
                       )}
-                      <IconButton icon="copy" label={`Copy ${url}`} onClick={() => void copyWithToast(ctx, url, "the address")} />
-                      {app && ms ? <IconButton icon="share" label={`Share ${app.label}`} onClick={() => setShare(app)} /> : <IconSlot />}
-                      {app && ms ? (
-                        <IconButton icon="pencil" label={`Change the address of ${app.label}`} onClick={() => setRename({ appId: app.id, machine: ms.machine.id, label: app.label, runner: app.runner })} />
-                      ) : row.kind === "compose" && live && ms ? (
-                        <IconButton icon="pencil" label={`Change ${row.hostname}`} onClick={() => setRename({ appId: "", route: row.hostname, machine: ms.machine.id, label: row.hostname })} />
-                      ) : userAlias && row.port ? (
-                        <IconButton icon="pencil" label={`Edit ${row.hostname}`} onClick={() => onEditAlias({ from: row.hostname, name: row.hostname.replace(/\.[^.]+$/, ""), port: row.port })} />
-                      ) : (
-                        <IconSlot />
-                      )}
-                      {userAlias ? <IconButton icon="trash" label={`Remove ${row.hostname}`} onClick={() => setRemoving(row)} /> : <IconSlot />}
+                      <Menu label={`More for ${row.hostname}`} items={addressMenu(row, url)} />
                     </span>
                   </td>
                 </tr>

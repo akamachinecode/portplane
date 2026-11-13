@@ -136,13 +136,14 @@ function ProjectBody({ ms, project }: { ms: MachineSnapshot; project: Project })
   return (
     <>
       <ViewHeader
-        section="Projects"
         title={project.name}
         summary={
-          <span className={`project-state project-state-${state}`}>
-            <StateDot state={state} />
-            {stateWord}
-          </span>
+          state !== "off" && (
+            <span className={`project-state project-state-${state}`}>
+              <StateDot state={state} />
+              {stateWord}
+            </span>
+          )
         }
         actions={
           <>
@@ -153,10 +154,10 @@ function ProjectBody({ ms, project }: { ms: MachineSnapshot; project: Project })
       />
       <header className="project-hero">
         <button type="button" className="icon-button" onClick={() => setIconOpen(true)} title="Change the icon" aria-label={`Change the icon of ${project.name}`}>
-          <ProjectIcon ms={ms} project={project} size={48} />
+          <ProjectIcon ms={ms} project={project} size={32} />
         </button>
+        {/* the name is the page's title, in the toolbar: here only what it is */}
         <div className="project-hero-text">
-          <h2 className="project-hero-name">{project.name}</h2>
           <p className="project-hero-meta">
             {meta.map((m, i) => (
               <span key={i} className={i === 0 && repo ? "mono" : undefined}>
@@ -184,12 +185,6 @@ function ProjectBody({ ms, project }: { ms: MachineSnapshot; project: Project })
       </nav>
       {tab === "apps" ? (
         <>
-          {project.worktrees.length > 1 && (
-            <p className="project-hint">
-              <Icon name="branch" size={13} />
-              Each worktree is a checkout of the same repository on another branch, with its own apps and addresses.
-            </p>
-          )}
           <ProjectCard ms={ms} group={group} folds={folds} headless />
         </>
       ) : (

@@ -136,7 +136,7 @@ function Mode({ view, status }: { view: LanView; status: PortlessStatus }) {
                 Cancel
               </button>
             )}
-            <button type="button" className="btn btn-primary" disabled={!view.ready || invalid} title={missing.length ? (missing[0].problem ?? missing[0].label) : undefined} onClick={turnOn}>
+            <button type="button" className="btn" disabled={!view.ready || invalid} title={missing.length ? (missing[0].problem ?? missing[0].label) : undefined} onClick={turnOn}>
               {password && <Icon name="shield" size={13} />}
               {view.enabled ? "Apply the new address…" : "Turn on LAN mode…"}
             </button>

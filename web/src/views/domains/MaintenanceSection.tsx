@@ -52,7 +52,8 @@ function Maintenance({ status }: { status: PortlessStatus }) {
         description={`Removes portless and everything it set up on ${machineLabel(ms)}: the service, the trusted certificate, its files and its hosts entries. Your apps, dekit.yaml and portless.json stay; apps lose their .localhost addresses.`}
       >
         <div className="sgroup-foot">
-          <button type="button" className="btn btn-danger" onClick={() => setPlan("uninstall")}>
+          {/* red only in the confirmation, where it is the decision */}
+          <button type="button" className="btn btn-ghost btn-danger-text" onClick={() => setPlan("uninstall")}>
             <Icon name="trash" size={13} />
             Uninstall portless…
           </button>

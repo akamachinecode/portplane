@@ -7,9 +7,9 @@ const local = (scenario: Parameters<typeof mockSnapshot>[0]) => mockSnapshot(sce
 describe("checklist", () => {
   it("reads every step from the live state", () => {
     const items = checklist(local("default"));
-    expect(items.map((i) => `${i.id}:${i.done}`)).toEqual(["tools:true", "https:true", "projects:true", "start:true"]);
+    expect(items.map((i) => `${i.id}:${i.done}`)).toEqual(["tools:true", "https:true", "projects:true"]);
     const fresh = checklist(local("nofolders"));
-    expect(fresh.map((i) => `${i.id}:${i.done}`)).toEqual(["tools:true", "https:true", "projects:false", "start:false"]);
+    expect(fresh.map((i) => `${i.id}:${i.done}`)).toEqual(["tools:true", "https:true", "projects:false"]);
     expect(doneCount(fresh)).toBe(2);
   });
   it("knows nothing without a machine", () => {

@@ -15,7 +15,7 @@
   align-items: center;
   gap: 4px;
   color: var(--text-3);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .setup-project-all .link-btn:disabled {
@@ -35,7 +35,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
 }
 
@@ -46,7 +46,7 @@
 .setup-unsupported-text {
   margin-top: 4px;
   color: var(--text-2);
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 1.5;
 }
 
@@ -57,7 +57,7 @@
   margin: 8px 0 0;
   padding: 0;
   list-style: none;
-  font-size: 12.5px;
+  font-size: 13px;
 }
 
 .setup-unsupported-list li {

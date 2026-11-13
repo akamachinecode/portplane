@@ -50,7 +50,7 @@
   border-radius: 50%;
   background: var(--bg);
   color: var(--text-3);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: var(--weight-strong);
   font-variant-numeric: tabular-nums;
 }
@@ -151,7 +151,7 @@
 
 .is-current .tl-title {
   color: var(--accent-text);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: var(--weight-medium);
 }
 
@@ -253,7 +253,7 @@
 }
 
 .ob-note {
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 1.5;
 }
 
@@ -333,7 +333,7 @@
 
 .ob-diagram-does {
   color: var(--text-2);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.4;
 }
 
@@ -426,20 +426,20 @@
 
 .ob-check-version {
   color: var(--text-2);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 400;
 }
 
 .ob-check-detail {
   margin-top: 2px;
   color: var(--text-2);
-  font-size: 12.5px;
+  font-size: 13px;
 }
 
 .ob-check-problem {
   margin-top: 2px;
   color: var(--text);
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
@@ -457,7 +457,7 @@
   gap: 3px;
   width: max-content;
   color: var(--accent-text);
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 500;
 }
 
@@ -518,7 +518,7 @@
   flex: 1;
   min-width: 0;
   color: var(--text-2);
-  font-size: 12.5px;
+  font-size: 13px;
   text-align: right;
 }
 
@@ -551,7 +551,7 @@
   padding: 10px 12px;
   border-radius: var(--radius-sm);
   background: var(--surface-2);
-  font-size: 12.5px;
+  font-size: 13px;
 }
 
 .ob-plan > div {
@@ -574,7 +574,7 @@
   overflow-x: auto;
   border-radius: var(--radius-sm);
   background: var(--code-bg);
-  font-size: 12.5px;
+  font-size: 13px;
   white-space: pre;
 }
 
@@ -628,7 +628,7 @@
   display: block;
   margin-top: 2px;
   color: var(--text-2);
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 1.5;
 }
 
@@ -644,7 +644,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--code-bg);
-  font-size: 12.5px;
+  font-size: 13px;
 }
 
 .ob-priv-title {
@@ -663,7 +663,7 @@
 
 .ob-argv li::marker {
   color: var(--text-3);
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .ob-env {
@@ -805,7 +805,7 @@
 }
 
 .ob-browser-store {
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 400;
 }
 
@@ -876,12 +876,12 @@
 .ob-folder-path {
   flex: 1;
   min-width: 0;
-  font-size: 13px;
+  font-size: 14px;
   overflow-wrap: anywhere;
 }
 
 .ob-folder-count {
-  font-size: 12.5px;
+  font-size: 13px;
 }
 
 .ob-folder-add {
@@ -980,13 +980,13 @@
 }
 
 .ob-start-meta {
-  font-size: 12.5px;
+  font-size: 13px;
   overflow-wrap: anywhere;
 }
 
 .ob-start-state {
   color: var(--text-2);
-  font-size: 12.5px;
+  font-size: 13px;
 }
 
 .ob-start.is-failed {
@@ -1007,7 +1007,7 @@
   overflow: auto;
   border-radius: var(--radius-sm);
   background: var(--code-bg);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.5;
   white-space: pre-wrap;
 }
@@ -1115,7 +1115,7 @@
 .ob-tip-extra {
   margin-top: 4px;
   color: var(--text-2);
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 1.5;
 }
 

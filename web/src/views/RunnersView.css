@@ -58,7 +58,7 @@
 .runner-row-path {
   overflow: hidden;
   color: var(--text-3);
-  font-size: 12px;
+  font-size: 13px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -238,7 +238,7 @@
 .dk-runner-path {
   overflow: hidden;
   color: var(--text-3);
-  font-size: 12px;
+  font-size: 13px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

@@ -5,7 +5,7 @@
 }
 
 .field-help code {
-  font-size: 11.5px;
+  font-size: 12px;
 }
 
 .field-help-default {
@@ -53,11 +53,9 @@
 
 .help-nav-title {
   margin-bottom: 2px;
-  color: var(--text-3);
-  font-size: 11px;
-  font-weight: 650;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  color: var(--text-2);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-strong);
 }
 
 .help-nav-item {
@@ -121,7 +119,7 @@
   border-radius: 4px;
   background: var(--code-bg);
   font-family: var(--mono);
-  font-size: 12.5px;
+  font-size: 13px;
 }
 
 .help-code {
@@ -129,7 +127,7 @@
   overflow: auto;
   border-radius: var(--radius-sm);
   background: var(--code-bg);
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 1.5;
 }
 
@@ -178,7 +176,7 @@
 .help-type {
   color: var(--text-3);
   font-family: var(--mono);
-  font-size: 11.5px;
+  font-size: 12px;
 }
 
 .help-field dd {

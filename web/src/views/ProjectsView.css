@@ -54,7 +54,7 @@
 .runner-link-path {
   overflow: hidden;
   color: var(--text-3);
-  font-size: 12px;
+  font-size: 13px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -107,7 +107,7 @@
 
 .runner-detail-path {
   color: var(--text-3);
-  font-size: 12px;
+  font-size: 13px;
   overflow-wrap: anywhere;
 }
 

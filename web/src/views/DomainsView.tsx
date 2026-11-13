@@ -83,7 +83,8 @@ function DomainsBody({ picker }: { picker: ReactNode }) {
         actions={
           <>
             {picker}
-            <ProxyPill />
+            {/* the Proxy page says it in its State row */}
+            {group.id !== "proxy" && <ProxyPill />}
           </>
         }
       />

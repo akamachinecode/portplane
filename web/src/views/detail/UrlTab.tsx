@@ -110,7 +110,7 @@ export function UrlTab({ ms, app }: DetailTabProps) {
         </div>
       </dl>
       {info.editable ? (
-        <button type="button" className="btn btn-primary" onClick={() => setRenaming(true)}>
+        <button type="button" className="btn" onClick={() => setRenaming(true)}>
           <Icon name="pencil" size={13} />
           Change name
         </button>

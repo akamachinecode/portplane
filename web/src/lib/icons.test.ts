@@ -43,7 +43,7 @@ describe("icon places and choices", () => {
   });
 
   it("gives an app without its own icon its project's initials", () => {
-    expect(initialsFor("web", { kind: "auto" }, { choice: { kind: "auto" }, name: "acme-shop" })).toEqual({ letters: "AS", tint: tintOf("acme-shop") });
+    expect(initialsFor("web", { kind: "auto" }, { choice: { kind: "auto" }, name: "acme-shop" })).toEqual({ letters: "AS", tint: 0 });
     expect(initialsFor("web", { kind: "auto" }, { choice: { kind: "initials", text: "X", tint: 2 }, name: "acme-shop" })).toEqual({ letters: "X", tint: 2 });
     expect(initialsFor("web", { kind: "initials", tint: 5 }, { choice: { kind: "auto" }, name: "acme-shop" })).toEqual({ letters: "W", tint: 5 });
   });

@@ -3,7 +3,7 @@ import { projectFoldKey, worktreeFoldKey, type Folds } from "../hooks/useFolds";
 import { indexApps, isAlive, projectApps, runningUrls, serviceCounts, worktreeApps } from "../lib/apps";
 import { inferHome, shortenPath } from "../lib/format";
 import { appsFingerprint } from "../lib/pending";
-import { checkoutKey, checkoutName, checkoutsText, foldedByDefault, groupState, projectRoute } from "../lib/projects";
+import { checkoutKey, checkoutName, checkoutsText, foldedByDefault, projectRoute } from "../lib/projects";
 import { href } from "../lib/router";
 import { projectTargets, worktreeTargets } from "../lib/targets";
 import type { AppEntry, ProjectGroup, WorktreeGroup } from "../views/apps/model";
@@ -38,6 +38,8 @@ export function GroupActions({ ms, name, keyBase, apps, targets, withOpen }: Gro
   );
   const act = (verb: Verb) => pending.run(keyBase + verb, fingerprint, () => Promise.all(targets.map((t) => api.act(t, verb))).then(() => undefined));
 
+  // Only what can be done now: Start all while something is off, Stop all
+  // while something runs (ADR-0032).
   return (
     <div className="group-actions">
       {withOpen && urls.length > 0 && (
@@ -48,30 +50,20 @@ export function GroupActions({ ms, name, keyBase, apps, targets, withOpen }: Gro
           onClick={() => pending.run(keyBase + "open", null, () => api.open(machine, urls))}
         />
       )}
-      <IconButton
-        icon="play"
-        tone="go"
-        label={`Start all in ${name}`}
-        disabled={!canAct || (total > 0 && running === total)}
-        pending={pending.has(keyBase + "start")}
-        busy={inFlight}
-        onClick={() => act("start")}
-      />
-      <IconButton
-        icon="stop"
-        tone="halt"
-        label={`Stop all in ${name}`}
-        disabled={!canAct || !anyAlive}
-        pending={pending.has(keyBase + "stop")}
-        busy={inFlight}
-        onClick={() => act("stop")}
-      />
+      {canAct && !(total > 0 && running === total) && (
+        <IconButton icon="play" tone="go" label={`Start all in ${name}`} pending={pending.has(keyBase + "start")} busy={inFlight} onClick={() => act("start")} />
+      )}
+      {canAct && anyAlive && (
+        <IconButton icon="stop" tone="halt" label={`Stop all in ${name}`} pending={pending.has(keyBase + "stop")} busy={inFlight} onClick={() => act("stop")} />
+      )}
     </div>
   );
 }
 
+/** How many run, out of how many: only while something runs (nothing running needs no number). */
 export function Count({ apps }: { apps: App[] }) {
   const { running, total } = serviceCounts(apps);
+  if (running === 0) return null;
   return (
     <span className={running > 0 ? "count count-live" : "count"} title={`${running} of ${total} running`}>
       <span className="sr-only">{`${running} of ${total} running`}</span>
@@ -148,17 +140,12 @@ function CheckoutSection({
         <div className="checkout-head">
           {folds && <FoldButton folded={folded} label={`the apps of ${name}`} controls={listId} onToggle={() => folds.setFolded(foldKey, !folded)} />}
           <Icon name="branch" size={13} className="checkout-icon" />
-          <span className="checkout-name" title={wt.prefix || undefined}>
+          <span className="checkout-name" title={path ?? wt.prefix ?? undefined}>
             {name}
           </span>
           {showBranch && (
             <span className="branch-chip" title="The branch it has out">
               {wt.branch}
-            </span>
-          )}
-          {path && (
-            <span className="checkout-path" title={wt.path}>
-              {path}
             </span>
           )}
           <span className="spacer" />
@@ -208,7 +195,6 @@ export function ProjectCard({
   const { project } = group;
   const byId = indexApps(ms.apps);
   const apps = projectApps(project, byId);
-  const state = groupState(apps);
   const foldKey = projectFoldKey(ms.machine.id, project.runner, project.name);
   const folded = !headless && !forceOpen && !!folds?.isFolded(foldKey, false);
   const headingId = `p-${ms.machine.id}-${project.runner}-${project.name}`.replace(/[^\w-]/g, "_");
@@ -234,16 +220,15 @@ export function ProjectCard({
   );
   if (headless) return <div className="project project-headless">{body}</div>;
   return (
-    <article className={`project project-${state}${folded ? " is-folded" : ""}`} aria-labelledby={headingId}>
+    <article className={`project${folded ? " is-folded" : ""}`} aria-labelledby={headingId}>
       <header className="project-head">
         {folds && <FoldButton folded={folded} label={`the apps of ${project.name}`} controls={listId} onToggle={() => folds.setFolded(foldKey, !folded)} />}
-        <ProjectIcon ms={ms} project={project} size={24} state={state === "off" ? undefined : state} />
+        <ProjectIcon ms={ms} project={project} size={24} />
         <h3 className="project-title" id={headingId}>
-          <a href={href(projectRoute(ms, project))} title={`Open ${project.name}: its worktrees, apps and configuration`}>
+          <a href={href(projectRoute(ms, project))} title={`Open ${project.name}${meta ? ` (${meta})` : ""}: its worktrees, apps and configuration`}>
             {project.name}
           </a>
         </h3>
-        {meta && <span className="project-meta">{meta}</span>}
         <span className="spacer" />
         <Count apps={apps} />
         <GroupActions

@@ -93,18 +93,29 @@ function Group({ id, title, hint, folded, onToggle, action, children }: { id: st
   );
 }
 
+/**
+ * A project in the sidebar: its icon and name, and on the right one mark at
+ * most (ADR-0032): how many run while some do, or a dot while one is
+ * starting or has failed. Nothing running needs no mark.
+ */
 function ProjectLink({ p, current, showMachine }: { p: SidebarProject; current: boolean; showMachine: boolean }) {
   const { project, ms, state, running, total } = p;
   const stateText = state === "failed" ? "something failed" : state === "starting" ? "starting" : running > 0 ? `${running} of ${total} running` : "nothing running";
   return (
     <li>
       <a className={`nav-item nav-project nav-project-${state}`} href={href(p.route)} aria-current={current ? "page" : undefined} title={`${project.name}${showMachine ? ` on ${ms.machine.name}` : ""}: ${stateText}`}>
-        <ProjectIcon ms={ms} project={project} size={18} state={state === "off" ? undefined : state} />
+        <ProjectIcon ms={ms} project={project} size={18} />
         <span className="nav-label">{project.name}</span>
         {showMachine && !ms.machine.local && <span className="nav-sub">{ms.machine.name}</span>}
-        <span className={`nav-count${running > 0 ? " is-live" : ""}`} aria-hidden="true">
-          {running > 0 ? `${running}/${total}` : total}
-        </span>
+        {state === "failed" || state === "starting" ? (
+          <StateDot state={state} />
+        ) : (
+          running > 0 && (
+            <span className="nav-count is-live" aria-hidden="true">
+              {running}/{total}
+            </span>
+          )
+        )}
         <span className="sr-only">({stateText})</span>
       </a>
     </li>
@@ -195,9 +206,8 @@ function WorkNav() {
             <ProgressRing value={doneCount(steps)} max={steps.length} size={20} />
             <span className="setup-callout-text">
               <span className="setup-callout-title">Set up Portplane</span>
-              <span className="setup-callout-sub">
-                {doneCount(steps)} of {steps.length} done
-              </span>
+              {/* what comes next, not a second count next to Setup's own */}
+              <span className="setup-callout-sub">Next: {steps.find((st) => !st.done)?.title ?? "check"}</span>
             </span>
             <Icon name="chevronRight" size={14} className="setup-callout-chevron" />
           </a>
@@ -267,19 +277,18 @@ function UpdateNotice({ setupLeft }: { setupLeft: boolean }) {
   }
   if (!shouldAskAboutUpdates(prefs, setupLeft)) return null;
   const answer = (updateCheck: "manual" | "auto") => void updatePreferences((p) => ({ ...p, updateCheck, updateAsked: true }));
+  // Asked once, in one line and neutral buttons: it must not outshout the
+  // page's own main action (ADR-0032). The details are in Settings › Updates.
   return (
-    <div className="setup-callout update-ask" role="group" aria-label="Updates">
-      <span className="setup-callout-text">
-        <span className="setup-callout-title">Get new versions?</span>
-        <span className="setup-callout-sub">Portplane asks GitHub once a day and tells you when there's one. Nothing installs without your click.</span>
-        <span className="update-ask-actions">
-          <button type="button" className="btn btn-sm btn-primary" onClick={() => answer("auto")}>
-            Check daily
-          </button>
-          <button type="button" className="btn btn-sm btn-ghost" onClick={() => answer("manual")}>
-            Not now
-          </button>
-        </span>
+    <div className="update-ask" role="group" aria-label="Updates" title="Portplane asks GitHub once a day and tells you when there's one. Nothing installs without your click.">
+      <span className="update-ask-title">Check for new versions daily?</span>
+      <span className="update-ask-actions">
+        <button type="button" className="btn btn-sm" onClick={() => answer("auto")}>
+          Yes
+        </button>
+        <button type="button" className="btn btn-sm btn-ghost" onClick={() => answer("manual")}>
+          No
+        </button>
       </span>
     </div>
   );

@@ -33,14 +33,6 @@
   background: var(--surface-2);
 }
 
-.health-line-error {
-  border-color: color-mix(in srgb, var(--err) 35%, var(--border));
-}
-
-.health-line-warn {
-  border-color: color-mix(in srgb, var(--warn-dot) 40%, var(--border));
-}
-
 .health-line-icon {
   color: var(--text-3);
 }
@@ -161,7 +153,7 @@
   border-radius: 999px;
   background: var(--accent);
   color: var(--accent-fg);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   line-height: 18px;
   text-align: center;
@@ -207,11 +199,9 @@
 
 .popmenu-title {
   padding: var(--space-1) var(--space-2) 2px;
-  color: var(--text-3);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  color: var(--text-2);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-strong);
 }
 
 .popmenu-item {
@@ -556,6 +546,11 @@
 /* Toasts sit above the bar while it shows. */
 body:has(.selection-bar) .toasts {
   bottom: calc(76px + var(--tabbar-h, 0px));
+}
+
+/* room under the last row, so the bar never covers it */
+.apps.has-selection {
+  padding-bottom: 72px;
 }
 
 .selection-bar {

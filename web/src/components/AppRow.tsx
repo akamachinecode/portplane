@@ -117,7 +117,9 @@ function AppRowImpl({ app, ms, extras, variant = "list", showProject, placeCell,
         {app.label}
       </a>
       {app.kind === "job" && <span className="tag">step</span>}
-      <span className="row-state">{stateLabel(app.state)}</span>
+      {/* Running shows as the green dot and a live address, off as neither:
+          the word is written only when something needs a look (ADR-0032). */}
+      <span className={app.state === "on" || app.state === "off" ? "sr-only" : "row-state"}>{stateLabel(app.state)}</span>
       {variant === "list" && (showProject || showMachine) && (
         <span className="row-where">{[showProject ? [app.project, app.worktree].filter(Boolean).join(" · ") : "", showMachine ? ms.machine.name : ""].filter(Boolean).join(" · ")}</span>
       )}

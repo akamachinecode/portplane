@@ -16,7 +16,6 @@ import { appHref, copyableUrl, isAlive } from "../lib/apps";
 import { appRoute, navigate } from "../lib/router";
 import type { ListAction } from "../lib/shortcuts";
 import { safeLocalStorage } from "../lib/storage";
-import { summaryParts } from "../lib/summary";
 import { SnapshotGate } from "../shell/SnapshotGate";
 import { useShell } from "../shell/ShellContext";
 import { AppsTable, projectSections } from "./apps/AppsTable";
@@ -77,41 +76,19 @@ function focusRow(key: string): boolean {
 
 /** Every dev server, by machine and project: the main view (plan §6.2). */
 export function AppsView() {
-  const { summary, route } = useShell();
-  const { openAddMachine } = useApp();
+  const { route } = useShell();
+  // No counts in the title: running apps show as such in the list and in the
+  // sidebar, problems in the one line above the list (ADR-0032). Adding a
+  // machine lives in Settings › Machines and the palette.
   return (
     <>
-      <ViewHeader
-        title="Apps"
-        summary={
-          summary && (
-            <span className="summary">
-              {summaryParts(summary).map((p) => (
-                <span key={p.tone} className={`summary-part tone-${p.tone}`}>
-                  {p.text}
-                </span>
-              ))}
-            </span>
-          )
-        }
-      />
+      <ViewHeader title="Apps" />
       <SnapshotGate loading={<SkeletonCards label="Connecting to Portplane…" />}>
         {(snapshot) =>
           snapshot.machines.length === 0 ? (
             <EmptyState icon="machine" title="No machines to show" />
           ) : (
-            <>
-              <AppsBody snapshot={snapshot} keysOn={route.view === "apps" && !route.detail} />
-              <button type="button" className="add-machine" onClick={openAddMachine}>
-                <span className="add-machine-icon">
-                  <Icon name="plus" size={15} />
-                </span>
-                <span className="add-machine-text">
-                  <span className="add-machine-title">Add a machine</span>
-                  <span className="add-machine-hint">See the dev servers of another computer over SSH, Tailscale included.</span>
-                </span>
-              </button>
-            </>
+            <AppsBody snapshot={snapshot} keysOn={route.view === "apps" && !route.detail} />
           )
         }
       </SnapshotGate>

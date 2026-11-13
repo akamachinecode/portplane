@@ -36,7 +36,7 @@
 
 .filter-count {
   color: var(--text-3);
-  font-size: 12px;
+  font-size: 13px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -129,5 +129,44 @@
 
 .addr-row.is-off .addr-main,
 .addr-row.is-stale .addr-main {
-  opacity: 0.8;
+  opacity: 0.85;
+}
+
+/* fixed columns: the address and where it comes from take the room, the
+   rest keep their width, so nothing runs off the right edge */
+.addr-table {
+  table-layout: fixed;
+}
+
+.addr-table th:nth-child(2) {
+  width: 92px;
+}
+
+.addr-table th:nth-child(4) {
+  width: 120px;
+}
+
+.addr-table th:nth-child(5) {
+  width: 92px;
+}
+
+.addr-table td:not(.row-actions-cell) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.addr-cell .addr-main {
+  display: flex;
+  max-width: 100%;
+}
+
+.addr-row:not(:hover, :focus-within) .table-actions > .menu-wrap {
+  opacity: 0;
+}
+
+@media (hover: none) {
+  .addr-row .table-actions > .menu-wrap {
+    opacity: 1;
+  }
 }

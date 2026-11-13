@@ -144,5 +144,6 @@ export function firstRunAction(p: Preferences, local: MachineSnapshot | undefine
 
 /** The onboarding a "Run setup again" or a resume starts on. */
 export function resumeStep(p: OnboardingProgress): StepId {
-  return p.completed ? "welcome" : parseStep(p.step);
+  // Once done, Setup opens on its record ("All set"), not on the welcome.
+  return p.completed ? "done" : parseStep(p.step);
 }
