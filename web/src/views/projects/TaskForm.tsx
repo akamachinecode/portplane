@@ -260,7 +260,7 @@ export function TaskForm({ runner, config, entry, defaults, os, headingLevel = 4
         </Section>
       )}
 
-      <Section level={headingLevel} title={defaults ? "Shared settings" : "Where"} open summary={`${draft.cwd.trim() || "The project folder"}${draft.env.length ? `, ${draft.env.length === 1 ? "1 variable" : `${draft.env.length} variables`}` : ""}`} problem={flagged("env")}>
+      <Section level={headingLevel} title={defaults ? "Shared settings" : "Where"} open={!!defaults} summary={`${draft.cwd.trim() || "The project folder"}${draft.env.length ? `, ${draft.env.length === 1 ? "1 variable" : `${draft.env.length} variables`}` : ""}`} problem={flagged("env")}>
         <FormRow label="Folder" htmlFor={ids.cwd} help={h("cwd", <>Relative to <span className="mono">{fileInfo?.rel ?? "the file"}</span>.</>)} locked={lock("cwd")}>
           <div className="input-row">
             <input id={ids.cwd} className="input mono" value={draft.cwd} placeholder={defaults ? "the project folder" : "the project folder"} spellCheck={false} onChange={(e) => set({ cwd: e.target.value })} />
