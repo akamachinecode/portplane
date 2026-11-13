@@ -5,38 +5,34 @@ import type { NameInfo, NamePreview } from "../../api/portless";
 import { useApp } from "../../components/AppContext";
 import { CommandLine } from "../../components/Controls";
 import { Dialog } from "../../components/Dialog";
-import { FileDiff } from "../../components/FileDiff";
 import { Icon, Spinner } from "../../components/Icon";
 import { JobCard } from "../../components/JobCard";
 import { ErrorState, LoadingState } from "../../components/States";
 import { previewHostname, renameProblem, SOURCE_LABELS } from "../../lib/portless";
 import { TYPING_DELAY } from "../../lib/setup";
+import { dirOf } from "../../lib/dekit/taskForm";
+import { ChangeFold } from "./Fold";
 // Its styles live with the Domains view, which may not have loaded (the app detail opens this too).
 import "../DomainsView.css";
-
-function dirOf(path: string): string {
-  const i = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
-  return i > 0 ? path.slice(0, i) : path;
-}
 
 /** Where the name lives, and what Portplane does with it, in a sentence. */
 function sourceText(info: NameInfo): string {
   switch (info.source) {
     case "fragment":
-      return "The name is in the task Portplane wrote for this app. Portplane changes it there, reloads dekit and restarts the app.";
+      return "Portplane changes it in that file, reloads dekit and restarts the app.";
     case "task":
-      return "The name is in the task's command in your dekit file. Portplane changes only that value and shows you the change first.";
+      return "Portplane changes only that value in the task's command; you see the change first.";
     case "config":
       return info.inferred
-        ? `portless works this name out from the folder (package.json or the folder's name). Portplane writes the new one in ${info.target ?? "portless.json"}.`
-        : `The name is in the project's ${info.target ?? "portless.json"}. Portplane changes it there and restarts the app.`;
+        ? `portless works it out from the folder; Portplane writes the new one in ${info.target ?? "portless.json"}.`
+        : `Portplane changes it in ${info.target ?? "portless.json"} and restarts the app.`;
     case "alias-task":
-      return `The name comes from an alias job (${info.task}). Portplane changes its command, removes the old alias and runs the job again.`;
+      return `Portplane changes the alias job's command (${info.task}), removes the old alias and runs the job again.`;
     case "alias":
-      return "The name is a portless alias. Portplane adds the new one and removes the old one.";
+      return "Portplane adds the new alias and removes the old one.";
     case "compose":
       return info.editable
-        ? `The name is the portless.name label of the ${info.service ?? "service"} service in the project's compose file. Portplane sets that label${info.running ? ", then starts the project again so the new address takes over" : ""}.`
+        ? `Portplane sets the portless.name label of the ${info.service ?? "service"} service${info.running ? ", then starts the project again" : ""}.`
         : "The name comes from a docker compose label.";
     default:
       return "";
@@ -258,24 +254,7 @@ export function RenameDialog({ machine, appId, route, label, runner, onClose }: 
                   {applyError}
                 </p>
               )}
-              {ready && preview.files.length > 0 && (
-                <div className="rename-diff">
-                  <h3 className="plan-title">The change</h3>
-                  {preview.files.map((f) => (
-                    <FileDiff key={f.path} file={f} folder={runner ?? dirOf(f.path)} />
-                  ))}
-                </div>
-              )}
-              {ready && preview.steps.length > 0 && (
-                <>
-                  <h3 className="plan-title">What happens</h3>
-                  <ol className="rename-steps">
-                    {preview.steps.map((s) => (
-                      <li key={s}>{s}</li>
-                    ))}
-                  </ol>
-                </>
-              )}
+              {ready && <ChangeFold files={preview.files} steps={preview.steps} runner={runner} />}
             </>
           )}
         </div>

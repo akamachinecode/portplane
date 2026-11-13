@@ -81,7 +81,7 @@ export function DekitHelpHost() {
 /** A link that opens a topic. */
 export function HelpLink({ tag, children, className }: { tag: string; children?: ReactNode; className?: string }) {
   return (
-    <button type="button" className={className ?? "link-btn help-link"} onClick={() => openDekitHelp(tag)}>
+    <button type="button" className={className ?? "link-btn help-link quiet-link"} onClick={() => openDekitHelp(tag)}>
       {children ?? (
         <>
           <Icon name="book" size={13} />

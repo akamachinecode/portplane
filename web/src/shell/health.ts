@@ -25,8 +25,10 @@ export interface Problem {
   severity: Severity;
   title: string;
   detail?: string;
-  /** A path, a command or an error message, shown in monospace. */
+  /** A command or an error message, shown in monospace. */
   code?: string;
+  /** The files or folders it is about: in the title's tooltip, not at rest (ADR-0032: paths move to tooltips). */
+  path?: string;
   machine?: { id: string; name: string };
   fix?: ProblemFix;
   /** Where to read more, e.g. a failed app's detail. */
@@ -122,9 +124,12 @@ function machineProblems(ms: MachineSnapshot): Problem[] {
       if (!r.up) {
         out.push({
           id: `runner-down|${machine.id}|${r.root}`,
-          severity: "warning",
-          title: `dekit isn't running for ${r.name}`,
-          detail: "Its apps can't start until the runner is up.",
+          // Not a problem: dekit starts a folder's runner with the first app
+          // started there. Starting it by hand also brings up the apps that
+          // start on their own.
+          severity: "info",
+          title: `dekit's runner for ${r.name} is stopped`,
+          detail: "It starts by itself with the first app you start. Start it now to bring up the apps set to start on their own.",
           code: r.root,
           machine: where,
           fix: { label: "Start runner", run: (ctx) => startRunner(ctx, machine.id, r.root), pendingKey: runnerKey(machine.id, r.root) },
@@ -192,12 +197,17 @@ export function collectProblems(snapshot: Snapshot): Problem[] {
 
 /** What the sidebar badge counts: errors and warnings. */
 export function problemBadge(problems: Problem[]): { count: number; tone: "error" | "warning" | null } {
-  let count = 0;
-  let error = false;
-  for (const p of problems) {
-    if (p.severity === "info") continue;
-    count++;
-    if (p.severity === "error") error = true;
-  }
-  return { count, tone: count === 0 ? null : error ? "error" : "warning" };
+  const { attention, tone } = splitProblems(problems);
+  return { count: attention.length, tone };
+}
+
+/**
+ * The problems (errors and warnings) apart from the notes, and how bad the
+ * worst is: what the sidebar's badge, the Apps line and the Health page all
+ * count (ADR-0032: one count of problems; notes are counted nowhere).
+ */
+export function splitProblems(problems: Problem[]): { attention: Problem[]; notes: Problem[]; tone: "error" | "warning" | null } {
+  const attention = problems.filter((p) => p.severity !== "info");
+  const notes = problems.filter((p) => p.severity === "info");
+  return { attention, notes, tone: attention.length === 0 ? null : attention.some((p) => p.severity === "error") ? "error" : "warning" };
 }

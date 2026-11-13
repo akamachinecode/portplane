@@ -1,7 +1,7 @@
 import { useEffect, useState, useSyncExternalStore, type CSSProperties } from "react";
 import type { Api } from "../api/client";
 import type { State } from "../api/types";
-import { dataUrl, initialsOf, tintOf, type IconChoice, type IconPlace } from "../lib/icons";
+import { dataUrl, initialsOf, type IconChoice, type IconPlace } from "../lib/icons";
 import { useApp } from "./AppContext";
 
 // The icon of an app or a project (ADR-0030): the user's choice, else the
@@ -70,16 +70,18 @@ export function useIconImage(choice: IconChoice, place: IconPlace | null, fallba
 /**
  * The letters and colour when there is no image: the user's initials for
  * this one; else, for an app, its project's (an app without a favicon shows
- * its project's icon); else its own name's.
+ * its project's icon); else its own name's. The colour is the one the user
+ * picked, else none (0, neutral grey): colour in a list means state, so an
+ * icon only has one when someone chose it (ADR-0032).
  */
 export function initialsFor(name: string, choice: IconChoice, fallback?: { choice: IconChoice; name?: string }): { letters: string; tint: number } {
-  if (choice.kind === "initials") return { letters: choice.text || initialsOf(name), tint: choice.tint || tintOf(name) };
+  if (choice.kind === "initials") return { letters: choice.text || initialsOf(name), tint: choice.tint || 0 };
   if (choice.kind === "auto" && fallback?.name) {
     const f = fallback.choice;
     const n = fallback.name;
-    return f.kind === "initials" ? { letters: f.text || initialsOf(n), tint: f.tint || tintOf(n) } : { letters: initialsOf(n), tint: tintOf(n) };
+    return f.kind === "initials" ? { letters: f.text || initialsOf(n), tint: f.tint || 0 } : { letters: initialsOf(n), tint: 0 };
   }
-  return { letters: initialsOf(name), tint: tintOf(name) };
+  return { letters: initialsOf(name), tint: 0 };
 }
 
 export interface EntityIconProps {
@@ -99,7 +101,9 @@ export interface EntityIconProps {
 export function EntityIcon({ name, choice, place, fallback, size = 20, state, className }: EntityIconProps) {
   const src = useIconImage(choice, place, fallback);
   const { letters, tint } = initialsFor(name, choice, fallback);
-  const style = { "--icon-size": `${size}px`, "--icon-tint": `var(--tint-${tint})` } as CSSProperties;
+  const vars: Record<string, string> = { "--icon-size": `${size}px` };
+  if (tint) vars["--icon-tint"] = `var(--tint-${tint})`;
+  const style = vars as CSSProperties;
   return (
     <span className={`entity-icon${src ? " has-image" : ""}${className ? ` ${className}` : ""}`} style={style} aria-hidden="true">
       {src ? <img src={src} alt="" width={size} height={size} draggable={false} /> : <span className="entity-initials">{letters}</span>}

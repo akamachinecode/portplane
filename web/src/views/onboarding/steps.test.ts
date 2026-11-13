@@ -30,7 +30,7 @@ describe("steps", () => {
     expect(prevStep("welcome")).toBe("welcome");
   });
 
-  it("sends Fix everything to the first step with work", () => {
+  it("sends Start fixing to the first step with work", () => {
     expect(firstFixStep({ ...ready, toolsReady: false })).toBe("install");
     expect(firstFixStep({ ...ready, proxyReady: false })).toBe("proxy");
     expect(firstFixStep({ ...ready, browsersNeeded: true })).toBe("browsers");
@@ -45,9 +45,9 @@ describe("steps", () => {
     expect(p.choices).toEqual({ proxy: "service" });
   });
 
-  it("resumes at the saved step, or the welcome once completed", () => {
+  it("resumes at the saved step, or the record once completed", () => {
     expect(resumeStep({ completed: false, skipped: false, done: [], step: "apps" })).toBe("apps");
-    expect(resumeStep({ completed: true, skipped: false, done: [], step: "done" })).toBe("welcome");
+    expect(resumeStep({ completed: true, skipped: false, done: [], step: "check" })).toBe("done");
     expect(resumeStep({ completed: false, skipped: false, done: [] })).toBe("welcome");
   });
 

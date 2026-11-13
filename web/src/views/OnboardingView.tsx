@@ -217,14 +217,20 @@ function OnboardingFlow() {
     step,
     facts,
   );
-  const doneSteps = steps.filter((s) => s.id !== "welcome" && s.id !== "done" && statuses[s.id] === "done").length;
+  // One count of progress (ADR-0032): what is done, whichever step is open.
+  const record = stepStatuses(
+    steps.map((s) => s.id),
+    "welcome",
+    facts,
+  );
+  const doneSteps = steps.filter((s) => s.id !== "welcome" && s.id !== "done" && record[s.id] === "done").length;
   const countable = steps.length - 2;
 
   return (
     <OnboardingContext value={ctx}>
       <ViewHeader
         title={remote ? `Set up ${remote}` : "Setup"}
-        summary={`${doneSteps} of ${countable} done`}
+        summary={doneSteps === countable ? "All set" : `${doneSteps} of ${countable} done`}
         description={
           remote
             ? `Everything Portplane sets up on ${remote}, step by step, acting on that machine over SSH.`
@@ -254,24 +260,27 @@ function OnboardingFlow() {
           return (
             <li key={s.id} className={`tl-item is-${status}`} aria-current={current ? "step" : undefined}>
               <span className="tl-marker" aria-hidden="true">
-                {status === "done" ? <Icon name="check" size={12} /> : current ? <span className="tl-pulse" /> : <span className="tl-num">{i + 1}</span>}
+                {/* done, open or to do: no number, the title's "N of M done" is the one count (ADR-0032 rule 7) */}
+                {status === "done" ? <Icon name="check" size={12} /> : current ? <span className="tl-pulse" /> : null}
               </span>
               <div className="tl-content">
-                <button type="button" className="tl-head" disabled={current || !reachable} onClick={() => go(s.id)} aria-expanded={current}>
-                  <span className="tl-title">{current ? `Step ${i + 1} of ${steps.length}` : labelOf(s.id, remote)}</span>
-                  <span className="tl-record">{stepRecord(s.id, facts)}</span>
-                  {!current && reachable && (
-                    <span className="tl-open">
-                      {status === "done" ? "Open" : "Start"}
-                      <Icon name="chevronRight" size={13} />
-                    </span>
-                  )}
-                  <span className="sr-only">{status === "done" ? " (done)" : current ? " (open)" : " (to do)"}</span>
-                </button>
-                {current && (
+                {current ? (
+                  // The open step: its card says its name, once (ADR-0032).
                   <div className="tl-panel">
                     <View key={step} />
                   </div>
+                ) : (
+                  <button type="button" className="tl-head" disabled={!reachable} onClick={() => go(s.id)}>
+                    <span className="tl-title">{labelOf(s.id, remote)}</span>
+                    <span className="tl-record">{stepRecord(s.id, facts)}</span>
+                    {reachable && (
+                      <span className="tl-open" aria-hidden="true">
+                        {status === "done" ? "Open" : "Go"}
+                        <Icon name="chevronRight" size={13} />
+                      </span>
+                    )}
+                    <span className="sr-only">{status === "done" ? " (done)" : " (to do)"}</span>
+                  </button>
                 )}
               </div>
             </li>

@@ -8,7 +8,7 @@ import { copyWithToast } from "../../components/appActions";
 import { Icon, Spinner } from "../../components/Icon";
 import { JobCard } from "../../components/JobCard";
 import { useJobEnd, useOnboarding } from "./context";
-import { Mark, NextButton, StepFooter, StepLayout } from "./parts";
+import { Mark, More, NextButton, StepFooter, StepLayout } from "./parts";
 import { statusOf } from "./steps";
 
 const NAMES: Record<ToolId, string> = { dekit: "dekit", node: "Node.js 24", portless: "portless" };
@@ -98,7 +98,7 @@ function PlanDetails({ plan }: { plan: InstallPlan }) {
   );
 }
 
-function ToolCard({ install }: { install: Install }) {
+function ToolCard({ install, main }: { install: Install; main: boolean }) {
   const app = useApp();
   const { tool, req, job, ok, running, failed, blocked } = install;
   const plan = req?.install;
@@ -174,7 +174,11 @@ function ToolCard({ install }: { install: Install }) {
                 </p>
               </fieldset>
             )}
-            {method === plan.method && <PlanDetails plan={plan} />}
+            {method === plan.method && (
+              <More label="Where it comes from">
+                <PlanDetails plan={plan} />
+              </More>
+            )}
           </>
         )
       )}
@@ -188,7 +192,7 @@ function ToolCard({ install }: { install: Install }) {
           {blocked ? (
             <span className="ob-blocked muted">{blocked}</span>
           ) : (
-            <button type="button" className="btn btn-primary" onClick={() => void install.start(method || undefined)} disabled={install.starting || !req} aria-busy={install.starting || undefined}>
+            <button type="button" className={main ? "btn btn-primary" : "btn"} onClick={() => void install.start(method || undefined)} disabled={install.starting || !req} aria-busy={install.starting || undefined}>
               {install.starting ? <Spinner size={12} /> : <Icon name={failed ? "restart" : "box"} size={14} />}
               {failed ? "Retry" : outdated && tool !== "node" ? `Update ${name}` : `Install ${name}`}
             </button>
@@ -306,14 +310,13 @@ export function InstallStep() {
 
   return (
     <StepLayout
-      icon="box"
-      title="Install the tools"
-      lead="Each card says where the tool comes from, how the download is checked and where it goes, before anything happens. None of them needs your password."
+      title="Install tools"
+      lead="Portplane downloads and checks each tool for you, without asking for your password."
       busy={busy}
       footer={
         <StepFooter status={status}>
           {missing.length > 1 && !busy && (
-            <button type="button" className="btn" onClick={() => setQueue(true)}>
+            <button type="button" className="btn btn-primary" onClick={() => setQueue(true)}>
               <Icon name="box" size={14} />
               Install all {missing.length}
             </button>
@@ -324,7 +327,7 @@ export function InstallStep() {
     >
       <div className="ob-tools">
         {all.map((i) => (
-          <ToolCard key={i.tool} install={i} />
+          <ToolCard key={i.tool} install={i} main={missing.length === 1} />
         ))}
         <PathCard />
       </div>

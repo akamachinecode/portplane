@@ -10,6 +10,13 @@ const svg = (body: string) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="
 /** Made-up marks, one per kind of folder the mock has. */
 const MARKS: Array<{ match: RegExp; path: string; svg: string }> = [
   {
+    // a real-world shape: a tall, black-only favicon made for a white browser
+    // tab (16×34). It must stay inside its square and show on a dark theme.
+    match: /blog\/studio$/,
+    path: "public/favicon.svg",
+    svg: '<svg width="16" height="34" viewBox="0 0 16 34" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 1h12v4h-4v24h4v4H2v-4h4V5H2z" fill="black"/></svg>',
+  },
+  {
     match: /my-monorepo(-checkout)?\/apps\/web$/,
     path: "apps/web/public/favicon.svg",
     svg: svg('<rect width="32" height="32" rx="8" fill="#111827"/><path d="M9 21l7-12 7 12z" fill="#3dd68c"/>'),

@@ -69,7 +69,7 @@ export function prevStep(step: StepId): StepId {
   return STEP_IDS[Math.max(0, stepIndex(step) - 1)];
 }
 
-/** Where "Fix everything" goes: the first step with work left. */
+/** Where "Start fixing" goes: the first step with work left. */
 export function firstFixStep(flow: Flow): StepId {
   if (!flow.toolsReady || flow.pathNeeded) return "install";
   if (!flow.proxyReady) return "proxy";
@@ -99,6 +99,20 @@ export function problems(reqs: Requirement[]): Requirement[] {
     const s = statusOf(r);
     return s === "missing" || s === "outdated" || s === "warning";
   });
+}
+
+/**
+ * The check's answer in a few words, the same on the open step and in the
+ * timeline (ADR-0032: one count): what must be fixed, else what is only
+ * suggested.
+ */
+export function checkVerdict(reqs: Requirement[]): string {
+  const issues = problems(reqs);
+  const fix = issues.filter((r) => !r.optional).length;
+  const suggested = issues.length - fix;
+  if (fix) return fix === 1 ? "One thing to fix" : `${fix} things to fix`;
+  if (suggested) return suggested === 1 ? "Ready, with one suggestion" : `Ready, with ${suggested} suggestions`;
+  return "Everything is ready";
 }
 
 /** The flow's facts from a check (the parts that were answered). */
@@ -144,5 +158,6 @@ export function firstRunAction(p: Preferences, local: MachineSnapshot | undefine
 
 /** The onboarding a "Run setup again" or a resume starts on. */
 export function resumeStep(p: OnboardingProgress): StepId {
-  return p.completed ? "welcome" : parseStep(p.step);
+  // Once done, Setup opens on its record ("All set"), not on the welcome.
+  return p.completed ? "done" : parseStep(p.step);
 }

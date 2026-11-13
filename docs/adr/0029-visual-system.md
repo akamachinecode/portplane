@@ -1,6 +1,6 @@
 # ADR-0029: A quieter visual system: neutral greys, Portplane's green as the one colour, Inter and Geist Mono, more room
 
-- **Status:** Accepted
+- **Status:** Accepted; type size, icon tints and the room in lists updated by [ADR-0032](0032-calm-by-default.md)
 - **Date:** 2026-11-12
 - **Builds on:** [ADR-0024](0024-app-shell.md) (tokens in plain CSS, theme and density), [ADR-0027](0027-projects-first-layout.md) (the inset panel)
 

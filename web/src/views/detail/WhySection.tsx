@@ -5,7 +5,7 @@ import type { App, MachineSnapshot } from "../../api/types";
 import { actOnApp, appKey } from "../../components/appActions";
 import { useApp } from "../../components/AppContext";
 import { Switch } from "../../components/Controls";
-import { Icon, Spinner } from "../../components/Icon";
+import { Spinner } from "../../components/Icon";
 import { StateDot } from "../../components/StateDot";
 import { neighbourhood } from "../../lib/dekit/graph";
 import { depTone, rawStateText, whyMarks, whySentence } from "../../lib/dekit/why";
@@ -101,6 +101,14 @@ export function DepGraph({ ms, app }: { ms: MachineSnapshot; app: App }) {
   );
 }
 
+/** The marks whose news isn't in the sentence already ("You started it", "kept stopped", "because web needs it"). */
+function extraMarks(why: Why, app: App) {
+  const sentence = whySentence(why);
+  return whyMarks(why, app).filter(
+    (m) => !(m.id === "pinned" && sentence.includes("You started it")) && !(m.id === "vetoed" && sentence.includes("kept stopped")) && !(m.id === "needed" && /needs? it|starts when/.test(sentence)),
+  );
+}
+
 export function WhySection({ ms, app }: { ms: MachineSnapshot; app: App }) {
   const ctx = useApp();
   const titleId = useId();
@@ -128,29 +136,33 @@ export function WhySection({ ms, app }: { ms: MachineSnapshot; app: App }) {
       ) : why ? (
         <>
           <p className="why-sentence">{whySentence(why)}</p>
-          <ul className="why-marks">
-            <li className="why-mark">
-              <span className="mono">{rawStateText(why)}</span>
-            </li>
-            {whyMarks(why, app).map((m) => (
-              <li key={m.id} className={`why-mark why-${m.id}`} title={m.detail}>
-                {m.label}
-              </li>
-            ))}
-          </ul>
-          {why.deps.length > 0 && (
-            <ul className="why-deps" aria-label="Its dependencies">
-              {why.deps.map((d) => {
-                const a = byTask.get(d.path);
-                return (
-                  <li key={d.path} className={`why-dep tone-${depTone(d)}`}>
-                    <StateDot state={depTone(d)} />
-                    {a ? <a href={href(appRoute(ms.machine.id, a.id))}>{a.label}</a> : <span className="mono">{d.path}</span>}
-                    <span className="muted">{rawStateText(d)}</span>
-                    {d.satisfied ? <Icon name="check" size={13} /> : <span className="why-wait">waiting</span>}
-                  </li>
-                );
-              })}
+          {/* Only what the sentence doesn't already say (ADR-0032): the raw
+              state lives in Technical details, and the dependencies show
+              here only while one holds it back. */}
+          {extraMarks(why, app).length > 0 && (
+            <ul className="why-marks">
+              {extraMarks(why, app).map((m) => (
+                <li key={m.id} className={`why-mark why-${m.id}`} title={m.detail}>
+                  {m.label}
+                </li>
+              ))}
+            </ul>
+          )}
+          {why.deps.some((d) => !d.satisfied) && (
+            <ul className="why-deps" aria-label="What it waits for">
+              {why.deps
+                .filter((d) => !d.satisfied)
+                .map((d) => {
+                  const a = byTask.get(d.path);
+                  return (
+                    <li key={d.path} className={`why-dep tone-${depTone(d)}`}>
+                      <StateDot state={depTone(d)} />
+                      {a ? <a href={href(appRoute(ms.machine.id, a.id))}>{a.label}</a> : <span className="mono">{d.path}</span>}
+                      <span className="muted">{rawStateText(d)}</span>
+                      <span className="why-wait">waiting</span>
+                    </li>
+                  );
+                })}
             </ul>
           )}
           <div className="why-veto">
@@ -164,7 +176,6 @@ export function WhySection({ ms, app }: { ms: MachineSnapshot; app: App }) {
           </div>
         </>
       ) : null}
-      <DepGraph ms={ms} app={app} />
     </section>
   );
 }

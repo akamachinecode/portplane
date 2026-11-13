@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { mockSnapshot } from "../api/mock";
 import { DEFAULT_PREFERENCES, normalizePreferences } from "./preferences";
-import { appIconKey, appIconPlace, iconChoice, initialsOf, projectIconKey, projectIconPlace, tintOf } from "./icons";
+import { appIconKey, appIconPlace, iconChoice, initialsOf, projectIconKey, projectIconPlace } from "./icons";
 import { initialsFor } from "../components/EntityIcon";
 
 describe("initialsOf", () => {
@@ -12,16 +12,6 @@ describe("initialsOf", () => {
     expect(initialsOf("myShop_api")).toBe("MS");
     expect(initialsOf("3d-viewer")).toBe("3V");
     expect(initialsOf("--")).toBe("?");
-  });
-});
-
-describe("tintOf", () => {
-  it("gives a name the same colour every time, one of eight", () => {
-    expect(tintOf("acme-shop")).toBe(tintOf("ACME-SHOP"));
-    for (const n of ["a", "web", "my-monorepo", "blog", "shop"]) {
-      expect(tintOf(n)).toBeGreaterThanOrEqual(1);
-      expect(tintOf(n)).toBeLessThanOrEqual(8);
-    }
   });
 });
 
@@ -43,7 +33,7 @@ describe("icon places and choices", () => {
   });
 
   it("gives an app without its own icon its project's initials", () => {
-    expect(initialsFor("web", { kind: "auto" }, { choice: { kind: "auto" }, name: "acme-shop" })).toEqual({ letters: "AS", tint: tintOf("acme-shop") });
+    expect(initialsFor("web", { kind: "auto" }, { choice: { kind: "auto" }, name: "acme-shop" })).toEqual({ letters: "AS", tint: 0 });
     expect(initialsFor("web", { kind: "auto" }, { choice: { kind: "initials", text: "X", tint: 2 }, name: "acme-shop" })).toEqual({ letters: "X", tint: 2 });
     expect(initialsFor("web", { kind: "initials", tint: 5 }, { choice: { kind: "auto" }, name: "acme-shop" })).toEqual({ letters: "W", tint: 5 });
   });

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { NameInfo, ProxyOptions } from "../api/portless";
 import type { ComposeProject, ShareInfo, ShareProvider, ShareView } from "../api/sharing";
 import { composeNameProblem, previewHostname, renameProblem } from "./portless";
-import { applyAction, composeFileFrom, composeHostnames, composeSummary, lanAddressProblem, lanChoice, lanOptions, readiness, replacedBy, shareState, sortShares } from "./sharing";
+import { applyAction, composeFileFrom, composeHostnames, composeSummary, lanAddressProblem, lanChoice, lanOptions, replacedBy, shareState, sortShares } from "./sharing";
 
 const provider = (kind: ShareProvider["kind"], ok: boolean): ShareProvider => ({
   kind,
@@ -57,12 +57,6 @@ describe("sharing lists", () => {
       "b.localhost:ngrok",
       "a.localhost:tailscale",
     ]);
-  });
-
-  it("counts what's missing", () => {
-    expect(readiness([])).toBe("Ready");
-    expect(readiness([{ id: "a", ok: false, label: "" }])).toBe("1 thing missing");
-    expect(readiness([{ id: "a", ok: false, label: "" }, { id: "b", ok: false, label: "" }, { id: "c", ok: true, label: "" }])).toBe("2 things missing");
   });
 });
 

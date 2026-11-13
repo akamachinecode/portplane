@@ -82,7 +82,7 @@ func (w *ConfigWatch) Check(ms model.MachineSnapshot) []Notification {
 			ID:    "config|" + ms.Machine.ID + "|" + r.Root,
 			Kind:  KindConfig,
 			Title: "dekit.yaml changed in " + name,
-			Body:  "dekit applies the change on a reload. Open the project to review and reload it.",
+			Body:  "Open the project to review the change and apply it.",
 			Route: window.ProjectRoute(ms.Machine.ID, r.Root),
 		})
 	}

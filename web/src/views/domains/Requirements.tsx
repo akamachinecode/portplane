@@ -87,12 +87,12 @@ export function Requirements({ reqs, showMet = true, onChanged }: { reqs: Requir
             </span>
             <div className="req-body">
               <p className="req-line">
-                <span className="req-name">{r.label}</span>
+                {/* a missing one says what's wrong, once, instead of its label and then its problem */}
+                <span className="req-name">{r.ok ? r.label : (r.problem ?? r.label)}</span>
                 <span className="sr-only">{r.ok ? ": done" : ": missing"}</span>
               </p>
               {!r.ok && (
                 <>
-                  {r.problem && <p className="req-problem">{r.problem}</p>}
                   {r.fix && <p className="req-fix">{r.fix}</p>}
                   {r.action === "ngrok-authtoken" && !noNgrok && <NgrokToken onSaved={() => onChanged?.()} />}
                   {r.command && (r.action !== "ngrok-authtoken" || noNgrok) && <CommandLine command={r.command} />}

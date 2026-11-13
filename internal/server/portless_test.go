@@ -386,7 +386,7 @@ func TestPortlessAliases(t *testing.T) {
 		t.Fatalf("force: %s", f.calls())
 	}
 	rec := f.do("POST", "/api/portless/aliases", aliasRequest{Name: "taken", Port: 80})
-	if rec.Code != http.StatusConflict || !strings.Contains(rec.Body.String(), "Replace the existing route") {
+	if rec.Code != http.StatusConflict || !strings.Contains(rec.Body.String(), "Replace the existing address") {
 		t.Fatalf("conflict: %d %s", rec.Code, rec.Body.String())
 	}
 	for _, bad := range []aliasRequest{{Name: "Bad Name", Port: 1}, {Name: "x", Port: 0}, {Name: "proxy", Port: 80}, {Name: "portplane", Port: 80}} {

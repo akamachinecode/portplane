@@ -14,7 +14,7 @@
 .req-fix {
   margin-top: 2px;
   color: var(--text-2);
-  font-size: 12.5px;
+  font-size: var(--text-xs);
 }
 
 .req-body .cmd {
@@ -67,9 +67,11 @@
 
 .share-row {
   display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  min-height: 52px;
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4);
 }
 
 .share-row + .share-row {
@@ -78,59 +80,24 @@
 
 .share-row-main {
   display: flex;
-  flex: 1 1 auto;
+  flex: 1 1 240px;
   flex-direction: column;
   gap: 3px;
   min-width: 0;
-}
-
-.share-row-title {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
   font-size: var(--text-sm);
-  font-weight: 600;
-}
-
-.share-row-desc {
-  color: var(--text-2);
-  font-size: 12.5px;
 }
 
 .share-row-state {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: 2px var(--space-2);
   min-width: 0;
-  margin-top: 2px;
-  font-size: var(--text-sm);
 }
 
-.share-row-action {
-  flex: none;
-}
-
-.share-public-tag {
-  margin-left: var(--space-2);
-  font-weight: 500;
-}
-
-.share-missing {
-  margin-top: var(--space-1);
-  font-size: 12.5px;
-}
-
-.share-missing > summary {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--warn);
-  cursor: pointer;
-}
-
-.share-missing > summary:focus-visible {
-  border-radius: var(--radius-sm);
+.share-row-state .addr {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .share-foot {
@@ -150,15 +117,13 @@
   gap: var(--space-3);
 }
 
+/* what's missing, as the requirement cards themselves: no tinted box
+   around boxes that already carry their own warning */
 .share-problem {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--warn-soft);
+  gap: var(--space-3);
   color: var(--text);
   font-size: var(--text-sm);
 }
@@ -204,16 +169,73 @@
 
 /* ---- Domains → Sharing ---- */
 
-.shares-table .share-host {
-  display: block;
+.shares-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.share-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+}
+
+.sgroup-body > .shares-list {
+  padding-block: 0;
+}
+
+.share-item {
+  padding-block: var(--space-3);
+}
+
+.share-item + .share-item {
+  border-top: 1px solid var(--border);
+}
+
+.share-item-main {
+  display: flex;
+  flex: 1 1 320px;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.share-item-app {
+  font-weight: var(--weight-medium);
+  overflow-wrap: anywhere;
+}
+
+.share-item-app .muted {
+  font-weight: 400;
   font-size: var(--text-xs);
 }
 
-/* Under the way it's shared, so the table fits beside the sub-navigation. */
-.shares-table .share-public-tag {
-  display: block;
-  width: fit-content;
-  margin: var(--space-1) 0 0;
+.share-item-where {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px var(--space-2);
+  min-width: 0;
+  color: var(--text-2);
+  font-size: var(--text-sm);
+}
+
+.share-item-where .addr {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.share-item-reason {
+  max-width: 64ch;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
+.share-item.is-stale .share-item-app {
+  color: var(--text-2);
 }
 
 .share-url-cell {
@@ -224,59 +246,36 @@
   min-width: 0;
 }
 
-.share-reason {
-  display: inline-block;
-  min-width: 140px;
-  max-width: 200px;
-  font-size: 12px;
-  text-align: left;
-  white-space: normal;
+/* One row per way to share: name and state; what it needs on expand. */
+.way > .dfold-summary {
+  width: 100%;
+  min-height: 40px;
+  color: var(--text);
 }
 
-.providers {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: var(--space-3);
-  align-items: start;
+.way > .dfold-summary .dfold-hint {
+  margin-left: auto;
+  color: var(--text-2);
+  font-size: var(--text-sm);
 }
 
-.provider {
+.way > .dfold-body {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
-  min-width: 0;
-  padding: var(--space-4);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding-left: 22px;
 }
 
-.provider-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-}
-
-.provider-title {
-  font-size: var(--text-md);
-  font-weight: 600;
-}
-
-.provider-state {
+.way-text {
+  max-width: 64ch;
   color: var(--text-2);
-  font-size: 12.5px;
-}
-
-.provider-where,
-.provider-note {
-  color: var(--text-2);
-  font-size: 12.5px;
-}
-
-.provider-where .mono {
-  color: var(--text);
+  font-size: var(--text-sm);
   overflow-wrap: anywhere;
+}
+
+.way-text .mono {
+  color: var(--text);
 }
 
 /* ---- Domains → Compose ---- */
@@ -323,17 +322,17 @@
   align-items: center;
   gap: 0 4px;
   color: var(--text-2);
-  font-size: 12.5px;
+  font-size: var(--text-xs);
 }
 
 .compose-file {
-  font-size: 12.5px;
+  font-size: var(--text-xs);
   overflow-wrap: anywhere;
 }
 
 .compose-project .fact-note {
   color: var(--text-2);
-  font-size: 12.5px;
+  font-size: var(--text-xs);
 }
 
 .compose-image {
@@ -403,7 +402,7 @@
 
 .lan-option-desc {
   color: var(--text-2);
-  font-size: 12.5px;
+  font-size: var(--text-xs);
 }
 
 .lan-custom {
@@ -438,6 +437,19 @@
   border-top: 1px solid var(--border);
 }
 
+/* inside a card already: rows, not a second box */
+.sgroup-body > .lan-apps {
+  padding-block: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+
+.sgroup-body > .lan-apps .lan-app {
+  padding-inline: 0;
+  min-height: 52px;
+}
+
 .lan-app-main {
   display: flex;
   flex: 1 1 auto;
@@ -454,7 +466,7 @@
 
 .lan-app-route {
   flex-basis: 100%;
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 
 .phone {
@@ -494,8 +506,8 @@
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: var(--accent-soft);
-  color: var(--accent-text);
+  background: var(--surface-2);
+  color: var(--text-2);
   font-size: var(--text-xs);
   font-weight: 600;
 }
@@ -507,7 +519,7 @@
 }
 
 .phone-step-text {
-  font-size: 12.5px;
+  font-size: var(--text-xs);
   overflow-wrap: anywhere;
 }
 
@@ -519,19 +531,29 @@
 .phone-fingerprint {
   display: block;
   margin-top: 2px;
-  font-size: 11px;
+  font-size: 12px;
   word-break: break-all;
 }
 
 .lan-phone-wrap {
+  margin-top: var(--section-gap);
+}
+
+.dfolds + .lan-phone-wrap.is-folded {
   margin-top: var(--space-4);
+}
+
+.lan-edit {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
 }
 
 .phone-trust {
   margin: 0;
   padding-left: 18px;
   color: var(--text-2);
-  font-size: 12.5px;
+  font-size: var(--text-xs);
 }
 
 .phone-trust li + li {
@@ -581,7 +603,7 @@
 }
 
 .qr-hint {
-  font-size: 12.5px;
+  font-size: var(--text-xs);
   text-align: center;
 }
 
@@ -594,12 +616,4 @@
     max-width: 260px;
   }
 
-  .share-row {
-    flex-direction: column;
-    gap: var(--space-2);
-  }
-
-  .providers {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }

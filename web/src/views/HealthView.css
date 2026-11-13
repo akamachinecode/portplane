@@ -64,7 +64,7 @@
   align-self: flex-start;
   max-width: 100%;
   margin-top: 2px;
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 
 .problem-actions {
@@ -97,10 +97,56 @@
   letter-spacing: -0.006em;
 }
 
-.health-text {
-  margin: calc(-1 * var(--space-2)) 0 var(--space-4);
+/* every check, folded under one line */
+.health-all {
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-4);
+}
+
+.health-all-summary {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  cursor: pointer;
+  list-style: none;
+}
+
+.health-all-summary::-webkit-details-marker {
+  display: none;
+}
+
+.health-all-summary .health-title {
+  margin: 0;
+}
+
+.health-all-chevron {
+  align-self: center;
+  color: var(--text-3);
+  transition: transform var(--dur-fast) var(--ease);
+}
+
+.health-all[open] .health-all-chevron {
+  transform: rotate(90deg);
+}
+
+.health-all-hint {
+  color: var(--text-3);
+  font-size: var(--text-sm);
+}
+
+.health-sub {
+  margin-top: var(--space-6);
+}
+
+.health-subtitle {
+  margin-bottom: var(--space-3);
   color: var(--text-2);
   font-size: var(--text-sm);
+  font-weight: var(--weight-strong);
+}
+
+.problems-notes .problem-title {
+  font-weight: var(--weight-medium);
 }
 
 .all-clear {
@@ -134,9 +180,9 @@
 
 .board-group-title {
   margin: 0 0 var(--space-2) 2px;
-  color: var(--text-3);
-  font-size: 12px;
-  font-weight: var(--weight-medium);
+  color: var(--text-2);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-strong);
 }
 
 .board {

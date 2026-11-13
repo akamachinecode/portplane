@@ -1,9 +1,9 @@
 import type { Requirement, RequirementId } from "../../api/types";
-import { Icon, Spinner } from "../../components/Icon";
+import { Icon } from "../../components/Icon";
 import { useMachineScope, useRemoteCommand } from "../../components/MachineScope";
 import { useOnboarding } from "./context";
 import { CopyCommand, Mark, NextButton, StepFooter, StepLayout } from "./parts";
-import { CHECK_ORDER, firstFixStep, problems, statusOf } from "./steps";
+import { CHECK_ORDER, checkVerdict, firstFixStep, problems, statusOf } from "./steps";
 
 const PENDING_NAME: Record<RequirementId, string> = {
   dekit: "dekit",
@@ -39,6 +39,24 @@ function CheckRow({ id, req, pending, error }: { id: RequirementId; req?: Requir
   const s = statusOf(req);
   const tone = s === "ok" ? "ok" : s === "info" ? "info" : s === "warning" ? "warn" : "bad";
   const label = { ok: "Ready", info: "Note", warn: "Worth fixing", bad: "Needs fixing" }[tone];
+  // What passes takes one line: name, version and how it was found (ADR-0032).
+  const compact = s === "ok" || (s === "info" && !req.problem && !req.commands?.length);
+  if (compact) {
+    return (
+      <li className={`ob-check ob-check-${tone} is-compact`} aria-busy={pending || undefined}>
+        {pending ? <Mark tone="busy" label="Checking again" /> : <Mark tone={tone} label={label} />}
+        <p className="ob-check-name">
+          {req.name}
+          {req.version && <span className="ob-check-version mono">{req.version}</span>}
+        </p>
+        {req.detail && (
+          <p className="ob-check-detail" title={req.detail}>
+            {req.detail}
+          </p>
+        )}
+      </li>
+    );
+  }
   return (
     <li className={`ob-check ob-check-${tone}`} aria-busy={pending || undefined}>
       {pending ? <Mark tone="busy" label="Checking again" /> : <Mark tone={tone} label={label} />}
@@ -46,8 +64,7 @@ function CheckRow({ id, req, pending, error }: { id: RequirementId; req?: Requir
         <p className="ob-check-name">
           {req.name}
           {req.version && <span className="ob-check-version mono">{req.version}</span>}
-          {req.fix && FIXABLE.has(req.fix) && s !== "ok" && s !== "info" && <span className="tag ob-tag-fix">Portplane can fix this</span>}
-          {req.privilege && s !== "ok" && s !== "info" && (
+          {req.privilege && s !== "info" && (
             <span className="tag tag-warn" title="Asks for your administrator password">
               <Icon name="shield" size={11} />
               password
@@ -56,7 +73,7 @@ function CheckRow({ id, req, pending, error }: { id: RequirementId; req?: Requir
         </p>
         {req.detail && <p className="ob-check-detail">{req.detail}</p>}
         {req.problem && <p className="ob-check-problem">{req.problem}</p>}
-        {s !== "ok" && !req.fix && req.commands && req.commands.length > 0 && (
+        {!req.fix && req.commands && req.commands.length > 0 && (
           <div className="ob-check-commands">
             {req.commands.map((c) =>
               c.startsWith("https://") ? (
@@ -94,30 +111,23 @@ export function CheckStep() {
 
   let status: string;
   if (running && known.length < shown.length) status = `Checking… ${known.length} of ${shown.length}`;
-  else if (required.length === 0 && optional.length === 0) status = "Everything is ready.";
-  else if (required.length === 0) status = optional.length === 1 ? "Ready, with one suggestion." : `Ready, with ${optional.length} suggestions.`;
-  else status = required.length === 1 ? "One thing to fix." : `${required.length} things to fix.`;
+  else status = `${checkVerdict(known)}.`;
 
   return (
     <StepLayout
-      icon="pulse"
       title={remote ? `Check ${remote}` : "Check your computer"}
       lead={
         remote
-          ? `Portplane looks at what's installed on ${remote} and how its proxy stands, over SSH. Nothing changes until you choose to fix something.`
-          : "Portplane looks at what's installed and how the proxy and certificate stand. Nothing changes until you choose to fix something."
+          ? `Portplane looks at the tools, the proxy and the certificate on ${remote}, over SSH, and changes nothing until you say so.`
+          : "Portplane looks at the tools, the proxy and the certificate, and changes nothing until you say so."
       }
       busy={running}
       footer={
         <StepFooter status={status}>
-          <button type="button" className="btn" onClick={() => void checks.run()} disabled={running} aria-busy={running || undefined}>
-            {running ? <Spinner size={12} /> : <Icon name="restart" size={14} />}
-            Check again
-          </button>
           {anyFix ? (
             <button type="button" className="btn btn-primary" onClick={() => go(firstFixStep(flow))} disabled={running && known.length < 3}>
-              <Icon name="wand" size={14} />
-              Fix everything
+              Start fixing
+              <Icon name="chevronRight" size={14} />
             </button>
           ) : (
             <NextButton disabled={running && known.length < 3} />

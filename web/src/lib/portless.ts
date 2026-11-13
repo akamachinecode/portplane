@@ -267,7 +267,7 @@ export const FIX_LABELS: Record<FixKind, string> = {
   "proxy-start": "Start the proxy",
   "proxy-restart": "Restart the proxy",
   trust: "Trust the certificate",
-  prune: "Clean stale routes",
+  prune: "Clean up stale addresses",
   "hosts-sync": "Sync the hosts file",
   "service-install": "Reinstall the service",
 };

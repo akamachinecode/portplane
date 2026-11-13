@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { mockSnapshot } from "../api/mock";
 import type { App, Snapshot } from "../api/types";
-import { documentTitle, summarize, summaryText } from "./summary";
+import { documentTitle, summarize } from "./summary";
 
 function snap(apps: Array<Partial<App>>): Snapshot {
   const base = mockSnapshot("empty");
@@ -32,13 +32,6 @@ describe("summarize", () => {
     const one = snap([{ state: "on" }]);
     const two: Snapshot = { ...one, machines: [one.machines[0], { ...one.machines[0], machine: { ...one.machines[0].machine, id: "box" } }] };
     expect(summarize(two).running).toBe(2);
-  });
-});
-
-describe("summaryText", () => {
-  it("joins the non-zero counts, running always first", () => {
-    expect(summaryText({ running: 4, failed: 1, starting: 2, stopping: 0 })).toBe("4 running · 1 failed · 2 starting");
-    expect(summaryText({ running: 0, failed: 0, starting: 0, stopping: 1 })).toBe("0 running · 1 stopping");
   });
 });
 

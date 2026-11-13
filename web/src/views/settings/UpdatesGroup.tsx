@@ -213,10 +213,7 @@ export function UpdatesGroup({ prefs }: { prefs: Preferences }) {
   const updates = last?.items.filter((i) => i.update).length ?? 0;
   const self = portplaneUpdate(last);
   return (
-    <SettingsGroup
-      title="Updates"
-      description="Portplane goes online for this only when you check, or once a day if you choose so. It reads the latest versions from GitHub and the npm registry and sends nothing about you. Nothing installs until you click."
-    >
+    <SettingsGroup>
       <SettingRow label="Check for new versions" description="Of Portplane, dekit and portless. With “Once a day”, a notification tells you about a new Portplane.">
         <Segmented
           label="Check for new versions"

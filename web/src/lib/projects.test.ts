@@ -21,7 +21,7 @@ describe("groupState", () => {
 describe("sidebarProjects", () => {
   it("lists this computer's projects first, then online machines', skipping offline ones", () => {
     const list = sidebarProjects(snap);
-    expect(list.map((p) => `${p.ms.machine.id}:${p.project.name}:${p.state}:${p.running}/${p.total}`)).toEqual(["local:my-monorepo:failed:4/6", "local:blog:off:0/4", "box:shop:on:2/3"]);
+    expect(list.map((p) => `${p.ms.machine.id}:${p.project.name}:${p.state}:${p.running}/${p.total}`)).toEqual(["local:my-monorepo:failed:2/6", "local:blog:off:0/4", "box:shop:on:2/3"]);
     expect(list[1].route).toEqual({ view: "project", machine: "local", name: "blog" });
   });
 });

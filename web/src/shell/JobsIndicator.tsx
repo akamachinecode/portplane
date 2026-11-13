@@ -55,7 +55,7 @@ export function JobsIndicator() {
         onClick={() => setOpen((o) => !o)}
       >
         {count > 0 ? <Spinner size={14} /> : <Icon name="jobs" size={16} />}
-        {count > 0 && <span className="jobs-count">{count}</span>}
+        {count > 0 && <span className="jobs-count">{count} running</span>}
       </button>
       {open && (
         <section className="jobs-pop" id={id} aria-label="Recent jobs">

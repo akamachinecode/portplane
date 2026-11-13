@@ -1,13 +1,15 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, type ReactNode } from "react";
 import type { App, MachineSnapshot, Project, Runner, Snapshot } from "../api/types";
 import { appKey, runnerKey, startRunner } from "../components/appActions";
 import { useApp } from "../components/AppContext";
 import { MachineScope } from "../components/MachineScope";
 import { Icon, Spinner } from "../components/Icon";
-import { EmptyState } from "../components/States";
+import { Menu } from "../components/Menu";
+import { Count } from "../components/ProjectCard";
+import { EmptyState, LoadingState } from "../components/States";
 import { StateDot } from "../components/StateDot";
 import { ViewHeader } from "../components/ViewHeader";
-import { indexApps, projectApps, serviceCounts, visibleApps, worktreeApps } from "../lib/apps";
+import { indexApps, projectApps, visibleApps, worktreeApps } from "../lib/apps";
 import { inferHome, shortenPath, stateLabel } from "../lib/format";
 import { appsFingerprint } from "../lib/pending";
 import { checkoutKey, checkoutName } from "../lib/projects";
@@ -46,16 +48,6 @@ export function runnerEntries(snapshot: Snapshot): RunnerEntry[] {
   });
 }
 
-function Counts({ apps }: { apps: App[] }) {
-  const { running, total } = serviceCounts(apps);
-  return (
-    <span className={running > 0 ? "count count-live" : "count"}>
-      {running}/{total}
-      <span className="sr-only"> running</span>
-    </span>
-  );
-}
-
 function RunnerLink({ entry, current, multiMachine }: { entry: RunnerEntry; current: boolean; multiMachine: boolean }) {
   const { ms, runner, projects, apps } = entry;
   const failed = apps.some((a) => a.state === "failed");
@@ -72,7 +64,7 @@ function RunnerLink({ entry, current, multiMachine }: { entry: RunnerEntry; curr
           <span>
             {projects.length} {projects.length === 1 ? "project" : "projects"}
           </span>
-          <Counts apps={apps} />
+          <Count apps={apps} />
         </span>
       </a>
     </li>
@@ -91,7 +83,7 @@ function ProjectBlock({ ms, project }: { ms: MachineSnapshot; project: Project }
     <section className="proj" aria-label={project.name}>
       <header className="proj-head">
         <h3 className="proj-name">{project.name}</h3>
-        <Counts apps={apps} />
+        <Count apps={apps} />
         <span className="spacer" />
         {canAct && (
           <button
@@ -151,25 +143,25 @@ function ProjectBlocks({ ms, projects }: { ms: MachineSnapshot; projects: Projec
   );
 }
 
+/** The view's title in the toolbar: a runner's folder under "Runners", like the sidebar says. */
+function RunnerHeader({ title, actions, description }: { title: string; actions?: ReactNode; description?: string }) {
+  return <ViewHeader section="Runners" title={title} description={description} actions={actions} />;
+}
+
 /** A machine's own runner (machine-wide tasks), at #/projects/<machine>/host. */
 function HostDetail({ ms }: { ms: MachineSnapshot }) {
   const name = ms.machine.local ? "This computer" : ms.machine.name;
   return (
     <MachineScope machine={ms.machine.id}>
-      <section className="runner-detail" aria-labelledby="runner-detail-title">
+      <RunnerHeader title={name} description="Tasks that are yours rather than a project's, such as a database you always want up. Every change shows as a diff before it is written." />
+      <section className="runner-detail" aria-label={`${name}: machine-wide tasks`}>
         <a className="back-link" href={href({ view: "runners", machine: ms.machine.local ? undefined : ms.machine.id })}>
           <Icon name="chevronLeft" size={14} />
           Runners
         </a>
-        <header className="runner-detail-head">
-          <div>
-            <h2 className="runner-detail-title" id="runner-detail-title">
-              {name}
-            </h2>
-            <p className="runner-detail-path mono">~/.config/dekit/host/dekit.yaml{ms.machine.local ? "" : ` on ${ms.machine.name}`}</p>
-          </div>
-        </header>
-        <p className="runner-detail-status">Tasks that are yours rather than a project's, such as a database you always want up.</p>
+        <p className="runner-detail-status">
+          <span className="runner-detail-path mono">~/.config/dekit/host/dekit.yaml{ms.machine.local ? "" : ` on ${ms.machine.name}`}</span>
+        </p>
         <ProjectEditor runner="host" up />
       </section>
     </MachineScope>
@@ -183,39 +175,36 @@ function RunnerDetail({ entry }: { entry: RunnerEntry }) {
   // Any machine Portplane reaches: a remote one's config travels over SSH (ADR-0026).
   const reachable = local || ms.machine.status === "online";
   const busy = ctx.pending.has(runnerKey(ms.machine.id, runner.root));
+  const name = folderName(runner.root);
+  const actions = (
+    <>
+      {!runner.up && ms.tools.dekit && (
+        <button type="button" className="btn btn-sm" aria-busy={busy || undefined} disabled={busy} onClick={() => void startRunner(ctx, ms.machine.id, runner.root)}>
+          {busy ? <Spinner size={12} /> : <Icon name="play" size={12} />}
+          Start runner
+        </button>
+      )}
+      {local && <Menu label={`More actions for ${name}`} items={[{ label: "Reveal folder", icon: "folder", onSelect: () => void ctx.pending.run(`reveal|${runner.root}`, null, () => ctx.api.reveal(ms.machine.id, runner.root)) }]} />}
+    </>
+  );
   return (
     <MachineScope machine={ms.machine.id}>
-      <section className="runner-detail" aria-labelledby="runner-detail-title">
+      <RunnerHeader title={name} actions={actions} description="This folder's dekit.yaml: its tasks, its settings, and the runner that runs them. Every change shows as a diff before it is written, and dekit picks it up when you reload." />
+      <section className="runner-detail" aria-label={`${name}/dekit.yaml`}>
         <a className="back-link" href={href({ view: "runners", machine: local ? undefined : ms.machine.id })}>
           <Icon name="chevronLeft" size={14} />
           Runners
         </a>
-        <header className="runner-detail-head">
-          <div>
-            <h2 className="runner-detail-title" id="runner-detail-title">
-              {folderName(runner.root)}/dekit.yaml
-            </h2>
-            <p className="runner-detail-path mono">{shortenPath(runner.root, entry.home)}</p>
-          </div>
-          <div className="runner-detail-actions">
-            {!runner.up && ms.tools.dekit && (
-              <button type="button" className="btn btn-primary" aria-busy={busy || undefined} disabled={busy} onClick={() => void startRunner(ctx, ms.machine.id, runner.root)}>
-                {busy ? <Spinner /> : <Icon name="play" size={13} />}
-                Start runner
-              </button>
-            )}
-            {local && (
-              <button type="button" className="btn" onClick={() => void ctx.pending.run(`reveal|${runner.root}`, null, () => ctx.api.reveal(ms.machine.id, runner.root))}>
-                <Icon name="folder" size={14} />
-                Reveal folder
-              </button>
-            )}
-          </div>
-        </header>
         <p className="runner-detail-status">
           <StateDot state={runner.up ? "on" : "off"} />
-          {runner.up ? "dekit is running for this folder" : "dekit isn't running for this folder: its apps can't start until it is"}
-          {runner.error && <span className="runner-error"> · {runner.error}</span>}
+          <span>{runner.up ? "Running" : "Stopped: it starts with the first app you start"}</span>
+          <span className="runner-detail-sep" aria-hidden="true">
+            ·
+          </span>
+          <span className="runner-detail-path mono" title={`${runner.root}/dekit.yaml`}>
+            {shortenPath(runner.root, entry.home)}/dekit.yaml{local ? "" : ` on ${ms.machine.name}`}
+          </span>
+          {runner.error && <span className="runner-error">{runner.error}</span>}
         </p>
 
         {reachable && ms.tools.dekit ? (
@@ -254,6 +243,8 @@ function Body({ snapshot }: { snapshot: Snapshot }) {
     const local = snapshot.machines.find((m) => m.machine.local);
     const folder = local?.folders[0];
     return (
+      <>
+      <ViewHeader section="dekit" title="Runners" />
       <EmptyState
         icon="box"
         title="No dekit.yaml yet"
@@ -266,6 +257,7 @@ function Body({ snapshot }: { snapshot: Snapshot }) {
       >
         dekit reads its tasks from a <code>dekit.yaml</code>. Setup finds the apps in your folders and writes one for you.
       </EmptyState>
+      </>
     );
   }
 
@@ -273,13 +265,18 @@ function Body({ snapshot }: { snapshot: Snapshot }) {
   if (selected) return <RunnerDetail entry={selected} />;
   if (sel) {
     return (
-      <EmptyState icon="box" title="This dekit.yaml isn't there any more">
-        <a href={href({ view: "runners" })}>See every runner</a>
-      </EmptyState>
+      <>
+        <ViewHeader section="dekit" title="Runners" />
+        <EmptyState icon="box" title="This dekit.yaml isn't there any more">
+          <a href={href({ view: "runners" })}>See every runner</a>
+        </EmptyState>
+      </>
     );
   }
   // A palette command asks which dekit.yaml to use.
   return (
+    <>
+    <ViewHeader section="dekit" title="Runners" />
     <section aria-labelledby="pick-title">
       <h2 className="sgroup-title" id="pick-title">
         {dialog?.kind === "add-app" ? "Which project gets the new app?" : "Where should the command run?"}
@@ -301,20 +298,28 @@ function Body({ snapshot }: { snapshot: Snapshot }) {
         ))}
       </ul>
     </section>
+    </>
   );
 }
 
 /**
  * One dekit.yaml and its runner (plan §4.5, ADR-0028): Settings › dekit ›
- * Runners › a folder. Its tasks as forms or YAML, its settings, and every
- * change as a diff before it is written. A project's own tasks are also on
- * the project's page.
+ * Runners › a folder, titled with the folder's name under "Runners" as the
+ * sidebar says. Its tasks and settings as forms or YAML, and every change as
+ * a diff before it is written. A project's own tasks are also on the
+ * project's page.
  */
 export function ProjectsView() {
   return (
-    <>
-      <ViewHeader section="dekit" title="Configuration" description="Edit a task with a form or as YAML; every change shows as a diff before it is written, and dekit picks it up when you reload." />
-      <SnapshotGate>{(snapshot) => <Body snapshot={snapshot} />}</SnapshotGate>
-    </>
+    <SnapshotGate
+      loading={
+        <>
+          <ViewHeader section="dekit" title="Runners" />
+          <LoadingState label="Connecting to Portplane…" />
+        </>
+      }
+    >
+      {(snapshot) => <Body snapshot={snapshot} />}
+    </SnapshotGate>
   );
 }

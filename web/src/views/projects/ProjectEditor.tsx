@@ -5,7 +5,9 @@ import { useScopedMachine } from "../../components/MachineScope";
 import { Banner } from "../../components/Banner";
 import { Dialog } from "../../components/Dialog";
 import { Icon } from "../../components/Icon";
+import { Menu, type MenuItem } from "../../components/Menu";
 import { ErrorState, LoadingState } from "../../components/States";
+import { taskLabel } from "../../lib/dekit/taskForm";
 import { appRoute, navigate } from "../../lib/router";
 import { DekitHelpHost } from "../runners/DekitHelp";
 import { AddAppDialog } from "./AddAppDialog";
@@ -18,31 +20,28 @@ import { useProjectConfig, useReloadPlan } from "./useProjectConfig";
 import { YamlPanel } from "./YamlPanel";
 import "./ProjectEditor.css";
 
-// A project's configuration (plan §4.5), under its apps in Projects:
-// tasks (tree and form), settings (defaults, kernel, hooks, log, vars,
-// fragments) and the raw YAML, a banner when dekit.yaml changed on disk,
-// and the Add an app and Run a command dialogs.
-
-export type EditorTab = "apps" | "tasks" | "settings" | "yaml";
-const TAB_LABEL: Record<EditorTab, string> = { apps: "Apps", tasks: "Tasks", settings: "Settings", yaml: "YAML" };
+// A project's configuration (plan §4.5): one panel, not tabs (ADR-0032).
+// The tree lists the file's Settings and its tasks; choosing one opens its
+// form beside it. "View as YAML" swaps the panel for the raw files. A line
+// says when dekit.yaml changed on disk, and the Add an app and Run a command
+// dialogs open from here.
 
 function ReloadDialog({ runner, reload, onClose }: { runner: string; reload: Reload; onClose(): void }) {
   return (
-    <Dialog open onClose={onClose} title="Review and reload" size="md">
+    <Dialog open onClose={onClose} title="Apply to the running project" size="md">
       <ReloadStep runner={runner} reload={reload} onDone={onClose} />
     </Dialog>
   );
 }
 
-export function ProjectEditor({ runner, up, apps, os, only }: { runner: string; up: boolean; apps?: ReactNode; os?: string; only?: ReadonlySet<string> }) {
+export function ProjectEditor({ runner, up, os, only }: { runner: string; up: boolean; os?: string; only?: ReadonlySet<string> }) {
   const { load, reload } = useProjectConfig(runner);
   const { plan, refresh } = useReloadPlan(runner, up);
   const dialog = useProjectDialog();
   const { toast } = useApp();
-  const [tab, setTab] = useState<EditorTab>(apps ? "apps" : "tasks");
+  const [yaml, setYaml] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [reviewing, setReviewing] = useState(false);
-  const tabs: EditorTab[] = apps ? ["apps", "tasks", "settings", "yaml"] : ["tasks", "settings", "yaml"];
   const pending = plan?.reload && (plan.reload.plan.changes.length > 0 || !!plan.reload.plan.order) ? plan.reload : null;
   const local = useScopedMachine();
 
@@ -61,30 +60,40 @@ export function ProjectEditor({ runner, up, apps, os, only }: { runner: string; 
   };
 
   let panel: ReactNode;
-  if (tab === "apps") panel = apps;
-  else if (load.status === "loading") panel = <LoadingState label="Reading the config…" />;
+  if (load.status === "loading") panel = <LoadingState label="Reading the config…" />;
   else if (load.status === "error") panel = <ErrorState title="Couldn't read the config" message={load.message} onRetry={reload} />;
-  else if (tab === "tasks") panel = <TasksPanel runner={runner} config={load.value} os={os} selected={selected} onSelect={setSelected} onSaved={saved} only={only} />;
-  else if (tab === "settings") panel = <SettingsPanel runner={runner} config={load.value} os={os} onSaved={saved} />;
-  else panel = <YamlPanel runner={runner} config={load.value} onSaved={saved} />;
+  else if (yaml) panel = <YamlPanel runner={runner} config={load.value} onSaved={saved} />;
+  else
+    panel = (
+      <TasksPanel
+        runner={runner}
+        config={load.value}
+        os={os}
+        selected={selected}
+        onSelect={setSelected}
+        onSaved={saved}
+        only={only}
+        settings={<SettingsPanel runner={runner} config={load.value} os={os} onSaved={saved} />}
+      />
+    );
 
   const config = load.status === "ok" ? load.value : null;
   const wantDialog = dialog && dialog.kind !== "reload" && (!dialog.runner || dialog.runner === runner) ? dialog : null;
+  const changes = pending ? pending.plan.changes.length : 0;
+  const more: MenuItem[] = [];
+  if (up && runner !== "host") more.push({ label: "Run a command…", icon: "terminal", onSelect: () => openProjectDialog({ kind: "run-command", runner }) });
   return (
     <div className="project-editor">
       {pending && (
         <Banner
           tone="info"
-          title="Configuration changed: review and reload"
+          title={changes === 0 ? "The new order of tasks isn't running yet" : changes === 1 ? "1 saved change isn't running yet" : `${changes} saved changes aren't running yet`}
           action={
             <button type="button" className="btn btn-sm" onClick={() => setReviewing(true)}>
-              Review and reload
+              Review and apply
             </button>
           }
-        >
-          The config files say something the runner doesn't run yet ({pending.plan.changes.length === 1 ? "1 task" : `${pending.plan.changes.length} tasks`}
-          {pending.plan.order ? ", and the order" : ""}).
-        </Banner>
+        />
       )}
       {config && config.warnings.length > 0 && (
         <Banner tone="warn" title="dekit.yaml has problems">
@@ -95,27 +104,19 @@ export function ProjectEditor({ runner, up, apps, os, only }: { runner: string; 
           </ul>
         </Banner>
       )}
-      <div className="editor-tabs" role="tablist" aria-label="Project">
-        {tabs.map((t) => (
-          <button key={t} type="button" role="tab" aria-selected={t === tab} data-tab={t} className="editor-tab" onClick={() => setTab(t)}>
-            {TAB_LABEL[t]}
-          </button>
-        ))}
+      <div className="editor-bar">
+        <button type="button" className="btn btn-sm btn-ghost" aria-pressed={yaml} onClick={() => setYaml((y) => !y)} disabled={!config}>
+          <Icon name={yaml ? "rows" : "file"} size={13} />
+          {yaml ? "Back to the form" : "View as YAML"}
+        </button>
         <span className="spacer" />
-        {up && runner !== "host" && (
-          <button type="button" className="btn btn-sm" onClick={() => openProjectDialog({ kind: "run-command", runner })}>
-            <Icon name="terminal" size={13} />
-            Run a command…
-          </button>
-        )}
         <button type="button" className="btn btn-sm" onClick={() => openProjectDialog({ kind: "add-app", runner })} disabled={!config}>
           <Icon name="plus" size={13} />
           Add an app
         </button>
+        {more.length > 0 && <Menu label="More configuration actions" items={more} />}
       </div>
-      <div className="editor-panel" role="tabpanel" aria-label={TAB_LABEL[tab]}>
-        {panel}
-      </div>
+      <div className="editor-panel">{panel}</div>
       {reviewing && pending && <ReloadDialog runner={runner} reload={pending} onClose={() => (setReviewing(false), refresh(), reload())} />}
       {wantDialog?.kind === "add-app" && config && (
         <AddAppDialog
@@ -124,7 +125,7 @@ export function ProjectEditor({ runner, up, apps, os, only }: { runner: string; 
           onClose={() => openProjectDialog(null)}
           onAdded={() => {
             saved();
-            setTab("tasks");
+            setYaml(false);
           }}
         />
       )}
@@ -132,7 +133,7 @@ export function ProjectEditor({ runner, up, apps, os, only }: { runner: string; 
         <RunCommandDialog
           runner={runner}
           initialCwd={wantDialog.cwd}
-          tasks={(config?.tasks ?? []).filter((t) => !t.folder).map((t) => ({ path: t.path, label: typeof t.values.label === "string" ? (t.values.label as string) : (t.path.split("/").pop() ?? t.path) }))}
+          tasks={(config?.tasks ?? []).filter((t) => !t.folder).map((t) => ({ path: t.path, label: taskLabel(t.path, t.values) }))}
           onClose={() => openProjectDialog(null)}
           onStarted={(path) => {
             const app = local?.apps.find((a) => a.runner === runner && a.task === path);

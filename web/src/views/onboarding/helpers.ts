@@ -14,11 +14,6 @@ export function missingManagers(proposals: Proposal[], managers: Record<string, 
   return [...need].filter((pm) => managers[pm] === "").sort();
 }
 
-/** Whether a scan found a dev script that fixes its port. */
-export function hasFixedPorts(p: Proposal): boolean {
-  return p.apps.some((a) => a.notes?.some((n) => /pins port|fixes (its|a) port|hard-coded port/i.test(n)));
-}
-
 export interface FolderRow {
   path: string;
   repos?: number;

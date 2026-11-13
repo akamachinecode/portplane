@@ -79,11 +79,12 @@ function DomainsBody({ picker }: { picker: ReactNode }) {
       <ViewHeader
         section="portless"
         title={group.label}
-        description={group.id === "proxy" ? (scope.remote ? <>On {machineName}; you open its addresses here through Portplane.</> : undefined) : scope.remote ? <>{group.text} On {machineName}; you open its addresses here through Portplane.</> : group.text}
+        description={scope.remote ? <>{group.text} On {machineName}; you open its addresses here through Portplane.</> : group.text}
         actions={
           <>
             {picker}
-            <ProxyPill />
+            {/* the Proxy page says it in its status line */}
+            {group.id !== "proxy" && <ProxyPill />}
           </>
         }
       />

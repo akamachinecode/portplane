@@ -9,7 +9,8 @@ import { Icon, Spinner } from "../../components/Icon";
 import { JobCard } from "../../components/JobCard";
 import { Segmented } from "../../components/Segmented";
 import { ErrorState, LoadingState } from "../../components/States";
-import { shortenPath } from "../../lib/format";
+import { useMachineScope } from "../../components/MachineScope";
+import { inferHome, shortenPath } from "../../lib/format";
 import { openDekitHelp } from "./DekitHelp";
 
 // dekit itself (plan §4.8): version, how it was installed, which binary
@@ -87,9 +88,7 @@ function UpdateDialog({ about, onClose }: { about: About; onClose(): void }) {
         </p>
       ) : (
         <>
-          <p className="dialog-text">
-            Installed with {ORIGIN_LABEL[about.origin.kind]}. {script ? "dekit updates itself and then switches the running runners; their tasks keep running." : "Portplane runs the package manager, then switches the running runners to the new binary."}
-          </p>
+          <p className="dialog-text">{script ? "dekit updates itself, then running projects switch to it. Their apps keep running." : `Portplane updates it with ${ORIGIN_LABEL[about.origin.kind]}, then running projects switch to it.`}</p>
           {script && (
             <>
               <Segmented<"latest" | "canary" | "version">
@@ -102,7 +101,7 @@ function UpdateDialog({ about, onClose }: { about: About; onClose(): void }) {
                   { value: "version", label: "A version" },
                 ]}
               />
-              {channel === "canary" && <p className="field-hint">The newest build of dekit's main branch: early, and sometimes broken.</p>}
+              {channel === "canary" && <p className="field-hint">The newest build: early, and sometimes broken.</p>}
               {channel === "version" && (
                 <Field label="Version" htmlFor={versionId} hint="Such as 0.10.2, to go back after a bad release.">
                   <input id={versionId} className="input mono" value={version} placeholder="0.10.2" onChange={(e) => setVersion(e.target.value)} />
@@ -110,9 +109,11 @@ function UpdateDialog({ about, onClose }: { about: About; onClose(): void }) {
               )}
             </>
           )}
-          <p className="field-hint">It runs:</p>
-          <CommandLine command={command} />
-          {!script && about.origin.upgradeRunners && <CommandLine command="dekit runner upgrade --all" />}
+          <details className="more-options">
+            <summary>What it runs</summary>
+            <CommandLine command={command} />
+            {!script && about.origin.upgradeRunners && <CommandLine command="dekit runner upgrade --all" />}
+          </details>
           {error && (
             <p className="field-error" role="alert">
               {error}
@@ -170,7 +171,7 @@ function KernelDialog({ about, onClose, onChanged }: { about: About; onClose(): 
       }
     >
       <p className="dialog-text">
-        Projects without a <code>kernel:</code> of their own run this binary. A project's runner switches to it when you restart or upgrade it.
+        Projects without a <code>kernel:</code> of their own run this binary, from their next restart.
       </p>
       <Field label="Binary" htmlFor={id} error={error}>
         <input id={id} className="input mono" value={path} spellCheck={false} onChange={(e) => setPath(e.target.value)} />
@@ -179,9 +180,10 @@ function KernelDialog({ about, onClose, onChanged }: { about: About; onClose(): 
   );
 }
 
-/** The "dekit" card at the top of Runners. */
+/** The dekit on a machine: its version, how it came, its binary and the one projects run. */
 export function DekitAbout() {
   const { api } = useApp();
+  const scope = useMachineScope();
   const [about, setAbout] = useState<{ status: "loading" } | { status: "error"; message: string } | { status: "ok"; value: About }>({ status: "loading" });
   const [dialog, setDialog] = useState<"update" | "kernel" | null>(null);
   const load = useCallback(() => {
@@ -196,6 +198,7 @@ export function DekitAbout() {
   const a = about.value;
   if (!a.installed) return null;
   const k = a.kernel;
+  const home = inferHome([...(scope.ms?.folders ?? []), ...(scope.ms?.runners.map((r) => r.root) ?? []), a.path]);
   return (
     <section className="dk-about" aria-labelledby="dk-about-title">
       <div className="dk-about-head">
@@ -221,15 +224,17 @@ export function DekitAbout() {
         <div>
           <dt>Binary</dt>
           <dd className="mono" title={a.path}>
-            {shortenPath(a.path ?? "", undefined)}
+            {shortenPath(a.path ?? "", home)}
           </dd>
         </div>
         <div>
           <dt>Default for projects</dt>
           <dd>
-            <span className="mono">{k?.default ?? "the dekit on PATH"}</span>{" "}
-            <button type="button" className="link-btn" onClick={() => setDialog("kernel")}>
-              Change
+            <span className={k?.default ? "mono" : undefined} title={k?.default ?? undefined}>
+              {k?.default ? shortenPath(k.default, home) : "the dekit on PATH"}
+            </span>
+            <button type="button" className="btn btn-sm btn-ghost" onClick={() => setDialog("kernel")} aria-label="Change the default dekit for projects">
+              Change…
             </button>
           </dd>
         </div>

@@ -12,14 +12,13 @@ import { useApp } from "../components/AppContext";
 import { Icon } from "../components/Icon";
 import { Menu, type MenuItem } from "../components/Menu";
 import { GroupActions, ProjectCard } from "../components/ProjectCard";
-import { StateDot } from "../components/StateDot";
 import { EmptyState } from "../components/States";
 import { useFolds } from "../hooks/useFolds";
 import { ViewHeader } from "../components/ViewHeader";
 import { indexApps, isVisible, projectApps, serviceCounts, worktreeApps } from "../lib/apps";
 import { inferHome, shortenPath } from "../lib/format";
 import { appsFingerprint } from "../lib/pending";
-import { checkoutsText, findProject, groupState } from "../lib/projects";
+import { checkoutsText, findProject } from "../lib/projects";
 import { href, navigate } from "../lib/router";
 import { projectTargets } from "../lib/targets";
 import { SnapshotGate } from "../shell/SnapshotGate";
@@ -72,7 +71,6 @@ function ProjectBody({ ms, project }: { ms: MachineSnapshot; project: Project })
   const byId = useMemo(() => indexApps(ms.apps), [ms.apps]);
   const apps = projectApps(project, byId);
   const { running, total } = serviceCounts(apps);
-  const state = groupState(apps);
   const home = inferHome([...ms.folders, ...ms.runners.map((r) => r.root)]);
   const favorites = useMemo(() => new Set(preferences.status === "ok" ? preferences.value.favorites : []), [preferences]);
   const runners = project.runners?.length ? project.runners : [project.runner];
@@ -122,12 +120,11 @@ function ProjectBody({ ms, project }: { ms: MachineSnapshot; project: Project })
     menu.push({ label: "Copy folder path", icon: "copy", onSelect: () => void copyWithToast(ctx, repo, "the path") });
   }
 
-  const stateWord = state === "failed" ? "Something failed" : state === "starting" ? "Starting" : running > 0 ? `${running} of ${total} running` : "Nothing running";
   const linked = checkoutsText(project);
   const tab = route.view === "project" ? (route.tab ?? "apps") : "apps";
   const tabRoute = (t: "apps" | "config") => ({ view: "project" as const, machine, name: project.name, ...(route.view === "project" && route.runner ? { runner: route.runner } : {}), ...(t === "config" ? { tab: t } : {}) });
+  // the folder is in the line's tooltip and the ⋯ menu (Reveal, Copy): paths stay out of the way (ADR-0032)
   const meta = [
-    repo ? shortenPath(repo, home) : null,
     linked ? (project.repos && project.repos.length > 1 ? linked : `main and ${linked}`) : "main checkout",
     `${total} ${total === 1 ? "app" : "apps"}`,
     !ms.machine.local ? `on ${ms.machine.name}` : null,
@@ -136,14 +133,10 @@ function ProjectBody({ ms, project }: { ms: MachineSnapshot; project: Project })
   return (
     <>
       <ViewHeader
-        section="Projects"
         title={project.name}
-        summary={
-          <span className={`project-state project-state-${state}`}>
-            <StateDot state={state} />
-            {stateWord}
-          </span>
-        }
+        // a project has no state of its own (ADR-0032): its rows say what failed
+        // or starts; the title counts what runs, while something does
+        summary={running > 0 && <span className="project-state">{`${running} of ${total} running`}</span>}
         actions={
           <>
             <GroupActions ms={ms} name={project.name} keyBase={`project|${machine}|${project.runner}|${project.name}|`} apps={apps} targets={projectTargets(machine, project, byId)} withOpen />
@@ -153,15 +146,13 @@ function ProjectBody({ ms, project }: { ms: MachineSnapshot; project: Project })
       />
       <header className="project-hero">
         <button type="button" className="icon-button" onClick={() => setIconOpen(true)} title="Change the icon" aria-label={`Change the icon of ${project.name}`}>
-          <ProjectIcon ms={ms} project={project} size={48} />
+          <ProjectIcon ms={ms} project={project} size={32} />
         </button>
+        {/* the name is the page's title, in the toolbar: here only what it is */}
         <div className="project-hero-text">
-          <h2 className="project-hero-name">{project.name}</h2>
-          <p className="project-hero-meta">
+          <p className="project-hero-meta" title={repo ? shortenPath(repo, home) : undefined}>
             {meta.map((m, i) => (
-              <span key={i} className={i === 0 && repo ? "mono" : undefined}>
-                {m}
-              </span>
+              <span key={i}>{m}</span>
             ))}
           </p>
         </div>
@@ -184,12 +175,6 @@ function ProjectBody({ ms, project }: { ms: MachineSnapshot; project: Project })
       </nav>
       {tab === "apps" ? (
         <>
-          {project.worktrees.length > 1 && (
-            <p className="project-hint">
-              <Icon name="branch" size={13} />
-              Each worktree is a checkout of the same repository on another branch, with its own apps and addresses.
-            </p>
-          )}
           <ProjectCard ms={ms} group={group} folds={folds} headless />
         </>
       ) : (
@@ -228,8 +213,10 @@ function ProjectConfig({ ms, project, runners, home, apps }: { ms: MachineSnapsh
       })}
       <p className="project-config-foot">
         <Icon name="info" size={13} />
-        Only this project's tasks show here. The whole file, its settings and its runner are in{" "}
-        <a href={href({ view: "projects", runner: { machine: ms.machine.id, root: project.runner } })}>Settings › dekit › Runners</a>.
+        <span>
+          Only this project's tasks show here. The whole file, its settings and its runner are in{" "}
+          <a href={href({ view: "projects", runner: { machine: ms.machine.id, root: project.runner } })}>Runners</a>.
+        </span>
       </p>
       <DekitHelpHost />
     </MachineScope>

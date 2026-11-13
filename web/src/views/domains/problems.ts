@@ -104,7 +104,7 @@ function machinePortlessProblems(ms: MachineSnapshot): Problem[] {
       severity: remote ? "info" : "warning",
       title: remote ? `${name} doesn't trust its own local certificate` : "Browsers will warn about your .localhost addresses",
       detail: remote
-        ? `Its apps open fine here, but programs on ${name} that call https://….localhost addresses will refuse them. Trusting it there needs your password once, as a command to run over SSH.`
+        ? `Its apps open fine here, but programs on ${name} refuse their addresses. Trusting it needs your password once.`
         : "Your system doesn't trust portless's local certificate authority yet. Trusting it asks for your password once.",
       machine: where,
       fix: fix("trust", "Trust the certificate"),
@@ -117,7 +117,7 @@ function machinePortlessProblems(ms: MachineSnapshot): Problem[] {
       severity: "warning",
       title: "The trusted copy of the local certificate belongs to your user",
       detail: "Any program you run could replace it with another certificate, and your system would trust that one the next time it updates its trust store. Fixing it asks for your password once.",
-      code: ca.systemCopy,
+      path: ca.systemCopy,
       machine: where,
       fix: fix("ca-fix-ownership", "Fix ownership"),
       link: { label: "Certificates", route: domains("certificates") },

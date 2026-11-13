@@ -49,6 +49,7 @@
 }
 
 .sgroup-text {
+  max-width: 64ch;
   color: var(--text-2);
   font-size: var(--text-sm);
   line-height: 1.6;
@@ -146,38 +147,12 @@
   white-space: nowrap;
 }
 
-.tool-row {
-  display: grid;
-  grid-template-columns: 8px 88px minmax(0, auto) minmax(0, 1fr);
-  align-items: center;
-  gap: var(--space-3);
-  font-size: var(--text-sm);
-}
-
-.tool-row + .tool-row {
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--border);
-}
-
-.tool-name {
-  font-weight: 600;
-}
-
-.tool-why {
-  color: var(--text-3);
-  font-size: var(--text-xs);
-}
-
 @media (max-width: 560px) {
   .sgroup-body {
     padding-inline: var(--space-4);
   }
-  .tool-row {
-    grid-template-columns: 8px minmax(0, 1fr) auto;
-  }
-  .tool-why {
-    grid-column: 2 / -1;
-  }
+  
+  
 }
 
 /* a table that is a group's content runs edge to edge in its card */

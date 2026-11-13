@@ -36,7 +36,7 @@
 
 .filter-count {
   color: var(--text-3);
-  font-size: 12px;
+  font-size: var(--text-xs);
   font-variant-numeric: tabular-nums;
 }
 
@@ -127,7 +127,76 @@
   font-weight: var(--weight-medium);
 }
 
-.addr-row.is-off .addr-main,
-.addr-row.is-stale .addr-main {
-  opacity: 0.8;
+/* fixed columns: the address and where it comes from take the room, the
+   rest keep their width, so nothing runs off the right edge */
+.addr-table {
+  table-layout: fixed;
+}
+
+.addr-table th:nth-child(2) {
+  width: 92px;
+}
+
+.addr-table th:nth-child(4) {
+  width: 120px;
+}
+
+.addr-table th:nth-child(5) {
+  width: 92px;
+}
+
+.addr-table tr:not(.addr-idle-head) > td:not(.row-actions-cell) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.addr-cell .addr-main {
+  display: flex;
+  max-width: 100%;
+}
+
+.addr-row:not(:hover, :focus-within) .table-actions > .menu-wrap {
+  opacity: 0;
+}
+
+@media (hover: none) {
+  .addr-row .table-actions > .menu-wrap {
+    opacity: 1;
+  }
+}
+
+/* the names kept for stopped apps, folded under one line */
+.addr-idle-head td {
+  padding: 0;
+}
+
+.addr-idle-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 48px;
+  padding: 0 var(--space-4);
+  border: 0;
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  /* the ring inside the row: the cell clips anything outside */
+  outline-offset: -2px;
+}
+
+.addr-idle-toggle:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.addr-idle-chevron {
+  transition: transform var(--dur-fast) var(--ease);
+}
+
+.addr-idle-toggle[aria-expanded="true"] .addr-idle-chevron {
+  transform: rotate(90deg);
 }

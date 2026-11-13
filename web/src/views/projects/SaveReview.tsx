@@ -15,7 +15,7 @@ import { changeText } from "../../lib/dekit/why";
 
 /** dekit reload's plan, one line per task. */
 export function ReloadPlanList({ plan }: { plan: ReloadPlan }) {
-  if (plan.changes.length === 0 && !plan.order) return <p className="muted">The runner already runs this config: nothing to apply.</p>;
+  if (plan.changes.length === 0 && !plan.order) return <p className="muted">Nothing to apply: the runner already runs this config.</p>;
   return (
     <ul className="reload-plan">
       {plan.changes.map((c) => (
@@ -80,14 +80,15 @@ function useAlive(runner: string): Set<string> {
   return new Set((ms?.apps ?? []).filter((a) => a.runner === runner && (a.state === "on" || a.state === "starting")).map((a) => a.task));
 }
 
-export function ReloadStep({ runner, reload, onDone }: { runner: string; reload: Reload; onDone(): void }) {
+export function ReloadStep({ runner, reload, onDone, saved }: { runner: string; reload: Reload; onDone(): void; saved?: boolean }) {
   const alive = useAlive(runner);
   const { apply, busy, error } = useApplyReload(runner);
   const restart = runningChanged(reload.plan, alive);
   return (
     <div className="review-step">
       <p className="review-lead">
-        <Icon name="checkCircle" size={15} /> Saved. The runner still runs the old config; this is what a reload changes:
+        {saved && <Icon name="checkCircle" size={15} />}
+        {saved ? "Saved. Applying it makes the runner do this:" : "Applying makes the runner do this:"}
       </p>
       <ReloadPlanList plan={reload.plan} />
       {reload.errors.length > 0 && (
@@ -115,7 +116,7 @@ export function ReloadStep({ runner, reload, onDone }: { runner: string; reload:
         )}
         <button type="button" className="btn btn-primary" disabled={!!busy} aria-busy={busy === "restart" || undefined} onClick={() => void apply(restart.length > 0).then((ok) => ok && onDone())}>
           {busy === "restart" && <Spinner />}
-          {restart.length ? `Apply and restart ${restart.length === 1 ? restart[0] : `${restart.length} tasks`}` : "Apply"}
+          {restart.length ? `Apply and restart ${restart.length === 1 ? (restart[0].split("/").pop() ?? restart[0]) : `${restart.length} tasks`}` : "Apply"}
         </button>
       </div>
     </div>
@@ -180,7 +181,7 @@ export function SaveReview({
   let body;
   if (saved) {
     body = saved.up && saved.reload ? (
-      <ReloadStep runner={runner} reload={saved.reload} onDone={onClose} />
+      <ReloadStep runner={runner} reload={saved.reload} onDone={onClose} saved />
     ) : (
       <div className="review-step">
         <p className="review-lead">
@@ -207,7 +208,7 @@ export function SaveReview({
           <p className="muted">Nothing changes in the file.</p>
         ) : (
           <>
-            <p className="review-lead">Portplane writes these changes; everything else in the {changed.length === 1 ? "file" : "files"} stays as it is.</p>
+            <p className="review-lead">Only these lines change.</p>
             {changed.map((f) => (
               <FileDiff key={f.path} file={f} folder={folder} />
             ))}

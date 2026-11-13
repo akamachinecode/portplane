@@ -1,7 +1,7 @@
 import type { MachineSnapshot, Requirement, RequirementId } from "../../api/types";
 import { serviceCounts } from "../../lib/apps";
 import { shortenPath } from "../../lib/format";
-import { problems, statusOf, type Flow, type StepId } from "./steps";
+import { checkVerdict, problems, statusOf, type Flow, type StepId } from "./steps";
 
 // Setup as a timeline (ADR-0028): each step says what it found or did, in
 // one line, read from the live check and snapshot, so a step done from a
@@ -27,7 +27,8 @@ export function stepDone(step: StepId, f: TimelineFacts): boolean {
   const services = (f.ms?.apps ?? []).filter((a) => a.kind !== "job");
   switch (step) {
     case "welcome":
-      return f.done.has("welcome") || f.done.size > 0;
+      // Read, or gone past: tools or folders that are already there count too.
+      return f.done.size > 0 || f.flow.toolsReady || f.folders.length > 0;
     case "check":
       return Object.keys(f.checks).length > 0 && (f.done.has("check") || problems(Object.values(f.checks) as Requirement[]).length === 0);
     case "install":
@@ -56,12 +57,11 @@ export function stepRecord(step: StepId, f: TimelineFacts): string {
   const projects = new Set(services.map((a) => a.project)).size;
   switch (step) {
     case "welcome":
-      return "Portplane drives dekit, which starts your dev servers, and portless, which gives each one its address.";
+      return "dekit runs your apps, portless gives them addresses";
     case "check": {
       if (!reqs.length) return "Looks at the tools, the proxy, the certificate and your system.";
-      const left = problems(reqs).length;
       const fine = reqs.filter((r) => statusOf(r) === "ok").length;
-      return left ? `${left} ${left === 1 ? "thing" : "things"} to fix · ${fine} fine` : `All ${fine} checks pass`;
+      return problems(reqs).length ? `${checkVerdict(reqs)} · ${fine} fine` : `All ${fine} checks pass`;
     }
     case "install": {
       const found = [version(c.dekit, "dekit"), version(c.node, "Node.js"), version(c.portless, "portless")].filter(Boolean);

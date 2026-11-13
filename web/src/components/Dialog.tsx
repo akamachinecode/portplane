@@ -117,11 +117,14 @@ export function ConfirmDialog({
   error,
   onConfirm,
   onClose,
+  tone = "danger",
 }: {
   open: boolean;
   title: ReactNode;
   children: ReactNode;
   confirmLabel: string;
+  /** Red for what removes or stops something; the main colour for a confirmation that doesn't (restart, upgrade). */
+  tone?: "danger" | "primary";
   busy: boolean;
   error: string | null;
   onConfirm(): void;
@@ -142,7 +145,7 @@ export function ConfirmDialog({
           <button type="button" className="btn btn-ghost" onClick={onClose} disabled={busy}>
             Cancel
           </button>
-          <button type="button" className="btn btn-danger" onClick={onConfirm} disabled={busy} aria-busy={busy || undefined}>
+          <button type="button" className={tone === "danger" ? "btn btn-danger" : "btn btn-primary"} onClick={onConfirm} disabled={busy} aria-busy={busy || undefined}>
             {busy && <Spinner />}
             {confirmLabel}
           </button>

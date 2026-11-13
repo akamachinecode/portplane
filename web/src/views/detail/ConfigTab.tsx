@@ -36,7 +36,7 @@ export function ConfigTab({ ms, app }: DetailTabProps) {
   }
   return (
     <div className="config-tab">
-      <TaskForm runner={app.runner} config={load.value} entry={entry} os={ms.machine.os} onSaved={reload} />
+      <TaskForm runner={app.runner} config={load.value} entry={entry} os={ms.machine.os} headingLevel={3} onSaved={reload} />
       <DekitHelpHost />
     </div>
   );

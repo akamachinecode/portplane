@@ -494,7 +494,7 @@ export function createMockPortless(ctx: MockContext): PortlessApi {
         p.steps.push(portlessStep(p.title, true, "hosts", "clean"));
         break;
       case "prune":
-        p.title = "Clean stale routes";
+        p.title = "Clean up stale addresses";
         p.summary = "Removes routes whose portless process is gone, and asks the dev servers still holding their ports to stop (SIGTERM).";
         p.steps.push(portlessStep(p.title, false, "prune"));
         break;
@@ -878,8 +878,8 @@ export function createMockPortless(ctx: MockContext): PortlessApi {
       if (holder && !req.force) {
         throw new ApiError(
           holder.kind === "alias"
-            ? "another alias already uses that name: pick another, or turn on “Replace the existing route”"
-            : "a running app already uses that name: pick another, or turn on “Replace the existing route” to take it over (that app's portless process is stopped)",
+            ? "another alias already uses that name: pick another, or turn on “Replace the existing address”"
+            : "a running app already uses that name: pick another, or turn on “Replace the existing address” to take it over (that app's portless process is stopped)",
           409,
         );
       }
@@ -895,7 +895,7 @@ export function createMockPortless(ctx: MockContext): PortlessApi {
       if (problem) throw new ApiError(problem, 400);
       const host = hostnameFor(req.name, tld);
       const holder = routes().find((r) => r.hostname === host && r.hostname !== req.from);
-      if (holder && !req.force) throw new ApiError("another route already uses that name: pick another, or turn on “Replace the existing route”", 409);
+      if (holder && !req.force) throw new ApiError("another address already uses that name: pick another, or turn on “Replace the existing address”", 409);
       state.aliases = [...state.aliases.filter((a) => a.hostname !== req.from && a.hostname !== host), { hostname: host, port: req.port, registeredAt: Date.now() }];
       syncSnapshot();
       return routes();

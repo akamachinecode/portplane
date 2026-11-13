@@ -7,6 +7,7 @@ import { Icon } from "../../components/Icon";
 import { IconButton } from "../../components/IconButton";
 import { ErrorState, LoadingState } from "../../components/States";
 import { copyableUrl } from "../../lib/apps";
+import { inferHome, shortenPath } from "../../lib/format";
 import { baseName, hostnameFor, proxyUrl, SOURCE_LABELS } from "../../lib/portless";
 import { href } from "../../lib/router";
 import type { DetailTabProps } from "../AppDetail";
@@ -89,17 +90,30 @@ export function UrlTab({ ms, app }: DetailTabProps) {
         )}
         <div className="facts-row">
           <dt>Name</dt>
-          <dd>
-            <span className="mono">{info.name || "—"}</span>
-            {info.inferred && <span className="muted"> · worked out by portless</span>}
-            {info.runMode && info.prefix && <span className="muted"> · portless run adds “{info.prefix}.” for this worktree</span>}
+          <dd className="url-name">
+            <span>
+              <span className="mono">{info.name || "—"}</span>
+              {info.inferred && <span className="muted"> · worked out by portless</span>}
+              {info.runMode && info.prefix && <span className="muted"> · portless run adds “{info.prefix}.” for this worktree</span>}
+            </span>
+            {info.editable && (
+              <button type="button" className="btn btn-sm" onClick={() => setRenaming(true)}>
+                <Icon name="pencil" size={13} />
+                Change…
+              </button>
+            )}
           </dd>
         </div>
         <div className="facts-row">
           <dt>Comes from</dt>
           <dd>
             {SOURCE_LABELS[info.source]}
-            {info.file && <span className="fact-path mono"> {info.file}</span>}
+            {info.file && (
+              <span className="fact-path mono" title={info.file}>
+                {" "}
+                {shortenPath(info.file, inferHome([info.file]))}
+              </span>
+            )}
             {info.source === "config" && info.dir && (
               <>
                 {" · "}
@@ -109,25 +123,20 @@ export function UrlTab({ ms, app }: DetailTabProps) {
           </dd>
         </div>
       </dl>
-      {info.editable ? (
-        <button type="button" className="btn btn-primary" onClick={() => setRenaming(true)}>
-          <Icon name="pencil" size={13} />
-          Change name
-        </button>
-      ) : (
-        info.reason && <p className="fact-note">{info.reason}</p>
-      )}
-      {info.notes.map((n) => (
-        <p key={n} className="fact-note">
-          {n}
-        </p>
-      ))}
+      {!info.editable && info.reason && <p className="fact-note">{info.reason}</p>}
+      {/* the rename dialog says these when you change the name */}
+      {!info.editable &&
+        info.notes.map((n) => (
+          <p key={n} className="fact-note">
+            {n}
+          </p>
+        ))}
       {!["none", "alias", "alias-task", "compose"].includes(info.source) && (
         <section className="detail-section url-share" aria-labelledby={shareId}>
           <h3 className="detail-section-title" id={shareId}>
             Sharing
           </h3>
-          <ShareControls ms={ms} app={app} headingLevel={4} />
+          <ShareControls ms={ms} app={app} />
         </section>
       )}
       {renaming && <RenameDialog machine={ms.machine.id} appId={app.id} label={app.label} runner={app.runner} onClose={() => setRenaming(false)} />}

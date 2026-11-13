@@ -7,7 +7,7 @@
 .first-run-manual {
   margin-top: 18px;
   color: var(--text-2);
-  font-size: 12.5px;
+  font-size: var(--text-xs);
 }
 
 .first-run-manual summary {
@@ -28,4 +28,48 @@
 
 .first-run-manual[open] summary {
   margin-bottom: 8px;
+}
+
+/* No apps in the folders yet: one message, one action. */
+
+.no-apps .panel-text {
+  max-width: 64ch;
+}
+
+.no-apps-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  margin-top: var(--space-4);
+}
+
+.no-apps-edit {
+  color: var(--text-2);
+  font-size: var(--text-sm);
+}
+
+.no-apps-folders {
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.no-apps-folders li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 44px;
+}
+
+.no-apps-folders li + li {
+  border-top: 1px solid var(--border);
+}
+
+.no-apps-folders .mono {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

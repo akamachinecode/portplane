@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import { errorText } from "../../api/errors";
 import type { App, Excerpt } from "../../api/types";
 import { useApp } from "../../components/AppContext";
@@ -6,11 +6,10 @@ import { Icon, Spinner } from "../../components/Icon";
 import { useMachineScope } from "../../components/MachineScope";
 import { appHref } from "../../lib/apps";
 import { EmptyState } from "../../components/States";
-import { inferHome, shortenPath } from "../../lib/format";
 import { appRoute, href } from "../../lib/router";
 import { useOnboarding } from "./context";
 import { Mark, NextButton, StepFooter, StepLayout } from "./parts";
-import { count, firstWorking, sentence, preselect, startCandidates, startPhase, startTargets } from "./summary";
+import { byProject, count, firstWorking, sentence, preselect, startCandidates, startPhase, startTargets } from "./summary";
 
 function FailedApp({ app }: { app: App }) {
   const { api } = useApp();
@@ -40,6 +39,64 @@ function FailedApp({ app }: { app: App }) {
   );
 }
 
+interface RowProps {
+  app: App;
+  picked: boolean;
+  started: boolean;
+  locked: boolean;
+  url: string | undefined;
+  onPick(on: boolean): void;
+  onOpen(url: string): void;
+}
+
+function StartRow({ app: a, picked, started: was, locked, url, onPick, onOpen }: RowProps) {
+  const phase = startPhase(a);
+  const tone = !was ? null : phase === "on" ? "ok" : phase === "failed" ? "bad" : "busy";
+  return (
+    <li className={`ob-start${was ? ` is-${phase}` : ""}`}>
+      <label className="ob-start-pick">
+        <input type="checkbox" checked={picked} disabled={locked} onChange={(e) => onPick(e.target.checked)} />
+        {tone && <Mark tone={tone} label={phase} />}
+        <span className="ob-start-name">{a.label}</span>
+        {a.worktree && <span className="ob-start-meta muted">{a.worktree}</span>}
+        {a.hostname && <span className="ob-start-meta mono muted">{a.hostname}</span>}
+      </label>
+      <span className="ob-start-state">
+        {was && phase === "starting" && "Starting…"}
+        {was && phase === "waiting" && "Waiting…"}
+        {was && phase === "failed" && "Didn't start"}
+        {phase === "on" && url && (
+          <button type="button" className="btn btn-sm" onClick={() => onOpen(url)}>
+            <Icon name="open" size={13} />
+            Open
+          </button>
+        )}
+      </span>
+      {was && phase === "failed" && <FailedApp app={a} />}
+    </li>
+  );
+}
+
+/** One project's apps, folded unless it is the first; its header says how many are picked. */
+function ProjectGroup({ project, apps, defaultOpen, picked, children }: { project: string; apps: App[]; defaultOpen: boolean; picked: number; children: ReactNode }) {
+  const [open, setOpen] = useState(defaultOpen);
+  const id = useId();
+  return (
+    <li className={`ob-start-group${open ? " is-open" : ""}`}>
+      <h3 className="ob-start-group-title">
+        <button type="button" className="ob-start-group-toggle" aria-expanded={open} aria-controls={id} onClick={() => setOpen((v) => !v)}>
+          <Icon name={open ? "chevronDown" : "chevronRight"} size={14} />
+          {project}
+          <span className="ob-start-group-count">{picked ? `${picked} of ${apps.length} picked` : count(apps.length, "app")}</span>
+        </button>
+      </h3>
+      <ul id={id} className="ob-start-list" hidden={!open} aria-label={`Apps in ${project}`}>
+        {children}
+      </ul>
+    </li>
+  );
+}
+
 /** Step 8: start a few apps and see the first one load. */
 export function StartStep() {
   const { api, toast } = useApp();
@@ -51,8 +108,6 @@ export function StartStep() {
   const [started, setStarted] = useState<Set<string>>(new Set());
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const home = inferHome(runners);
-
   // Tick the main app of each project once the apps are known.
   useEffect(() => {
     if (picked === null && apps.length) setPicked(preselect(apps));
@@ -89,13 +144,19 @@ export function StartStep() {
   else if (started.size && waiting) status = sentence(`${count(waiting, "app")} still starting…`);
   else if (started.size && failed) status = sentence(`${count(failed, "app")} didn't start.`);
   else if (started.size) status = "Everything you picked is running.";
-  else if (chosen.size) status = sentence(`${count(chosen.size, "app")} picked.`);
+
+  const groups = byProject(apps);
+  const pick = (id: string, on: boolean) => {
+    const n = new Set(chosen);
+    if (on) n.add(id);
+    else n.delete(id);
+    setPicked(n);
+  };
 
   return (
     <StepLayout
-      icon="play"
-      title="Start something now?"
-      lead="Pick a few apps to start. Portplane starts dekit for their project, then each app, and shows you when its address works."
+      title="First start"
+      lead="Pick what to start now; everything else is one click away in Apps."
       busy={starting}
       footer={
         <StepFooter status={status}>
@@ -139,51 +200,26 @@ export function StartStep() {
               Couldn't start them: {error}
             </p>
           )}
-          <ul className="ob-start-list" aria-label="Apps">
-            {apps.map((a) => {
-              const was = started.has(a.id);
-              const phase = startPhase(a);
-              const tone = !was ? null : phase === "on" ? "ok" : phase === "failed" ? "bad" : "busy";
-              return (
-                <li key={a.id} className={`ob-start${was ? ` is-${phase}` : ""}`}>
-                  <label className="ob-start-pick">
-                    <input
-                      type="checkbox"
-                      checked={chosen.has(a.id)}
-                      disabled={started.size > 0}
-                      onChange={(e) => {
-                        const n = new Set(chosen);
-                        if (e.target.checked) n.add(a.id);
-                        else n.delete(a.id);
-                        setPicked(n);
-                      }}
-                    />
-                    {tone && <Mark tone={tone} label={phase} />}
-                    <span className="ob-start-name">{a.label}</span>
-                    <span className="ob-start-meta muted">
-                      {[a.project, a.worktree].filter(Boolean).join(" · ")}
-                      {a.hostname && <span className="mono"> · {a.hostname}</span>}
-                    </span>
-                  </label>
-                  <span className="ob-start-state">
-                    {was && phase === "starting" && "Starting…"}
-                    {was && phase === "waiting" && "Waiting…"}
-                    {was && phase === "failed" && "Didn't start"}
-                    {phase === "on" && urlOf(a) && (
-                      <button type="button" className="btn btn-sm" onClick={() => open(urlOf(a)!)}>
-                        <Icon name="open" size={13} />
-                        Open
-                      </button>
-                    )}
-                  </span>
-                  {was && phase === "failed" && <FailedApp app={a} />}
-                </li>
-              );
-            })}
-          </ul>
-          <p className="muted ob-note">
-            Apps from {runners.map((r) => shortenPath(r, home)).join(", ")}. The ones you don't start now are one click away in the Apps view.
-          </p>
+          {groups.length === 1 ? (
+            <ul className="ob-start-list" aria-label="Apps">
+              {groups[0].apps.map((a) => (
+                <StartRow key={a.id} app={a} picked={chosen.has(a.id)} started={started.has(a.id)} locked={started.size > 0} url={urlOf(a)} onPick={(on) => pick(a.id, on)} onOpen={open} />
+              ))}
+            </ul>
+          ) : (
+            <ul className="ob-start-groups" aria-label="Apps by project">
+              {groups.map((g, i) => {
+                const n = g.apps.filter((a) => chosen.has(a.id)).length;
+                return (
+                  <ProjectGroup key={g.project} project={g.project} apps={g.apps} picked={n} defaultOpen={i === 0}>
+                    {g.apps.map((a) => (
+                      <StartRow key={a.id} app={a} picked={chosen.has(a.id)} started={started.has(a.id)} locked={started.size > 0} url={urlOf(a)} onPick={(on) => pick(a.id, on)} onOpen={open} />
+                    ))}
+                  </ProjectGroup>
+                );
+              })}
+            </ul>
+          )}
         </>
       )}
     </StepLayout>

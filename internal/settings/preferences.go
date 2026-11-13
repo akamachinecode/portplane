@@ -32,7 +32,7 @@ type Preferences struct {
 type IconChoice struct {
 	Kind    string `json:"kind"`              // auto, initials or file
 	Text    string `json:"text,omitempty"`    // initials: up to 3 characters
-	Tint    int    `json:"tint,omitempty"`    // initials: 1–8, 0 for the name's own
+	Tint    int    `json:"tint,omitempty"`    // initials: 1–8, 0 for none (grey)
 	Machine string `json:"machine,omitempty"` // file: the machine the file is on
 	Path    string `json:"path,omitempty"`    // file: an absolute path
 }

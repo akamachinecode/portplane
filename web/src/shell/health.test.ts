@@ -21,11 +21,11 @@ describe("snapshotProblems", () => {
     expect(failed.fix?.pendingKey).toBe("app|local|/home/dev/code#my-monorepo/admin|start");
   });
 
-  it("explains missing tools and a runner that is down, with their fixes", () => {
+  it("explains missing tools, and notes a runner that is down, with their fixes", () => {
     expect(summary(snapshotProblems(mockSnapshot("degraded")))).toEqual([
       "error: admin failed [Start again]",
-      "warning: dekit isn't running for legacy-app [Start runner]",
       "info: portless isn't installed [See how to install]",
+      "info: dekit's runner for legacy-app is stopped [Start runner]",
     ]);
     expect(summary(snapshotProblems(mockSnapshot("readonly")))).toEqual(["warning: dekit isn't installed [See how to install]", "info: portless isn't installed [See how to install]"]);
   });
@@ -65,7 +65,8 @@ describe("problem sources", () => {
 
 describe("problemBadge", () => {
   it("counts errors and warnings, not notes", () => {
-    expect(problemBadge(snapshotProblems(mockSnapshot("degraded")))).toEqual({ count: 2, tone: "error" });
+    // the failed app; a stopped runner is a note (it starts with the first app)
+    expect(problemBadge(snapshotProblems(mockSnapshot("degraded")))).toEqual({ count: 1, tone: "error" });
     expect(problemBadge(snapshotProblems(mockSnapshot("readonly")))).toEqual({ count: 1, tone: "warning" });
     expect(problemBadge([])).toEqual({ count: 0, tone: null });
   });

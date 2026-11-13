@@ -3,6 +3,7 @@ import type { DoctorReport, Finding, FixKind } from "../../api/portless";
 import { Icon, Spinner, type IconName } from "../../components/Icon";
 import { ErrorState, LoadingState } from "../../components/States";
 import { useNow } from "../../hooks/useNow";
+import { ShortPath } from "./Fold";
 import { doctorSummary, FIX_LABELS, groupFindings, routeAge } from "../../lib/portless";
 import { PlanDialog } from "./PlanDialog";
 import { StatusGate } from "./ProxySection";
@@ -20,7 +21,7 @@ function Report({ report, running, run, at }: { report: DoctorReport; running: b
     <>
       <div className="section-bar">
         <p className="section-bar-text">
-          <strong>{doctorSummary(report)}</strong>
+          <strong>{doctorSummary(report).replace(/\.$/, "")}</strong>
           {at && <span className="muted"> · checked {routeAge(at, now) ?? "just now"} ago</span>}
         </p>
         <span className="spacer" />
@@ -37,17 +38,16 @@ function Report({ report, running, run, at }: { report: DoctorReport; running: b
                 <Icon name={STATUS_ICON[g.status]} size={16} />
                 <span className="sr-only">{STATUS_LABEL[g.status]}:</span>
               </span>
-              <div className="check-body">
-                <p className="check-title">{g.label}</p>
-                <ul className="check-findings">
-                  {g.findings.map((f, i) => (
-                    <li key={i} className={`finding finding-${f.status}`}>
-                      {f.message}
-                      {f.hint && f.status !== "ok" && <span className={`finding-hint${/^Run: /.test(f.hint) ? " is-command" : ""}`}>{f.hint}</span>}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              <p className="check-title">{g.label}</p>
+              <ul className="check-findings">
+                {g.findings.map((f, i) => (
+                  <li key={i} className={`finding finding-${f.status}`}>
+                    {f.message}
+                    {/* a fix button says what to do; the hint only when there is none */}
+                    {f.hint && f.status !== "ok" && !g.fixes.length && <span className={`finding-hint${/^Run: /.test(f.hint) ? " is-command" : ""}`}>{f.hint}</span>}
+                  </li>
+                ))}
+              </ul>
               {g.fixes.length > 0 && (
                 <div className="check-actions">
                   {g.fixes.map((x) => (
@@ -94,7 +94,9 @@ function Report({ report, running, run, at }: { report: DoctorReport; running: b
         {report.stateDir && (
           <div>
             <dt>State folder</dt>
-            <dd className="mono">{report.stateDir}</dd>
+            <dd>
+              <ShortPath path={report.stateDir} />
+            </dd>
           </div>
         )}
       </dl>
@@ -107,10 +109,17 @@ function Report({ report, running, run, at }: { report: DoctorReport; running: b
   );
 }
 
-/** portless doctor as a checklist, with a fix for each failure (plan §5.8). */
-export function DoctorSection() {
+/**
+ * portless doctor as a checklist, with a fix for each failure (plan §5.8).
+ * `onRun` tells the page it was asked to run (the palette's Run
+ * diagnostics), so a page that folds it can show the result.
+ */
+export function DoctorSection({ onRun }: { onRun?(): void } = {}) {
   const { state, reload } = usePortlessDoctor(true);
-  useIntent("run-doctor", () => void reload());
+  useIntent("run-doctor", () => {
+    onRun?.();
+    void reload();
+  });
   const report = valueOf(state);
   const running = state.status === "loading";
   return (

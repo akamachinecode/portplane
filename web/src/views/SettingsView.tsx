@@ -11,9 +11,9 @@ import "./SettingsView.css";
 /** One component per page, each in settings/, so they can change independently. */
 const SECTIONS: Record<SettingsSection, { Section: ComponentType; description?: ReactNode }> = {
   general: { Section: GeneralSection, description: "How Portplane starts and looks." },
-  notifications: { Section: NotificationsSection, description: "System notifications for what happens while you look elsewhere. Failures only, unless you turn on more." },
-  updates: { Section: UpdatesSection, description: "Portplane, dekit and portless each have their own releases. Portplane checks them when you ask, or once a day if you turn it on, and updates itself in one click." },
-  folders: { Section: FoldersSection, description: "The folders where your code lives. Portplane finds the projects and dev servers in each one." },
+  notifications: { Section: NotificationsSection, description: "System notifications, also while the window is closed: failures only, unless you turn on more." },
+  updates: { Section: UpdatesSection, description: "Portplane, dekit and portless each have their own releases. Portplane reads the latest versions from GitHub and npm when you ask, or once a day; it sends nothing about you and installs nothing until you click." },
+  folders: { Section: FoldersSection, description: "The folders where your code lives. Portplane reads the dekit.yaml files in them and marks open ports that serve from inside them; Set up finds the apps in a folder and writes that config for you." },
   advanced: { Section: AdvancedSection },
 };
 

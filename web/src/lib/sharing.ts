@@ -9,7 +9,7 @@ export const SHARE_KINDS: ShareKind[] = ["tailscale", "funnel", "ngrok", "cloudf
 
 /** What each share is called on its switch. */
 export const SHARE_TITLES: Record<ShareKind, string> = {
-  tailscale: "Share on my tailnet",
+  tailscale: "Share on your tailnet",
   funnel: "Share publicly with Tailscale Funnel",
   ngrok: "Share publicly with ngrok",
   cloudflare: "Share publicly with Cloudflare",
@@ -23,12 +23,12 @@ export const SHARE_NAMES: Record<ShareKind, string> = {
   cloudflare: "Cloudflare",
 };
 
-/** What each one does, in a sentence. */
+/** Where a shared app opens, in a sentence. Who can open it is the dialog's title and its warning, said once. */
 export const SHARE_BLURBS: Record<ShareKind, string> = {
-  tailscale: "People signed in to your Tailscale network open it at this computer's tailnet address.",
-  funnel: "Anyone on the internet opens it at this computer's tailnet address, through Tailscale Funnel.",
-  ngrok: "Anyone on the internet opens it at a random ngrok address.",
-  cloudflare: "Anyone on the internet opens it at a random trycloudflare.com address that changes on every restart.",
+  tailscale: "It opens at this computer's tailnet address.",
+  funnel: "It opens at this computer's tailnet address, through Tailscale Funnel.",
+  ngrok: "It opens at a random ngrok address.",
+  cloudflare: "It opens at a random trycloudflare.com address that changes on every restart.",
 };
 
 export function isPublic(kind: ShareKind): boolean {
@@ -77,13 +77,6 @@ export function replacedBy(info: ShareInfo, kind: ShareKind): ShareKind | undefi
 /** Public shares first, then by address: what the Sharing list shows. */
 export function sortShares(shares: ShareView[]): ShareView[] {
   return [...shares].sort((a, b) => Number(b.public) - Number(a.public) || a.hostname.localeCompare(b.hostname) || a.kind.localeCompare(b.kind));
-}
-
-/** "Ready", "1 thing missing", "3 things missing". */
-export function readiness(reqs: Requirement[]): string {
-  const n = reqs.filter((r) => !r.ok).length;
-  if (n === 0) return "Ready";
-  return `${n} ${n === 1 ? "thing" : "things"} missing`;
 }
 
 // ---- LAN ----

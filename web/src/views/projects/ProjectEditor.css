@@ -12,54 +12,16 @@
   padding-left: var(--space-4);
 }
 
-.editor-tabs {
+.editor-bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-1);
-  padding-bottom: var(--space-2);
-  border-bottom: 1px solid var(--border);
-}
-
-.editor-tab {
-  height: var(--control-h);
-  padding: 0 var(--space-3);
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--text-2);
-  font-size: var(--text-sm);
-  font-weight: 550;
-  cursor: pointer;
-}
-
-.editor-tab:hover {
-  background: var(--surface-2);
-  color: var(--text);
-}
-
-.editor-tab[aria-selected="true"] {
-  background: var(--accent-soft);
-  color: var(--accent-text);
+  gap: var(--space-2);
 }
 
 .editor-panel {
   min-width: 0;
   container: editor / inline-size;
-}
-
-/* While a project's config is edited, it gets the whole width: the list of
-   projects steps aside (its "All projects" link comes back). */
-.projects-layout:has(.editor-tab[aria-selected="true"]:not([data-tab="apps"])) {
-  grid-template-columns: minmax(0, 1fr);
-}
-
-.projects-layout:has(.editor-tab[aria-selected="true"]:not([data-tab="apps"])) .runner-list {
-  display: none;
-}
-
-.projects-layout:has(.editor-tab[aria-selected="true"]:not([data-tab="apps"])) .back-link {
-  display: inline-flex;
 }
 
 .proj-blocks {
@@ -84,9 +46,19 @@
 .task-tree {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-4);
   position: sticky;
   top: var(--space-4);
+}
+
+.task-tree-settings {
+  flex: none;
+  height: 32px;
+  font-weight: var(--weight-medium);
+}
+
+.task-tree-settings .icon {
+  color: var(--text-3);
 }
 
 .task-tree-file-name {
@@ -95,9 +67,11 @@
   align-items: center;
   gap: 6px;
   margin-bottom: var(--space-1);
+  padding: 0 var(--space-2);
   color: var(--text-2);
   font-size: var(--text-xs);
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 .task-tree-file-name .icon {
@@ -119,8 +93,8 @@
 
 .task-tree-item {
   display: flex;
-  align-items: center;
-  min-height: 30px;
+  align-items: flex-start;
+  min-height: 32px;
 }
 
 .task-tree-item .menu-wrap {
@@ -133,35 +107,59 @@
   opacity: 1;
 }
 
+@media (hover: none) {
+  .task-tree-item .menu-wrap {
+    opacity: 1;
+  }
+}
+
+/* names wrap instead of being cut: a long folder path stays readable */
 .task-tree-folder,
 .task-tree-task {
   display: flex;
   flex: 1;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 6px;
+  gap: 2px 6px;
   min-width: 0;
-  height: 28px;
-  padding: 0 var(--space-2);
-  overflow: hidden;
+  min-height: 30px;
+  padding: 4px var(--space-2);
   border: 0;
   border-radius: var(--radius-sm);
   background: transparent;
   color: inherit;
   font-size: var(--text-sm);
+  line-height: 1.4;
   text-align: left;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  cursor: pointer;
 }
 
 .task-tree-folder {
   color: var(--text-2);
 }
 
-.task-tree-task {
-  cursor: pointer;
+.task-tree-folder .icon {
+  flex: none;
+  color: var(--text-3);
 }
 
+.task-tree-chevron {
+  transition: transform var(--dur-fast);
+}
+
+.task-tree-folder[aria-expanded="true"] .task-tree-chevron {
+  transform: rotate(90deg);
+}
+
+.task-tree-folder:hover,
 .task-tree-task:hover {
   background: var(--surface-2);
+}
+
+.task-tree-lock {
+  display: inline-flex;
+  color: var(--text-3);
 }
 
 .task-tree-task[aria-current="true"] {
@@ -170,9 +168,7 @@
 }
 
 .task-tree-task .muted {
-  overflow: hidden;
   font-size: var(--text-xs);
-  text-overflow: ellipsis;
 }
 
 .task-editor {
@@ -196,7 +192,7 @@
 .task-form {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: 0;
   container: taskform / inline-size;
 }
 
@@ -209,24 +205,68 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
+  padding-bottom: var(--space-3);
   color: var(--text-2);
   font-size: var(--text-xs);
 }
 
+/* a group of fields: folded to one line that says what it holds */
 .form-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  padding-top: var(--space-3);
   border-top: 1px solid var(--border);
 }
 
+.form-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px var(--space-3);
+  padding: var(--space-3) 0 var(--space-3) 22px;
+  position: relative;
+  list-style: none;
+  cursor: pointer;
+}
+
+.form-section-head::-webkit-details-marker {
+  display: none;
+}
+
+.form-section-head:hover .form-section-title {
+  color: var(--accent-text);
+}
+
+.form-section-chevron {
+  position: absolute;
+  top: calc(var(--space-3) + 3px);
+  left: 0;
+  color: var(--text-3);
+  transition: transform var(--dur-fast);
+}
+
+details[open] > summary > .form-section-chevron {
+  transform: rotate(90deg);
+}
+
 .form-section-title {
+  color: var(--text);
+  font-size: var(--text-md);
+  font-weight: var(--weight-strong);
+}
+
+.form-section-summary {
+  min-width: 0;
+  overflow: hidden;
   color: var(--text-2);
-  font-size: var(--text-xs);
-  font-weight: 650;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.form-section-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-1) 0 var(--space-6) 22px;
 }
 
 .form-row {
@@ -236,10 +276,40 @@
 }
 
 .form-row-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
   padding-top: 6px;
   color: var(--text);
   font-size: var(--text-sm);
   font-weight: 550;
+}
+
+/* the (i) next to a label: dekit's help for the field, on demand */
+.form-help-btn {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  margin-top: -1px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-3);
+  cursor: pointer;
+}
+
+.form-help-btn:hover,
+.form-help-btn.is-on {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.form-help {
+  max-width: 64ch;
+  line-height: 1.55;
 }
 
 .form-row-control {
@@ -252,7 +322,6 @@
 .form-row-control > .input,
 .form-row-control > select.input,
 .picker > .input,
-.argv-paste > .input,
 .wizard-step > .input,
 .field > .input-row > .input,
 .kv-table .input,
@@ -346,22 +415,26 @@
   max-width: 520px;
 }
 
+/* Save and Discard: only while something changed, stuck to the bottom of
+   the scroller; the scroller's scroll-padding keeps a focused field clear. */
 .form-actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
   position: sticky;
   bottom: 0;
   z-index: 1;
+  margin-top: var(--space-2);
   padding: var(--space-3) 0;
   border-top: 1px solid var(--border);
-  background: var(--surface);
+  background: var(--bg);
+  box-shadow: var(--shadow-sticky);
 }
 
 .form-dirty {
-  color: var(--warn);
-  font-size: var(--text-xs);
-  font-weight: 550;
+  color: var(--text-2);
+  font-size: var(--text-sm);
 }
 
 .form-readonly {
@@ -404,10 +477,15 @@
   list-style: none;
 }
 
-.argv-row {
+.argv-row,
+.command-input {
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+.command-input .input {
+  flex: 1 1 auto;
 }
 
 .argv-n {
@@ -415,7 +493,7 @@
   width: 18px;
   color: var(--text-3);
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 12px;
   text-align: right;
 }
 
@@ -435,39 +513,17 @@
   gap: var(--space-1);
 }
 
-.argv-preview {
-  overflow: hidden;
-  max-width: 100%;
-  color: var(--text-3);
-  font-size: 11.5px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.argv-paste {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-2);
-  border: 1px dashed var(--border-strong);
-  border-radius: var(--radius-sm);
-}
-
-.argv-paste-actions {
-  display: flex;
-  gap: var(--space-2);
-}
-
 .argv-warn {
   display: flex;
   gap: 6px;
-  color: var(--warn);
-  font-size: var(--text-xs);
+  color: var(--text-2);
+  font-size: var(--text-sm);
 }
 
 .argv-warn .icon {
   flex: none;
-  margin-top: 2px;
+  margin-top: 3px;
+  color: var(--warn);
 }
 
 .kv {
@@ -486,7 +542,7 @@
 .kv-table th {
   padding: 0 4px 3px;
   color: var(--text-3);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   text-align: left;
 }
@@ -522,7 +578,8 @@
   font-style: italic;
 }
 
-.chips {
+/* the tags input: names scoped to it (.chips and .chip are portless pages' too) */
+.tag-field {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -535,17 +592,17 @@
   background: var(--surface);
 }
 
-.chips:focus-within {
+.tag-field:focus-within {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
-.chips-list {
+.tag-field-list {
   display: contents;
   list-style: none;
 }
 
-.chip {
+.tag-chip {
   display: inline-flex;
   align-items: center;
   gap: 2px;
@@ -558,7 +615,7 @@
   font-weight: 550;
 }
 
-.chip-x {
+.tag-chip-x {
   display: grid;
   place-items: center;
   width: 18px;
@@ -570,11 +627,11 @@
   cursor: pointer;
 }
 
-.chip-x:hover {
+.tag-chip-x:hover {
   background: var(--mark-bg);
 }
 
-.chips-input.input {
+.tag-field-input.input {
   flex: 1 1 100px;
   height: 24px;
   border: 0;
@@ -640,6 +697,10 @@
   font-size: var(--text-xs);
 }
 
+.picker-more {
+  align-self: flex-start;
+}
+
 .radio-list {
   display: flex;
   flex-direction: column;
@@ -676,6 +737,7 @@
   display: block;
   color: var(--text-2);
   font-size: var(--text-xs);
+  line-height: 1.5;
 }
 
 /* ---- settings ---- */
@@ -683,16 +745,38 @@
 .settings-panel {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
 }
 
+/* each setting folds to a line with its value, like the form's groups */
 .settings-card {
+  border-top: 1px solid var(--border);
+}
+
+.settings-card:last-child {
+  border-bottom: 1px solid var(--border);
+}
+
+.settings-card-head {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-4);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px var(--space-3);
+  position: relative;
+  padding: var(--space-3) 0 var(--space-3) 22px;
+  list-style: none;
+  cursor: pointer;
+}
+
+.settings-card-head::-webkit-details-marker {
+  display: none;
+}
+
+.settings-card-head:hover .settings-card-title {
+  color: var(--accent-text);
+}
+
+.settings-card-head .form-section-chevron {
+  top: calc(var(--space-3) + 3px);
 }
 
 .settings-card-title {
@@ -700,9 +784,28 @@
   font-weight: 600;
 }
 
-.settings-card-help {
+.settings-card-value {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
   color: var(--text-2);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: 0 0 var(--space-6) 22px;
+}
+
+.settings-card-help {
+  max-width: 64ch;
+  color: var(--text-2);
+  font-size: var(--text-sm);
+  line-height: 1.55;
 }
 
 .settings-card-actions {
@@ -710,10 +813,6 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
-}
-
-.settings-card .task-form .form-actions {
-  background: transparent;
 }
 
 .settings-text {
@@ -796,7 +895,7 @@
   border-right: 1px solid var(--border);
   color: var(--text-3);
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: var(--text-xs);
   line-height: 20px;
   text-align: right;
   user-select: none;
@@ -815,7 +914,7 @@
   outline: none;
   background: transparent;
   color: var(--text);
-  font-size: 12px;
+  font-size: var(--text-xs);
   line-height: 20px;
   tab-size: 2;
   resize: none;
@@ -995,7 +1094,7 @@
 
 .suggestion-cmd {
   overflow-wrap: anywhere;
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 
 .suggestion-src {
@@ -1012,7 +1111,7 @@
   align-items: center;
   gap: 4px;
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 
 .name-affix-row .input {
@@ -1084,4 +1183,12 @@
   .tasks-panel.has-task .task-editor-head .icon-btn {
     display: none;
   }
+}
+
+/* In the app drawer the scroller has bottom padding: the footer reaches its edge. */
+.config-tab .form-actions {
+  background: var(--surface-raised);
+  bottom: calc(-1 * var(--space-10));
+  margin-bottom: calc(-1 * var(--space-10));
+  padding-bottom: calc(var(--space-3) + var(--space-10));
 }

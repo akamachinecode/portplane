@@ -55,7 +55,7 @@ export function ToolBanners({ ms }: { ms: MachineSnapshot }) {
   );
 }
 
-/** A dekit project whose runner is down: its apps can't start until it's up. */
+/** A dekit project whose runner is down (it starts with the first app started there). */
 export function RunnerBanners({ ms, home }: { ms: MachineSnapshot; home: string | undefined }) {
   const { api, pending } = useApp();
   const machine = ms.machine.id;

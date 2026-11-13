@@ -6,7 +6,7 @@ import { Dialog } from "../../components/Dialog";
 import { Spinner } from "../../components/Icon";
 import { joinCommand } from "../../lib/dekit/shell";
 import { HelpLink } from "../runners/DekitHelp";
-import { ArgvEditor, Chips, KeyValueEditor, TaskPicker } from "./fields";
+import { Chips, CommandField, KeyValueEditor, TaskPicker } from "./fields";
 import type { EnvRow } from "../../lib/dekit/taskForm";
 
 // "Run a command…" (plan §4.7): dekit spawn. The task runs once in the
@@ -80,9 +80,9 @@ export function RunCommandDialog({ runner, tasks, initialCwd, onClose, onStarted
         </>
       }
     >
-      <p className="dialog-text">Runs once in this project's runner, without changing dekit.yaml. It shows in Apps with its output until you remove it.</p>
+      <p className="dialog-text">Runs once, without changing dekit.yaml. It stays in Apps until you remove it.</p>
       <Field label="Command">
-        <ArgvEditor value={cmd} onChange={setCmd} label="Command" placeholder="pnpm" />
+        <CommandField value={cmd} onChange={setCmd} label="Command" placeholder="pnpm run migrate" />
       </Field>
       <div className="form-inline">
         <label className="form-inline-field" htmlFor={ids.path}>
@@ -106,8 +106,12 @@ export function RunCommandDialog({ runner, tasks, initialCwd, onClose, onStarted
         <Field label="Tags">
           <Chips value={tags} onChange={setTags} label="Tags" />
         </Field>
+        {words[0] && (
+          <Field label="As a dekit command">
+            <CommandLine command={`${preview.slice(0, -words.length).join(" ")} ${joinCommand(words)}`} />
+          </Field>
+        )}
       </details>
-      {words[0] && <CommandLine command={`${preview.slice(0, -words.length).join(" ")} ${joinCommand(words)}`} />}
       {error && (
         <p className="field-error" role="alert">
           {error}

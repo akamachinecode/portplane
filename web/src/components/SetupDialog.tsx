@@ -2,16 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { errorText, isStale } from "../api/errors";
 import { useSetupProposal } from "../hooks/useSetupProposal";
 import { inferHome, shortenPath } from "../lib/format";
-import {
-  applyMessage,
-  changedFiles,
-  countsText,
-  missingRequirements,
-  NO_EDITS,
-  proposalCounts,
-  writeBlocker,
-  type SetupEdits,
-} from "../lib/setup";
+import { applyMessage, changedFiles, isIncluded, missingRequirements, NO_EDITS, writeBlocker, type SetupEdits } from "../lib/setup";
 import { useApp } from "./AppContext";
 import { Banner } from "./Banner";
 import { Dialog } from "./Dialog";
@@ -115,7 +106,8 @@ export function SetupDialog({ folder, onClose }: { folder: string; onClose(): vo
   const missing = check.status === "ok" ? missingRequirements(check.check) : [];
   const available = (s: Step) => s !== "files" || scan.proposal !== null;
   const done = (s: Step) => (s === "tools" ? ready && step !== "tools" : s === "apps" ? step === "files" : false);
-  const title = `Set up ${shortenPath(folder, inferHome([folder]))}`;
+  const where = shortenPath(folder, inferHome([folder]));
+  const title = `Set up ${where}`;
 
   const stepper = (
     <nav className="steps" aria-label="Setup steps">
@@ -166,12 +158,13 @@ export function SetupDialog({ folder, onClose }: { folder: string; onClose(): vo
       </>
     );
   } else if (step === "apps") {
+    const included = scan.proposal ? scan.proposal.apps.filter((a) => isIncluded(a, edits)).length : 0;
     footer = (
       <>
         <button type="button" className="btn btn-ghost" onClick={() => go("tools")}>
           Back
         </button>
-        {status(scan.proposal ? countsText(proposalCounts(scan.proposal)) : scan.scanning ? "Scanning…" : null)}
+        {status(scan.proposal ? (included === 1 ? "One app to set up" : `${included || "No"} apps to set up`) : scan.scanning ? "Scanning…" : null)}
         <button type="button" className="btn btn-primary" onClick={() => go("files")} disabled={!scan.proposal}>
           Next: review changes
           <Icon name="chevronRight" size={14} />
@@ -231,7 +224,7 @@ export function SetupDialog({ folder, onClose }: { folder: string; onClose(): vo
           ) : (
             !scan.error && (
               <p className="dialog-loading">
-                <Spinner /> Looking for apps in <span className="mono">{folder}</span>…
+                <Spinner /> Looking for apps in <span className="mono">{where}</span>…
               </p>
             )
           )}
@@ -246,14 +239,11 @@ export function SetupDialog({ folder, onClose }: { folder: string; onClose(): vo
             </Banner>
           )}
           <p className="setup-lead">
-            Generated tasks go to <code>.portplane/tasks.yaml</code>, loaded from <code>dekit.yaml</code>. Tasks you write by hand in{" "}
-            <code>dekit.yaml</code> always win.
+            Generated tasks go to <code>.portplane/tasks.yaml</code>, loaded from <code>dekit.yaml</code>; tasks you write by hand there always win.
           </p>
-          {[...scan.proposal.files]
-            .sort((a, b) => Number(b.changed) - Number(a.changed))
-            .map((f) => (
-              <FileDiff key={`${f.path}\u0000${scan.proposal!.digest}`} file={f} folder={folder} />
-            ))}
+          {changedFiles(scan.proposal).map((f) => (
+            <FileDiff key={`${f.path}\u0000${scan.proposal!.digest}`} file={f} folder={folder} />
+          ))}
           {writeError && (
             <p className="field-error" role="alert">
               Couldn't write the config: {writeError}

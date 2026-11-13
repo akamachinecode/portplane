@@ -48,5 +48,6 @@ Accepted ADRs are not rewritten. A decision that changes gets a new ADR that sup
 | [0029](0029-visual-system.md) | A quieter visual system: neutral greys, Portplane's green as the one colour, Inter and Geist Mono, more room | Accepted |
 | [0030](0030-app-icons.md) | Give every app and project an icon: the user's choice, else its own favicon or logo, else its initials | Accepted |
 | [0031](0031-self-update.md) | Portplane updates itself on a click, and asks once whether to check every day | Accepted |
+| [0032](0032-calm-by-default.md) | Calm by default: every fact said once, colour only for state, details on demand, type that is easy to read | Accepted |
 
 Pending decisions are tracked in [../open-questions.md](../open-questions.md).

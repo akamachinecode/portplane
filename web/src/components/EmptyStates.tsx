@@ -1,6 +1,5 @@
-import { useMemo } from "react";
 import type { MachineSnapshot } from "../api/types";
-import { checklist, checklistVisible } from "../lib/gettingStarted";
+import { inferHome, shortenPath } from "../lib/format";
 import { href } from "../lib/router";
 import { useShell } from "../shell/ShellContext";
 import { resumeStep } from "../views/onboarding/steps";
@@ -15,17 +14,15 @@ import "./EmptyStates.css";
  */
 export function FirstRun() {
   const { api } = useApp();
-  const { preferences, snapshot } = useShell();
-  const local = snapshot?.machines.find((m) => m.machine.local);
-  const steps = useMemo(() => checklist(local), [local]);
+  const { preferences } = useShell();
   const step = preferences.status === "ok" ? resumeStep(preferences.value.onboarding) : "welcome";
   const add = async (path: string) => {
     const current = await api.settings();
     if (current.folders.includes(path)) return;
     await api.saveSettings({ folders: [...current.folders, path] });
   };
-  // "Get started" above says the same, with every step.
-  if (checklistVisible(preferences.status === "ok" ? preferences.value : null, steps)) return null;
+  // The sidebar's setup card points at Setup too; the empty Apps page still
+  // says what to do, or it would show nothing at all.
   return (
     <section className="panel first-run" aria-labelledby="first-run-title">
       <span className="panel-icon">
@@ -34,57 +31,76 @@ export function FirstRun() {
       <h3 id="first-run-title" className="panel-title">
         Set up Portplane
       </h3>
-      <p className="panel-text">
-        The guided setup checks this computer, installs dekit and portless if they're missing, finds the apps in your project folders and starts the
-        first one. It takes about five minutes.
-      </p>
+      <p className="panel-text">Setup finds the apps in your project folders and gives each one an address, in about five minutes.</p>
       <a className="btn btn-primary first-run-start" href={href({ view: "onboarding", step })}>
         <Icon name="wand" size={14} />
-        {step === "welcome" ? "Start the guided setup" : "Continue the guided setup"}
+        {step === "welcome" ? "Start Setup" : "Continue Setup"}
       </a>
       <details className="first-run-manual">
         <summary>Or just add a folder</summary>
-        <p className="panel-text">
-          Portplane reads the <code>dekit.yaml</code> files in it and shows every dev server they define, with its state and its URL.
-        </p>
+        <p className="panel-text">Portplane shows every dev server its dekit.yaml files define.</p>
         <FolderInput onAdd={add} />
       </details>
     </section>
   );
 }
 
-/** Folders are set, but none holds a dekit.yaml. */
+/** Folders are set, but none holds a dekit.yaml: one message, one action (ADR-0032). */
 export function NoApps({ ms }: { ms: MachineSnapshot }) {
   const { openSettings, openSetup, openEditMachine } = useApp();
   const local = ms.machine.local;
+  const home = inferHome(ms.folders);
+  const one = ms.folders.length === 1 ? ms.folders[0] : null;
+  const titleId = `no-apps-${ms.machine.id}`;
+  const edit = (
+    <button type="button" className="link-btn no-apps-edit" onClick={local ? openSettings : () => openEditMachine(ms.machine.id)}>
+      Edit folders
+    </button>
+  );
   return (
-    <section className="panel" aria-labelledby={`no-apps-${ms.machine.id}`}>
-      <h3 id={`no-apps-${ms.machine.id}`} className="panel-title">
-        No dev servers found yet
+    <section className="panel no-apps" aria-labelledby={titleId}>
+      <h3 id={titleId} className="panel-title">
+        {one ? (
+          <>
+            No apps in{" "}
+            <span className="mono" title={one}>
+              {shortenPath(one, home)}
+            </span>{" "}
+            yet
+          </>
+        ) : (
+          "No apps in your folders yet"
+        )}
       </h3>
       <p className="panel-text">
-        Portplane reads <code>dekit.yaml</code> files in {ms.folders.length === 1 ? "this folder" : "these folders"}, and{" "}
-        {ms.folders.length === 1 ? "it has none" : "none of them has one"}. Setup can find your apps and write one for you{local ? "" : `, on ${ms.machine.name}`}.
+        Setup finds the dev servers {one ? "in it" : "in each one"}
+        {local ? "" : ` on ${ms.machine.name}`} and writes their dekit config, showing you every change first.
       </p>
-      <ul className="panel-folders">
-        {ms.folders.map((f) => (
-          <li key={f} className="panel-folder">
-            <span className="mono">{f}</span>
-            <button type="button" className="btn btn-sm btn-primary" onClick={() => openSetup(f, ms.machine.id)}>
-              <Icon name="wand" size={14} />
-              Set up this folder
-            </button>
-          </li>
-        ))}
-      </ul>
-      <p className="panel-text">
-        You see every change before anything is written, and the result is plain dekit config you can keep using without
-        Portplane.
-      </p>
-      <button type="button" className="btn" onClick={local ? openSettings : () => openEditMachine(ms.machine.id)}>
-        <Icon name="folder" size={14} />
-        Edit folders
-      </button>
+      {one ? (
+        <div className="no-apps-actions">
+          <button type="button" className="btn btn-primary" onClick={() => openSetup(one, ms.machine.id)}>
+            <Icon name="wand" size={14} />
+            Set up this folder
+          </button>
+          {edit}
+        </div>
+      ) : (
+        <>
+          <ul className="no-apps-folders">
+            {ms.folders.map((f) => (
+              <li key={f}>
+                <span className="mono" title={f}>
+                  {shortenPath(f, home)}
+                </span>
+                <button type="button" className="btn btn-sm" onClick={() => openSetup(f, ms.machine.id)}>
+                  Set up…
+                </button>
+              </li>
+            ))}
+          </ul>
+          <div className="no-apps-actions">{edit}</div>
+        </>
+      )}
     </section>
   );
 }

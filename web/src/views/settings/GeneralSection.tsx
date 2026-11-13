@@ -113,7 +113,7 @@ function ShowChecklist() {
   return (
     <Switch
       label="Show Set up Portplane in the sidebar"
-      description="The steps from nothing to your first app at https://….localhost, ticked as each one is done. It moves to the foot of the sidebar once they all are."
+      description="Until every step is done; then Setup moves to the foot of the sidebar."
       checked={!hidden}
       onChange={(show) =>
         void updatePreferences((p) => {
@@ -136,7 +136,7 @@ export function GeneralSection() {
       <Appearance />
       <SettingsGroup title="Setup">
         <ShowChecklist />
-        <SettingRow label="Setup" description="What was checked, installed and set up on this computer, step by step. Any step can be done again from there.">
+        <SettingRow label="Setup" description="Every step, what it found, and a way to do it again.">
           <a className="btn" href={href({ view: "onboarding" })}>
             <Icon name="timeline" size={14} />
             Open Setup

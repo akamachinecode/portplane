@@ -308,7 +308,7 @@ func (p *portlessAPI) overview(ctx context.Context) (SharingOverview, error) {
 			sv := ShareView{Hostname: v.Hostname, Kind: s.Kind, URL: s.URL, Public: portless.SharePublic(s.Kind), Alive: v.Alive, Owner: v.Owner}
 			switch {
 			case !v.Alive:
-				sv.Reason = "The app that shared it has stopped. Clean stale routes removes it."
+				sv.Reason = "The app that shared it has stopped. Cleaning up stale addresses removes it."
 			case v.Owner != nil && v.Owner.Kind == "app" && v.Owner.AppID != "":
 				if sc, err := p.resolveShare(ctx, v.Owner.Machine, v.Owner.AppID); err == nil {
 					sv.Editable, sv.Reason = sc.info.Editable, sc.info.Reason

@@ -11,6 +11,7 @@ import { IconButton } from "../../components/IconButton";
 import { JobCard } from "../../components/JobCard";
 import { EmptyState, ErrorState, LoadingState } from "../../components/States";
 import { StateDot } from "../../components/StateDot";
+import { inferHome, shortenPath } from "../../lib/format";
 import { COMPOSE_STATE_LABELS, composeFileFrom, composeSummary } from "../../lib/sharing";
 import { useShell } from "../../shell/ShellContext";
 import { StatusGate } from "./ProxySection";
@@ -189,15 +190,14 @@ function Project({ p, tld }: { p: ComposeProject; tld: string }) {
       </header>
       <p className="compose-file">
         {p.file ? (
-          <>
-            <span className="mono path-value">{p.file}</span>
-            <span className="muted"> · found from {composeFileFrom(p)}</span>
-          </>
+          <span className="mono path-value" title={`${p.file}\nFound from ${composeFileFrom(p)}`}>
+            {shortenPath(p.file, inferHome([p.file]))}
+          </span>
         ) : (
           <span className="muted">Portplane hasn't found this project's compose file; Start asks for it.</span>
         )}
       </p>
-      {p.state === "down" && <p className="fact-note">portless brought this project down, so it keeps nothing about it. Portplane remembers the file it was started with.</p>}
+      {p.state === "down" && <p className="fact-note">Brought down: portless keeps nothing about it, so Portplane remembers its file.</p>}
       {p.services.length > 0 && (
         <div className="table-wrap">
           <table className="table compose-table">
@@ -302,7 +302,8 @@ export function ComposeSection() {
                 <Icon name="restart" size={13} />
                 Refresh
               </button>
-              <button type="button" className="btn btn-sm btn-primary" disabled={!ov.docker} onClick={() => setAdding(true)}>
+              {/* neutral: Addresses' one green button is New alias */}
+              <button type="button" className="btn btn-sm" disabled={!ov.docker} onClick={() => setAdding(true)}>
                 <Icon name="plus" size={13} />
                 Start a compose project…
               </button>

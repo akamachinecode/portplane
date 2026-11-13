@@ -8,7 +8,7 @@ import type { StepId } from "../views/onboarding/steps";
 // from what the guided setup remembers, so a tool installed from a terminal
 // ticks its item too.
 
-export type ChecklistId = "tools" | "https" | "projects" | "start";
+export type ChecklistId = "tools" | "https" | "projects";
 
 export interface ChecklistItem {
   id: ChecklistId;
@@ -30,7 +30,6 @@ export function checklist(local: MachineSnapshot | undefined): ChecklistItem[] {
   const https = !!tools?.proxyRunning && !!tools?.proxyHttps;
   const services = (local?.apps ?? []).filter((a) => a.kind !== "job");
   const hasProjects = (local?.folders.length ?? 0) > 0 && services.length > 0;
-  const started = services.some((a) => a.state === "on" || a.state === "starting");
   return [
     {
       id: "tools",
@@ -61,16 +60,6 @@ export function checklist(local: MachineSnapshot | undefined): ChecklistItem[] {
       done: hasProjects,
       step: "folders",
       action: "Choose folders",
-    },
-    {
-      id: "start",
-      title: "Start your first app",
-      summary: started ? "Something is running" : "And open it at its address",
-      body: "Start an app and open it at its https://….localhost address. Its output, configuration and URL are one click away in its details.",
-      icon: "play",
-      done: started,
-      step: "start",
-      action: "Start an app",
     },
   ];
 }

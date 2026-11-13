@@ -78,14 +78,16 @@ export function MachineSection({ ms, projects, filtering, renderProjects, showHe
     <section className="machine" aria-labelledby={headingId}>
       <header className={showHeader ? "machine-head" : "machine-head sr-only"}>
         <Icon name="machine" size={15} className="machine-icon" />
-        <h2 className="machine-name" id={headingId}>
+        <h2 className="machine-name" id={headingId} title={meta || undefined}>
           {machine.name}
         </h2>
-        {meta && <span className="machine-meta">{meta}</span>}
-        <span className={`pill pill-${machine.status}`}>
-          <StateDot state={machine.status} />
-          {STATUS_LABEL[machine.status] ?? machine.status}
-        </span>
+        {/* online is the normal case: only a machine that isn't says so */}
+        {machine.status !== "online" && (
+          <span className={`pill pill-${machine.status}`}>
+            <StateDot state={machine.status} />
+            {STATUS_LABEL[machine.status] ?? machine.status}
+          </span>
+        )}
         {!machine.local && (
           <span className="machine-actions">
             <Menu

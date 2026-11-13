@@ -383,7 +383,7 @@ func (p *portlessAPI) action(r *http.Request, name string) (action, error) {
 			a.plan.Title = "Force-stop orphaned servers"
 			a.plan.Summary = "Removes routes whose portless process is gone and kills the dev servers still holding their ports at once (SIGKILL). Unsaved work in those servers is lost."
 		} else {
-			a.plan.Title = "Clean stale routes"
+			a.plan.Title = "Clean up stale addresses"
 			a.plan.Summary = "Removes routes whose portless process is gone, and asks the dev servers still holding their ports to stop (SIGTERM)."
 		}
 		s, err := p.portlessStep(a.plan.Title, "", false, portless.PruneArgs(force)...)

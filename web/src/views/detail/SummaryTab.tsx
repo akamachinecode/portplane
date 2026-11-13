@@ -3,15 +3,16 @@ import type { App } from "../../api/types";
 import { copyWithToast } from "../../components/appActions";
 import { useApp } from "../../components/AppContext";
 import { ExcerptPanel } from "../../components/ExcerptPanel";
+import { Fold } from "../../components/Fold";
 import { Icon } from "../../components/Icon";
 import { IconButton } from "../../components/IconButton";
 import { StateDot } from "../../components/StateDot";
-import { appHref, copyableUrl, isAlive } from "../../lib/apps";
+import { appHref, copyableUrl } from "../../lib/apps";
 import { dekitCommand, displayHost, inferHome, shellQuote, shortenPath, stateLabel } from "../../lib/format";
 import { appRoute, href as routeHref } from "../../lib/router";
 import type { DetailTabProps } from "../AppDetail";
 import { DekitHelpHost } from "../runners/DekitHelp";
-import { WhySection } from "./WhySection";
+import { DepGraph, WhySection } from "./WhySection";
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -61,16 +62,10 @@ export function SummaryTab({ ms, app }: DetailTabProps) {
         </section>
       )}
 
+      {/* What a person needs: where it is and where it lives. The state is
+          in the header and explained just below ("Why it is like this"). */}
       <dl className="facts">
-        <Row label="State">
-          <span className="fact-state">
-            <StateDot state={app.state} />
-            {stateLabel(app.state)}
-            {app.rawState && app.rawState !== app.state && <span className="muted"> (dekit: {app.rawState})</span>}
-            {app.detail && <span className="muted"> · {app.detail}</span>}
-          </span>
-        </Row>
-        <Row label="URL">
+        <Row label="Address">
           {href || url ? (
             <span className="fact-inline">
               {href ? (
@@ -89,12 +84,11 @@ export function SummaryTab({ ms, app }: DetailTabProps) {
           )}
           {!href && (url || app.hostname) && <p className="fact-note">Works once the app runs{!machine.local ? ", through Portplane's SSH tunnel" : ""}.</p>}
         </Row>
-        <Row label={ports.length > 1 ? "Ports" : "Port"}>{ports.length ? <span className="mono">{ports.map((p) => `:${p}`).join("  ")}</span> : <span className="muted">{isAlive(app.state) ? "Not listening yet" : "None while it's off"}</span>}</Row>
-        {app.pid ? (
-          <Row label="PID">
-            <span className="mono">{app.pid}</span>
+        {ports.length > 0 && (
+          <Row label={ports.length > 1 ? "Ports" : "Port"}>
+            <span className="mono">{ports.map((p) => `:${p}`).join("  ")}</span>
           </Row>
-        ) : null}
+        )}
         {app.dir && (
           <Row label="Folder">
             <span className="fact-inline">
@@ -102,14 +96,6 @@ export function SummaryTab({ ms, app }: DetailTabProps) {
                 {shortenPath(app.dir, home)}
               </span>
               {machine.local && <IconButton icon="folder" label="Reveal the folder" onClick={() => void ctx.pending.run(`reveal|${app.dir}`, null, () => ctx.api.reveal(machine.id, app.dir!))} />}
-            </span>
-          </Row>
-        )}
-        {command && (
-          <Row label="Command">
-            <span className="fact-inline">
-              <code className="fact-code">{command}</code>
-              <IconButton icon="copy" label="Copy the command" onClick={() => void copyWithToast(ctx, command, "the command")} />
             </span>
           </Row>
         )}
@@ -124,28 +110,51 @@ export function SummaryTab({ ms, app }: DetailTabProps) {
             <span className="muted"> · main checkout</span>
           )}
         </Row>
-        <Row label="Kind">{app.kind === "job" ? "Setup step (runs once, then stops)" : "Service (keeps running)"}</Row>
-        {deps.length > 0 && (
-          <Row label="Needs">
-            <ul className="deps">{deps.map((d) => depItem(d.task, d.app))}</ul>
-          </Row>
-        )}
-        {dependents.length > 0 && (
-          <Row label="Needed by">
-            <ul className="deps">{dependents.map((d) => depItem(d.task, d))}</ul>
-          </Row>
-        )}
-        <Row label="dekit task">
-          <span className="fact-inline">
-            <code className="fact-code">{dekitCommand(app)}</code>
-            <IconButton icon="copy" label="Copy the dekit command" onClick={() => void copyWithToast(ctx, dekitCommand(app), "the command")} />
-          </span>
-          <p className="fact-note">
-            Runner <span className="mono">{shortenPath(app.runner, home)}</span> on {machine.name}
-          </p>
-        </Row>
       </dl>
       <WhySection ms={ms} app={app} />
+      {/* for the curious and for bug reports: folded (ADR-0032) */}
+      <Fold summary="Technical details" className="tech-details">
+        <dl className="facts facts-tech">
+          <Row label="dekit state">
+            {app.rawState ?? stateLabel(app.state)}
+            {app.detail && <span className="muted"> · {app.detail}</span>}
+          </Row>
+          {app.pid ? (
+            <Row label="PID">
+              <span className="mono">{app.pid}</span>
+            </Row>
+          ) : null}
+          {command && (
+            <Row label="Command">
+              <span className="fact-inline">
+                <code className="fact-code">{command}</code>
+                <IconButton icon="copy" label="Copy the command" onClick={() => void copyWithToast(ctx, command, "the command")} />
+              </span>
+            </Row>
+          )}
+          <Row label="Kind">{app.kind === "job" ? "Setup step (runs once, then stops)" : "Service (keeps running)"}</Row>
+          {deps.length > 0 && (
+            <Row label="Needs">
+              <ul className="deps">{deps.map((d) => depItem(d.task, d.app))}</ul>
+            </Row>
+          )}
+          {dependents.length > 0 && (
+            <Row label="Needed by">
+              <ul className="deps">{dependents.map((d) => depItem(d.task, d))}</ul>
+            </Row>
+          )}
+          <Row label="dekit task">
+            <span className="fact-inline">
+              <code className="fact-code">{dekitCommand(app)}</code>
+              <IconButton icon="copy" label="Copy the dekit command" onClick={() => void copyWithToast(ctx, dekitCommand(app), "the command")} />
+            </span>
+            <p className="fact-note">
+              Runner <span className="mono">{shortenPath(app.runner, home)}</span> on {machine.name}
+            </p>
+          </Row>
+        </dl>
+        {(deps.length > 0 || dependents.length > 0) && <DepGraph ms={ms} app={app} />}
+      </Fold>
       <DekitHelpHost />
     </div>
   );

@@ -1,16 +1,3 @@
-.runners-machine + .runners-machine {
-  margin-top: var(--space-6);
-}
-
-.runners-note {
-  padding: var(--space-2) 0;
-  font-size: var(--text-sm);
-}
-
-.runners-note a {
-  color: var(--accent-text);
-}
-
 .runner-rows {
   margin: 0;
   padding: 0;
@@ -20,96 +7,6 @@
   background: var(--surface);
   box-shadow: var(--shadow-1);
   list-style: none;
-}
-
-.runner-row {
-  display: grid;
-  grid-template-columns: 8px minmax(0, 1fr) 56px 56px 88px;
-  align-items: center;
-  gap: var(--space-3);
-  min-height: var(--row-h);
-  padding: var(--row-pad-y) var(--space-3) var(--row-pad-y) var(--space-4);
-}
-
-.runner-row + .runner-row {
-  border-top: 1px solid var(--border);
-}
-
-.runner-row-text {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0 var(--space-2);
-  min-width: 0;
-}
-
-.runner-row-name {
-  color: inherit;
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.runner-row-name:hover {
-  color: var(--accent-text);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-.runner-row-path {
-  overflow: hidden;
-  color: var(--text-3);
-  font-size: 12px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.runner-row-error {
-  flex-basis: 100%;
-  color: var(--err);
-  font-size: var(--text-xs);
-}
-
-.runner-row-state {
-  color: var(--text-2);
-  font-size: var(--text-xs);
-}
-
-.is-down .runner-row-state {
-  color: var(--text-3);
-}
-
-.runner-row-apps {
-  color: var(--text-2);
-  font-size: var(--text-xs);
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-.runner-row-action {
-  display: flex;
-  justify-content: flex-end;
-}
-
-@media (max-width: 560px) {
-  .runner-row {
-    grid-template-columns: 8px minmax(0, 1fr) auto;
-    grid-template-areas:
-      "dot text action"
-      ". meta meta";
-  }
-  .runner-row > .dot {
-    grid-area: dot;
-  }
-  .runner-row-text {
-    grid-area: text;
-  }
-  .runner-row-action {
-    grid-area: action;
-  }
-  .runner-row-state,
-  .runner-row-apps {
-    display: none;
-  }
 }
 
 /* ---- the dekit center (M5.3) ---- */
@@ -153,14 +50,17 @@
 
 .dk-about-facts dt {
   color: var(--text-3);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
 }
 
 .dk-about-facts dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
   margin: 0;
-  overflow: hidden;
   font-size: var(--text-sm);
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 
 .dk-note {
@@ -178,12 +78,6 @@
 
 .dk-section + .dk-section {
   margin-top: var(--space-6);
-}
-
-.dk-section-text {
-  margin: calc(-1 * var(--space-1)) 0 var(--space-2);
-  color: var(--text-2);
-  font-size: var(--text-xs);
 }
 
 .dk-runners {
@@ -219,8 +113,8 @@
 .dk-runner-name {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
+  align-items: baseline;
+  gap: 0 var(--space-2);
   font-weight: 600;
 }
 
@@ -238,44 +132,16 @@
 .dk-runner-path {
   overflow: hidden;
   color: var(--text-3);
-  font-size: 12px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.dk-runner-facts {
-  display: grid;
-  grid-template-columns: 96px 84px 64px 130px;
-  align-items: center;
-  gap: var(--space-3);
-  margin: 0;
-  color: var(--text-2);
   font-size: var(--text-xs);
-}
-
-.dk-runner-facts div {
-  display: flex;
-  gap: 4px;
-  min-width: 0;
-}
-
-.dk-runner-facts dt {
-  color: var(--text-3);
-}
-
-.dk-runner-facts dd {
-  margin: 0;
-  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+/* the state in words, only when it needs a look (ADR-0032) */
 .dk-state {
+  color: var(--text-2);
+  font-size: var(--text-sm);
   font-weight: 550;
-}
-
-.dk-state-running {
-  color: var(--on);
 }
 
 .dk-state-stale,
@@ -292,25 +158,71 @@
   align-items: center;
   justify-content: flex-end;
   gap: var(--space-1);
-  min-width: 112px;
 }
 
-.dk-runner-warnings {
-  margin: 0;
-  padding: 0 var(--space-4) var(--space-2) calc(var(--space-4) + 20px);
+/* as in every list (ADR-0032): a runner's actions show where the pointer
+   or the keyboard is; a busy one, an open menu and touch screens keep them */
+@media (hover: hover) {
+  .dk-runner:not(:hover, :focus-within) .dk-runner-actions > :not([aria-busy="true"]) {
+    opacity: 0;
+  }
+}
+
+.dk-runner-actions > * {
+  transition: opacity var(--dur-fast);
+}
+
+/* a problem: one quiet line, with the button that fixes it */
+.dk-runner-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  margin: calc(-1 * var(--space-2)) 0 0;
+  padding: 0 var(--space-4) var(--space-3) calc(var(--space-4) + 20px);
+  color: var(--text-2);
+  font-size: var(--text-sm);
+}
+
+.dk-runner-line + .dk-runner-line {
+  margin-top: calc(-1 * var(--space-2));
+}
+
+.dk-line-icon {
+  flex: none;
   color: var(--warn);
-  font-size: var(--text-xs);
-  list-style: none;
 }
 
 .dk-warn-error {
   color: var(--err);
 }
 
-.dk-runner-note {
-  padding: 0 var(--space-4) var(--space-3) calc(var(--space-4) + 20px);
-  color: var(--text-2);
-  font-size: var(--text-xs);
+.dk-facts {
+  margin: 0;
+}
+
+.dk-facts-row {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: var(--space-3);
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.dk-facts-row:last-child {
+  border-bottom: 0;
+}
+
+.dk-facts dt {
+  color: var(--text-3);
+  font-size: var(--text-sm);
+}
+
+.dk-facts dd {
+  min-width: 0;
+  margin: 0;
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
 }
 
 .runner-job {
@@ -329,28 +241,12 @@
   align-self: flex-end;
 }
 
-.runner-job-all {
-  margin-top: var(--space-4);
-  padding: 0;
-}
-
-@media (max-width: 900px) {
-  .dk-runner-facts {
-    grid-template-columns: 96px 84px;
-  }
-  .dk-runner-facts > div:nth-child(n + 3) {
-    display: none;
-  }
-}
-
 @media (max-width: 560px) {
   .dk-runner-main {
     grid-template-columns: 8px minmax(0, 1fr) auto;
   }
-  .dk-runner-facts {
-    display: none;
-  }
-  .dk-runner-actions {
-    min-width: 0;
+  .dk-state {
+    grid-column: 2;
+    grid-row: 2;
   }
 }

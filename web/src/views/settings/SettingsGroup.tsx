@@ -5,9 +5,18 @@ import "../SettingsView.css";
 /**
  * A titled block of settings (ADR-0029): the title and its sentence above,
  * the settings in one card below, one row each, as in Linear's settings.
+ * A page with one group leaves the title out: the page's own title says it
+ * (ADR-0032: say it once), and its explanation is behind the page's ⓘ.
  */
-export function SettingsGroup({ title, description, children }: { title: string; description?: ReactNode; children: ReactNode }) {
+export function SettingsGroup({ title, description, children }: { title?: string; description?: ReactNode; children: ReactNode }) {
   const id = useId();
+  if (!title) {
+    return (
+      <section className="sgroup">
+        <div className="sgroup-body">{children}</div>
+      </section>
+    );
+  }
   return (
     <section className="sgroup" aria-labelledby={id}>
       <header className="sgroup-head">

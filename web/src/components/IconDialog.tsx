@@ -1,7 +1,7 @@
 import { useEffect, useId, useState } from "react";
 import { errorText } from "../api/errors";
 import { LOCAL_MACHINE } from "../api/machine";
-import { dataUrl, iconChoice, initialsOf, TINTS, tintOf, type IconChoice, type IconImage, type IconPlace } from "../lib/icons";
+import { dataUrl, iconChoice, initialsOf, TINTS, type IconChoice, type IconImage, type IconPlace } from "../lib/icons";
 import { useShell } from "../shell/ShellContext";
 import { useApp } from "./AppContext";
 import { Dialog } from "./Dialog";
@@ -37,7 +37,8 @@ export function IconDialog({
   const current = iconChoice(prefs, prefKey);
   const [mode, setMode] = useState<Mode>(current.kind === "file" ? "image" : current.kind);
   const [text, setText] = useState(current.kind === "initials" ? (current.text ?? "") : "");
-  const [tint, setTint] = useState(current.kind === "initials" ? (current.tint ?? tintOf(name)) : tintOf(name));
+  // grey unless the user picks a colour: a colour in a list reads as state (ADR-0032)
+  const [tint, setTint] = useState(current.kind === "initials" ? (current.tint ?? 0) : 0);
   const [file, setFile] = useState<{ machine: string; image: IconImage } | null>(null);
   const [candidates, setCandidates] = useState<IconImage[] | null>(null);
   const [busy, setBusy] = useState(false);
@@ -81,7 +82,7 @@ export function IconDialog({
 
   const choice: IconChoice =
     mode === "initials"
-      ? { kind: "initials", ...(text.trim() ? { text: text.trim().slice(0, 3) } : {}), tint }
+      ? { kind: "initials", ...(text.trim() ? { text: text.trim().slice(0, 3) } : {}), ...(tint ? { tint } : {}) }
       : mode === "image" && file
         ? { kind: "file", machine: file.machine, path: file.image.path }
         : { kind: "auto" };
@@ -163,7 +164,7 @@ export function IconDialog({
             <input type="radio" name="icon-mode" checked={mode === "initials"} onChange={() => setMode("initials")} />
             <span className="icon-mode-text">
               <span className="icon-mode-title">Initials</span>
-              <span className="icon-mode-desc">Up to three letters on a colour.</span>
+              <span className="icon-mode-desc">Up to three letters, grey or on a colour.</span>
             </span>
           </label>
           {mode === "initials" && (
@@ -173,15 +174,15 @@ export function IconDialog({
               </label>
               <input id={textId} className="input icon-text" value={text} maxLength={3} placeholder={initialsOf(name)} onChange={(e) => setText(e.target.value)} />
               <div className="tints" role="radiogroup" aria-label="Colour">
-                {Array.from({ length: TINTS }, (_, i) => i + 1).map((t) => (
+                {Array.from({ length: TINTS + 1 }, (_, i) => i).map((t) => (
                   <button
                     key={t}
                     type="button"
                     role="radio"
                     aria-checked={t === tint}
-                    aria-label={`Colour ${t}`}
+                    aria-label={t ? `Colour ${t}` : "No colour"}
                     className="tint"
-                    style={{ ["--tint" as string]: `var(--tint-${t})` }}
+                    style={{ ["--tint" as string]: t ? `var(--tint-${t})` : "var(--text-3)" }}
                     onClick={() => setTint(t)}
                   />
                 ))}

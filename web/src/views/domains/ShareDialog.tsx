@@ -5,21 +5,16 @@ import type { SharePreview, ShareKind } from "../../api/sharing";
 import { copyWithToast } from "../../components/appActions";
 import { useApp } from "../../components/AppContext";
 import { Dialog } from "../../components/Dialog";
-import { FileDiff } from "../../components/FileDiff";
 import { Icon, Spinner } from "../../components/Icon";
 import { IconButton } from "../../components/IconButton";
 import { JobCard } from "../../components/JobCard";
 import { ErrorState, LoadingState } from "../../components/States";
 import { SHARE_BLURBS, SHARE_NAMES, SHARE_TITLES } from "../../lib/sharing";
 import { Requirements } from "./Requirements";
+import { ChangeFold } from "./Fold";
 import "./Sharing.css";
 // Its styles live with the Domains view, which may not have loaded (the app detail opens this too).
 import "../DomainsView.css";
-
-function dirOf(path: string): string {
-  const i = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
-  return i > 0 ? path.slice(0, i) : path;
-}
 
 export interface ShareTarget {
   machine: string;
@@ -125,12 +120,16 @@ export function ShareDialog({ target, kind, on, onClose }: { target: ShareTarget
           )}
           {!preview.problem && (
             <>
-              {preview.warnings.map((w) => (
-                <p key={w} className={`rename-note${preview.public && w.startsWith("Anyone") ? " share-public-warn" : " rename-warn"}`}>
-                  <Icon name="warning" size={13} />
-                  {w}
-                </p>
-              ))}
+              {/* red for what makes an app public; the rest is information, in plain text */}
+              {preview.warnings.map((w) => {
+                const exposure = preview.public && w.startsWith("Anyone");
+                return (
+                  <p key={w} className={`rename-note${exposure ? " share-public-warn" : ""}`}>
+                    <Icon name={exposure ? "warning" : "info"} size={13} />
+                    {w}
+                  </p>
+                );
+              })}
               {preview.public && (
                 <label className="share-confirm" htmlFor={confirmId}>
                   <input id={confirmId} type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} data-autofocus />
@@ -139,20 +138,7 @@ export function ShareDialog({ target, kind, on, onClose }: { target: ShareTarget
                   </span>
                 </label>
               )}
-              {preview.files.length > 0 && (
-                <div className="rename-diff">
-                  <h3 className="plan-title">The change</h3>
-                  {preview.files.map((f) => (
-                    <FileDiff key={f.path} file={f} folder={target.runner ?? dirOf(f.path)} />
-                  ))}
-                </div>
-              )}
-              <h3 className="plan-title">What happens</h3>
-              <ol className="rename-steps">
-                {preview.steps.map((s) => (
-                  <li key={s}>{s}</li>
-                ))}
-              </ol>
+              <ChangeFold files={preview.files} steps={preview.steps} runner={target.runner} />
             </>
           )}
           {applyError && (

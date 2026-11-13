@@ -1,9 +1,10 @@
-import type { App, MachineSnapshot, Project, Target, Verb } from "../api/types";
+import { useLayoutEffect, useRef } from "react";
+import type { App, MachineSnapshot, Project, Target, Verb, Worktree } from "../api/types";
 import { projectFoldKey, worktreeFoldKey, type Folds } from "../hooks/useFolds";
 import { indexApps, isAlive, projectApps, runningUrls, serviceCounts, worktreeApps } from "../lib/apps";
 import { inferHome, shortenPath } from "../lib/format";
 import { appsFingerprint } from "../lib/pending";
-import { checkoutKey, checkoutName, checkoutsText, foldedByDefault, groupState, projectRoute } from "../lib/projects";
+import { checkoutKey, checkoutName, checkoutsText, foldedByDefault, projectRoute } from "../lib/projects";
 import { href } from "../lib/router";
 import { projectTargets, worktreeTargets } from "../lib/targets";
 import type { AppEntry, ProjectGroup, WorktreeGroup } from "../views/apps/model";
@@ -23,11 +24,17 @@ interface GroupActionsProps {
   withOpen: boolean;
 }
 
+/** Whether a checkout shows a header: a linked worktree always says which it is; the main checkout only next to others. */
+function hasHead(multi: boolean, wt: Worktree): boolean {
+  return multi || !!wt.name;
+}
+
 /** Open all running, start all, stop all, for a project or a worktree. */
 export function GroupActions({ ms, name, keyBase, apps, targets, withOpen }: GroupActionsProps) {
   const { api, pending } = useApp();
   const machine = ms.machine.id;
-  const { running, total } = serviceCounts(apps);
+  const services = apps.filter((a) => a.kind !== "job");
+  const allAlive = services.length > 0 && services.every((a) => isAlive(a.state));
   const anyAlive = apps.some((a) => isAlive(a.state));
   const urls = runningUrls(apps, ms.machine);
   const inFlight = pending.has(keyBase + "start") || pending.has(keyBase + "stop");
@@ -38,8 +45,18 @@ export function GroupActions({ ms, name, keyBase, apps, targets, withOpen }: Gro
   );
   const act = (verb: Verb) => pending.run(keyBase + verb, fingerprint, () => Promise.all(targets.map((t) => api.act(t, verb))).then(() => undefined));
 
+  // Only what can be done now: Start all while something is off, Stop all
+  // while something runs (ADR-0032). When the button that had the keyboard
+  // goes (Start all, once everything runs), the keyboard stays in the group.
+  const wrap = useRef<HTMLDivElement>(null);
+  const hadFocus = useRef(false);
+  hadFocus.current = !!wrap.current?.contains(document.activeElement);
+  useLayoutEffect(() => {
+    const w = wrap.current;
+    if (hadFocus.current && w && !w.contains(document.activeElement)) w.querySelector<HTMLElement>("button")?.focus();
+  });
   return (
-    <div className="group-actions">
+    <div className="group-actions" ref={wrap}>
       {withOpen && urls.length > 0 && (
         <IconButton
           icon="open"
@@ -48,32 +65,22 @@ export function GroupActions({ ms, name, keyBase, apps, targets, withOpen }: Gro
           onClick={() => pending.run(keyBase + "open", null, () => api.open(machine, urls))}
         />
       )}
-      <IconButton
-        icon="play"
-        tone="go"
-        label={`Start all in ${name}`}
-        disabled={!canAct || (total > 0 && running === total)}
-        pending={pending.has(keyBase + "start")}
-        busy={inFlight}
-        onClick={() => act("start")}
-      />
-      <IconButton
-        icon="stop"
-        tone="halt"
-        label={`Stop all in ${name}`}
-        disabled={!canAct || !anyAlive}
-        pending={pending.has(keyBase + "stop")}
-        busy={inFlight}
-        onClick={() => act("stop")}
-      />
+      {canAct && !allAlive && (
+        <IconButton icon="play" tone="go" label={`Start all in ${name}`} pending={pending.has(keyBase + "start")} busy={inFlight} onClick={() => act("start")} />
+      )}
+      {canAct && anyAlive && (
+        <IconButton icon="stop" tone="halt" label={`Stop all in ${name}`} pending={pending.has(keyBase + "stop")} busy={inFlight} onClick={() => act("stop")} />
+      )}
     </div>
   );
 }
 
+/** How many run, out of how many: only while something runs (nothing running needs no number). */
 export function Count({ apps }: { apps: App[] }) {
   const { running, total } = serviceCounts(apps);
+  if (running === 0) return null;
   return (
-    <span className={running > 0 ? "count count-live" : "count"} title={`${running} of ${total} running`}>
+    <span className="count count-live" title={`${running} of ${total} running`}>
       <span className="sr-only">{`${running} of ${total} running`}</span>
       <span aria-hidden="true">
         {running}/{total}
@@ -135,9 +142,8 @@ function CheckoutSection({
   const linked = !!wt.name;
   const name = checkoutName(project, wt);
   const foldKey = worktreeFoldKey(ms.machine.id, project.runner, project.name, checkoutKey(wt));
-  // A linked worktree always says which it is; the main checkout only next
-  // to others. Only a checkout with a header can fold: there'd be no way back.
-  const head = multi || linked;
+  // Only a checkout with a header can fold: there'd be no way back.
+  const head = hasHead(multi, wt);
   const folded = head && !forceOpen && !!folds?.isFolded(foldKey, !only && foldedByDefault(wt, byId));
   const path = usePath(ms, wt.path);
   const listId = `rows-${foldKey}`.replace(/[^\w-]/g, "_");
@@ -148,17 +154,12 @@ function CheckoutSection({
         <div className="checkout-head">
           {folds && <FoldButton folded={folded} label={`the apps of ${name}`} controls={listId} onToggle={() => folds.setFolded(foldKey, !folded)} />}
           <Icon name="branch" size={13} className="checkout-icon" />
-          <span className="checkout-name" title={wt.prefix || undefined}>
+          <span className="checkout-name" title={path ?? wt.prefix ?? undefined}>
             {name}
           </span>
           {showBranch && (
             <span className="branch-chip" title="The branch it has out">
               {wt.branch}
-            </span>
-          )}
-          {path && (
-            <span className="checkout-path" title={wt.path}>
-              {path}
             </span>
           )}
           <span className="spacer" />
@@ -208,12 +209,12 @@ export function ProjectCard({
   const { project } = group;
   const byId = indexApps(ms.apps);
   const apps = projectApps(project, byId);
-  const state = groupState(apps);
   const foldKey = projectFoldKey(ms.machine.id, project.runner, project.name);
   const folded = !headless && !forceOpen && !!folds?.isFolded(foldKey, false);
   const headingId = `p-${ms.machine.id}-${project.runner}-${project.name}`.replace(/[^\w-]/g, "_");
   const listId = `${headingId}-list`;
   const meta = checkoutsText(project);
+  const checkoutHeads = group.worktrees.some((wt) => hasHead(group.multi, wt.worktree));
   const body = !folded && (
     <div className="project-body" id={listId}>
       {group.worktrees.map((wt) => (
@@ -233,19 +234,30 @@ export function ProjectCard({
     </div>
   );
   if (headless) return <div className="project project-headless">{body}</div>;
+  // A project with one app in one checkout is one row, not a heading over a
+  // row that repeats it (ADR-0032). The project's page is in the sidebar.
+  const only = group.worktrees.length === 1 && !hasHead(group.multi, group.worktrees[0].worktree) ? group.worktrees[0].entries : null;
+  if (only && only.length === 1 && apps.length === 1) {
+    const e = only[0];
+    return (
+      <article className="project project-single" aria-label={project.name}>
+        <EntryRows entries={only} extras={extras} showProject={e.app.label !== project.name} />
+      </article>
+    );
+  }
   return (
-    <article className={`project project-${state}${folded ? " is-folded" : ""}`} aria-labelledby={headingId}>
+    <article className={`project${folded ? " is-folded" : ""}`} aria-labelledby={headingId}>
       <header className="project-head">
         {folds && <FoldButton folded={folded} label={`the apps of ${project.name}`} controls={listId} onToggle={() => folds.setFolded(foldKey, !folded)} />}
-        <ProjectIcon ms={ms} project={project} size={24} state={state === "off" ? undefined : state} />
+        <ProjectIcon ms={ms} project={project} size={24} />
         <h3 className="project-title" id={headingId}>
-          <a href={href(projectRoute(ms, project))} title={`Open ${project.name}: its worktrees, apps and configuration`}>
+          <a href={href(projectRoute(ms, project))} title={`Open ${project.name}${meta ? ` (${meta})` : ""}: its worktrees, apps and configuration`}>
             {project.name}
           </a>
         </h3>
-        {meta && <span className="project-meta">{meta}</span>}
         <span className="spacer" />
-        <Count apps={apps} />
+        {/* open, its checkouts' headers count their own apps: the project's sum would say it twice (ADR-0032) */}
+        {(folded || !checkoutHeads) && <Count apps={apps} />}
         <GroupActions
           ms={ms}
           name={project.name}

@@ -46,7 +46,8 @@ function Header({ ms, app, titleId }: DetailTabProps & { titleId: string }) {
   const href = app.state === "on" ? appHref(app, ms.machine) : undefined;
   const canAct = !!ms.tools.dekit && (ms.machine.local || ms.machine.status === "online");
   const toggle = alive ? "stop" : "start";
-  const where = [app.project, app.worktree, ms.machine.name].filter(Boolean).join(" · ");
+  // the machine only when it isn't this one, the project only when the name doesn't say it
+  const where = [app.project !== app.label ? app.project : "", app.worktree, ms.machine.local ? "" : ms.machine.name].filter(Boolean).join(" · ");
   const more = useAppActionMenu(ms, app);
   const [iconOpen, setIconOpen] = useState(false);
   return (
@@ -59,11 +60,19 @@ function Header({ ms, app, titleId }: DetailTabProps & { titleId: string }) {
           <h2 className="detail-title" id={titleId} tabIndex={-1} data-autofocus>
             {app.label}
           </h2>
+          {/* as in the list (ADR-0032): running is the dot and the address,
+              off is neither; the word shows when something needs a look */}
           <p className="detail-where">
-            <span className={`detail-state state-${app.state}`}>{stateLabel(app.state)}</span>
-            <span className="detail-where-sep" aria-hidden="true">
-              ·
-            </span>
+            {app.state === "on" || app.state === "off" ? (
+              <span className="sr-only">{stateLabel(app.state)}, </span>
+            ) : (
+              <>
+                <span className={`detail-state state-${app.state}`}>{stateLabel(app.state)}</span>
+                <span className="detail-where-sep" aria-hidden="true">
+                  ·
+                </span>
+              </>
+            )}
             {where}
           </p>
         </div>

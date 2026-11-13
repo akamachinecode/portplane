@@ -53,6 +53,8 @@ html:has(.shell) body {
   margin: var(--inset) var(--inset) var(--inset) 0;
   overflow: hidden auto;
   overscroll-behavior: contain;
+  /* a field that gets focus scrolls clear of a sticky footer (Save, the selection bar) */
+  scroll-padding-bottom: 88px;
   border: 1px solid var(--panel-border);
   border-radius: var(--radius-lg);
   background: var(--bg);
@@ -208,7 +210,7 @@ html:has(.shell) body {
 }
 
 .sidebar-search .kbd {
-  font-size: 10.5px;
+  font-size: 12px;
 }
 
 .sidebar-scroll {
@@ -226,10 +228,6 @@ html:has(.shell) body {
   margin: 0;
   padding: 0;
   list-style: none;
-}
-
-.nav-list-gap {
-  margin-top: var(--space-4);
 }
 
 .nav-item {
@@ -284,7 +282,7 @@ html:has(.shell) body {
   max-width: 40%;
   overflow: hidden;
   color: var(--text-3);
-  font-size: 11px;
+  font-size: 12px;
   text-overflow: ellipsis;
 }
 
@@ -295,7 +293,7 @@ html:has(.shell) body {
   border-radius: 999px;
   background: var(--surface-2);
   color: var(--text-2);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   line-height: 18px;
   text-align: center;
@@ -342,7 +340,7 @@ html:has(.shell) body {
   border-radius: 6px;
   background: transparent;
   color: var(--text-3);
-  font-size: 12px;
+  font-size: var(--text-xs);
   font-weight: var(--weight-medium);
   letter-spacing: 0;
   text-align: left;
@@ -386,16 +384,12 @@ html:has(.shell) body {
   flex: none;
   color: var(--text-3);
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
 
 .nav-count.is-live {
   color: var(--on);
-}
-
-.nav-project-failed .nav-count {
-  color: var(--err);
 }
 
 .nav-empty {
@@ -454,7 +448,7 @@ html:has(.shell) body {
 
 .setup-callout-sub {
   color: var(--text-3);
-  font-size: 12px;
+  font-size: var(--text-xs);
 }
 
 .setup-callout-chevron {
@@ -472,18 +466,23 @@ html:has(.shell) body {
 }
 
 .update-ask {
-  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3) var(--space-2) 0;
+  border-top: 1px solid var(--border);
 }
 
-.update-ask .setup-callout-sub {
-  margin-top: 2px;
+.update-ask-title {
+  color: var(--text-2);
+  font-size: var(--text-sm);
   line-height: 1.4;
 }
 
 .update-ask-actions {
   display: flex;
   gap: var(--space-1);
-  margin-top: var(--space-2);
 }
 
 /* Settings' own sidebar */
@@ -566,6 +565,13 @@ html:has(.shell) body {
   min-width: 0;
 }
 
+/* a narrow page's title and actions sit over its column, on the same
+   edges, as in Linear's settings: one left edge to read down */
+.shell-body.is-narrow .toolbar-slot {
+  max-width: var(--page-narrow-w);
+  margin-inline: auto;
+}
+
 .toolbar-view {
   display: flex;
   flex: 1;
@@ -626,11 +632,28 @@ html:has(.shell) body {
   margin: var(--space-2) 0 var(--space-8);
 }
 
+.view-intro.is-empty {
+  display: none;
+}
+
 .view-intro .view-desc {
-  max-width: 68ch;
+  max-width: 64ch;
+  padding: var(--space-3) var(--space-4);
+  border-left: 2px solid var(--border-strong);
   color: var(--text-2);
   font-size: var(--text-sm);
-  line-height: 1.6;
+  line-height: 1.65;
+}
+
+.view-about {
+  flex: none;
+  color: var(--text-3);
+}
+
+/* open: pressed, like the other toggles; green is for state and the main action */
+.view-about.is-on {
+  background: var(--surface-2);
+  color: var(--text);
 }
 
 /* jobs */
@@ -793,7 +816,7 @@ html:has(.shell) body {
     gap: 3px;
     border-radius: 8px;
     color: var(--text-3);
-    font-size: 10.5px;
+    font-size: 12px;
     font-weight: 500;
     text-decoration: none;
   }

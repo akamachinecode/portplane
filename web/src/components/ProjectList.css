@@ -16,12 +16,13 @@
   box-shadow: var(--shadow-card);
 }
 
-.project-failed {
-  border-color: color-mix(in srgb, var(--err) 32%, var(--border));
-}
-
 .project-headless {
   overflow: hidden;
+}
+
+/* one app: the row is the card */
+.project-single .rows > .row:first-child {
+  border-top: 0;
 }
 
 .project-head {
@@ -56,12 +57,6 @@
   color: var(--accent-text);
   text-decoration: underline;
   text-underline-offset: 3px;
-}
-
-.project-meta {
-  flex: none;
-  color: var(--text-3);
-  font-size: var(--text-xs);
 }
 
 .fold {
@@ -131,23 +126,9 @@
   flex: none;
   max-width: 34ch;
   overflow: hidden;
-  padding: 0 6px;
-  border-radius: 5px;
-  background: var(--accent-soft);
-  color: var(--accent-text);
-  font-family: var(--mono);
-  font-size: 11px;
-  line-height: 19px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.checkout-path {
-  min-width: 0;
-  overflow: hidden;
   color: var(--text-3);
   font-family: var(--mono);
-  font-size: 11.5px;
+  font-size: var(--text-xs);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -177,23 +158,31 @@
   transform: translateY(-50%);
 }
 
-/* actions: the toggle and the menu always show; the rest on hover */
-.row:not(:hover, :focus-within, .is-cursor) :is(.row-pin:not(.is-pinned), .row-restart) {
-  opacity: 0;
+/* Actions show where the pointer or the keyboard is (ADR-0032): a list at
+   rest is names, states and addresses. A failed app keeps its actions in
+   view; anything in flight keeps the one that stops it (and a busy button
+   stays). Touch screens (no hover) show them all, disabled ones as
+   disabled. */
+@media (hover: hover) {
+  .row:not(:hover, :focus-within, .is-cursor, .is-selected, .row-failed, .row-starting, .row-stopping) .row-actions > :not([aria-busy="true"], .is-pinned),
+  .row:is(.row-starting, .row-stopping):not(:hover, :focus-within, .is-cursor, .is-selected) .row-actions > :not(.row-toggle, [aria-busy="true"], .is-pinned),
+  .project-head:not(:hover, :focus-within) .group-actions > :not([aria-busy="true"]),
+  .checkout-head:not(:hover, :focus-within) .group-actions > :not([aria-busy="true"]) {
+    opacity: 0;
+  }
+
+  .apps:not(.has-selection) .row:not(:hover, :focus-within, .is-cursor, .is-selected) .row-check {
+    opacity: 0;
+  }
+}
+
+.row-actions > *,
+.group-actions > * {
+  transition: opacity var(--dur-fast);
 }
 
 .row-check {
   transition: opacity var(--dur-fast);
-}
-
-.apps:not(.has-selection) .row:not(:hover, :focus-within, .is-cursor, .is-selected) .row-check {
-  opacity: 0;
-}
-
-@media (hover: none) {
-  .row :is(.row-pin, .row-restart, .row-check) {
-    opacity: 1 !important;
-  }
 }
 
 .project-head .group-actions,

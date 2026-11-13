@@ -57,15 +57,7 @@ export function FoldersSection() {
   };
 
   return (
-    <SettingsGroup
-      title="Folders"
-      description={
-        <>
-          Portplane reads the <code>dekit.yaml</code> files in these folders, and marks open ports that serve from inside them.{" "}
-          <strong>Set up</strong> finds the apps in a folder and writes that config for you.
-        </>
-      }
-    >
+    <SettingsGroup>
       {loadError ? (
         <ErrorState title="Couldn't load the folders" message={loadError} onRetry={() => setAttempt((n) => n + 1)} />
       ) : draft === null ? (
@@ -94,8 +86,8 @@ export function FoldersSection() {
                         unsaved
                       </span>
                     )}
-                    <button type="button" className="btn btn-sm btn-ghost" aria-label={`Remove ${f}`} onClick={() => setDraft(draft.filter((x) => x !== f))}>
-                      Remove
+                    <button type="button" className="icon-btn" aria-label={`Remove ${f}`} title={`Remove ${f}`} onClick={() => setDraft(draft.filter((x) => x !== f))}>
+                      <Icon name="close" size={14} />
                     </button>
                   </li>
                 );
@@ -108,17 +100,18 @@ export function FoldersSection() {
               {saveError}
             </p>
           )}
-          <div className="sgroup-foot">
-            {changed && (
+          {/* Save and Discard only once there is something to save (ADR-0032) */}
+          {changed && (
+            <div className="sgroup-foot">
               <button type="button" className="btn btn-ghost" onClick={() => setDraft(saved)} disabled={saving}>
                 Discard changes
               </button>
-            )}
-            <button type="button" className="btn btn-primary" onClick={save} disabled={!changed || saving} aria-busy={saving || undefined}>
-              {saving && <Spinner />}
-              Save
-            </button>
-          </div>
+              <button type="button" className="btn btn-primary" onClick={save} disabled={saving} aria-busy={saving || undefined}>
+                {saving && <Spinner />}
+                Save
+              </button>
+            </div>
+          )}
         </>
       )}
     </SettingsGroup>

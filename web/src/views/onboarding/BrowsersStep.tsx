@@ -30,6 +30,18 @@ function ProfileRow({ browser, browserName, profile, onAdded }: { browser: strin
       setAdding(false);
     }
   };
+  if (tone === "ok") {
+    // A profile that trusts it takes one line; what that means is the mark (ADR-0032).
+    return (
+      <li className="ob-check ob-check-ok is-compact">
+        <Mark tone="ok" label={profile.status} />
+        <p className="ob-check-name" title={profile.detail}>
+          {profile.name === "All profiles" ? "All profiles" : profile.name}
+          {profile.default && profile.name !== "All profiles" && <span className="tag">default</span>}
+        </p>
+      </li>
+    );
+  }
   return (
     <li className={`ob-check ob-check-${tone}`}>
       <Mark tone={tone === "idle" ? "idle" : tone} label={profile.status} />
@@ -95,16 +107,17 @@ export function BrowsersStep() {
 
   return (
     <StepLayout
-      icon="globe"
       title="Browser trust"
-      lead="Some browsers keep their own list of certificates instead of using your system's. Portplane adds the local certificate to each one that needs it, without a password."
+      lead="Portplane adds the local certificate to each browser that keeps its own list, without a password."
       busy={load.status === "loading"}
       footer={
         <StepFooter status={report ? (pending ? "Some browsers don't trust it yet." : "Your browsers trust the certificate.") : ""}>
-          <button type="button" className="btn" onClick={fetchReport} disabled={load.status === "loading"}>
-            <Icon name="restart" size={14} />
-            Check again
-          </button>
+          {pending && (
+            <button type="button" className="btn" onClick={fetchReport} disabled={load.status === "loading"}>
+              <Icon name="restart" size={14} />
+              Check the browsers again
+            </button>
+          )}
           <NextButton label={pending ? "Continue anyway" : "Next"} primary={!pending} />
         </StepFooter>
       }

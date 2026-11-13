@@ -134,16 +134,18 @@ export function YamlPanel({ runner, config, onSaved }: { runner: string; config:
           ))}
         </ul>
       )}
-      <div className="form-actions">
-        {dirty && <span className="form-dirty">Not saved</span>}
-        <span className="spacer" />
-        <button type="button" className="btn btn-ghost" disabled={!dirty} onClick={() => setText(file.content)}>
-          Discard
-        </button>
-        <button type="button" className="btn btn-primary" disabled={!dirty || !!problems?.length || checking} onClick={() => setReviewing(true)}>
-          Review and save…
-        </button>
-      </div>
+      {dirty && (
+        <div className="form-actions">
+          <span className="form-dirty">Not saved</span>
+          <span className="spacer" />
+          <button type="button" className="btn btn-ghost" onClick={() => setText(file.content)}>
+            Discard
+          </button>
+          <button type="button" className="btn btn-primary" disabled={!!problems?.length || checking} onClick={() => setReviewing(true)}>
+            Review and save…
+          </button>
+        </div>
+      )}
       {reviewing && (
         <SaveReview
           title={`Save ${file.rel}`}

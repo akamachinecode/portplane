@@ -1,10 +1,12 @@
+import { useState } from "react";
 import { errorText } from "../api/errors";
+import { LOCAL_MACHINE } from "../api/machine";
 import { useApp } from "../components/AppContext";
 import { Icon, Spinner, type IconName } from "../components/Icon";
 import type { MachineSnapshot } from "../api/types";
 import { ViewHeader } from "../components/ViewHeader";
 import { href } from "../lib/router";
-import type { Problem, Severity } from "../shell/health";
+import { splitProblems, type Problem, type Severity } from "../shell/health";
 import { SnapshotGate } from "../shell/SnapshotGate";
 import { useShell } from "../shell/ShellContext";
 import { DoctorSection } from "./domains/DoctorSection";
@@ -29,9 +31,10 @@ function ProblemRow({ problem, multiMachine }: { problem: Problem; multiMachine:
         <span className="sr-only">{SEVERITY_LABEL[problem.severity]}:</span>
       </span>
       <div className="problem-body">
-        <p className="problem-title">
+        <p className="problem-title" title={problem.path}>
           {problem.title}
-          {multiMachine && problem.machine && <span className="problem-machine">{problem.machine.name}</span>}
+          {/* the machine, when it's another one: "This computer" on every row would say it again and again */}
+          {multiMachine && problem.machine && problem.machine.id !== LOCAL_MACHINE && <span className="problem-machine">{problem.machine.name}</span>}
         </p>
         {problem.detail && <p className="problem-detail">{problem.detail}</p>}
         {problem.code && <code className="problem-code">{problem.code}</code>}
@@ -92,7 +95,13 @@ export function HealthView() {
   // so their findings join the page (they need a few seconds, so not at start).
   const doctor = usePortlessDoctor(!!local?.tools.portless);
   const check = useSystemCheck(true);
-  const serious = problems.filter((p) => p.severity !== "info").length;
+  // "Every check" is folded; Run diagnostics (the palette) opens it to show its result.
+  const [allOpen, setAllOpen] = useState(false);
+  // One count everywhere (ADR-0032): the problems (errors and warnings) are
+  // what the sidebar's badge, the Apps line and this title count; notes are
+  // listed apart and counted nowhere.
+  const { attention, notes } = splitProblems(problems);
+  const serious = attention.length;
   const multiMachine = (snapshot?.machines.length ?? 0) > 1;
   const checking = check.state.status === "loading" || doctor.state.status === "loading";
   const again = () => {
@@ -124,47 +133,66 @@ export function HealthView() {
               <h2 className="health-title" id="health-attention">
                 Needs attention
               </h2>
-              {problems.length === 0 ? (
+              {attention.length === 0 ? (
                 <div className="all-clear">
                   <Icon name="checkCircle" size={18} />
                   <div>
                     <p className="all-clear-title">Nothing needs your attention</p>
-                    <p className="all-clear-text">Every check below passes. Problems show here the moment they happen, with a way to fix each one.</p>
+                    <p className="all-clear-text">Problems show here the moment they happen, each with its fix.</p>
                   </div>
                 </div>
               ) : (
-                <ul className="problems" aria-label={`${problems.length} ${problems.length === 1 ? "problem" : "problems"}, most serious first`}>
-                  {problems.map((p) => (
+                <ul className="problems" aria-label={`${attention.length} ${attention.length === 1 ? "problem" : "problems"}, most serious first`}>
+                  {attention.map((p) => (
                     <ProblemRow key={p.id} problem={p} multiMachine={multiMachine} />
                   ))}
                 </ul>
               )}
             </section>
-            {local && (
-              <section className="health-section" aria-labelledby="health-computer">
-                <h2 className="health-title" id="health-computer">
-                  This computer
+            {notes.length > 0 && (
+              <section className="health-section" aria-labelledby="health-notes">
+                <h2 className="health-title" id="health-notes">
+                  Good to know
                 </h2>
-                <SystemChecks ms={local} />
+                <ul className="problems problems-notes" aria-label={`${notes.length} ${notes.length === 1 ? "note" : "notes"}`}>
+                  {notes.map((p) => (
+                    <ProblemRow key={p.id} problem={p} multiMachine={multiMachine} />
+                  ))}
+                </ul>
               </section>
             )}
-            {local?.tools.portless && (
-              <section className="health-section" aria-labelledby="health-doctor">
-                <h2 className="health-title" id="health-doctor">
-                  portless doctor
-                </h2>
-                <p className="health-text">portless checks its own setup: the proxy, its state folder, the certificate and how names resolve.</p>
-                <DoctorSection />
-              </section>
-            )}
-            {snap.machines.some((m) => !m.machine.local) && (
-              <section className="health-section" aria-labelledby="health-machines">
-                <h2 className="health-title" id="health-machines">
-                  Other machines
-                </h2>
-                <MachineRows machines={snap.machines.filter((m) => !m.machine.local)} />
-              </section>
-            )}
+            {/* every check that runs, folded: it is the record, not the news */}
+            <details className="health-section health-all" open={allOpen} onToggle={(e) => setAllOpen(e.currentTarget.open)}>
+              <summary className="health-all-summary">
+                <Icon name="chevronRight" size={14} className="health-all-chevron" />
+                <span className="health-title">Every check</span>
+                <span className="health-all-hint">This computer{local?.tools.portless ? ", portless doctor" : ""}{snap.machines.some((m) => !m.machine.local) ? ", other machines" : ""}</span>
+              </summary>
+              {local && (
+                <section className="health-sub" aria-labelledby="health-computer">
+                  <h3 className="health-subtitle" id="health-computer">
+                    This computer
+                  </h3>
+                  <SystemChecks ms={local} />
+                </section>
+              )}
+              {local?.tools.portless && (
+                <section className="health-sub" aria-labelledby="health-doctor">
+                  <h3 className="health-subtitle" id="health-doctor">
+                    portless doctor
+                  </h3>
+                  <DoctorSection onRun={() => setAllOpen(true)} />
+                </section>
+              )}
+              {snap.machines.some((m) => !m.machine.local) && (
+                <section className="health-sub" aria-labelledby="health-machines">
+                  <h3 className="health-subtitle" id="health-machines">
+                    Other machines
+                  </h3>
+                  <MachineRows machines={snap.machines.filter((m) => !m.machine.local)} />
+                </section>
+              )}
+            </details>
           </>
         )}
       </SnapshotGate>

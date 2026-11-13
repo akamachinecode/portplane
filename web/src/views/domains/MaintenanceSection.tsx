@@ -4,7 +4,7 @@ import { CommandLine } from "../../components/Controls";
 import { Icon } from "../../components/Icon";
 import { machineLabel, useScopedMachine } from "../../components/MachineScope";
 import { ORIGIN_LABELS } from "../../lib/portless";
-import { SettingRow, SettingsGroup } from "../settings/SettingsGroup";
+import { Fact, Fold, Group, ShortPath, StatusLine } from "./Fold";
 import { PlanDialog } from "./PlanDialog";
 import { StatusGate } from "./ProxySection";
 
@@ -18,46 +18,58 @@ function Maintenance({ status }: { status: PortlessStatus }) {
   const install = status.install;
   return (
     <>
-      <SettingsGroup title="portless" description="The program behind your .localhost addresses. Portplane updates and removes it with the tool that installed it.">
-        <SettingRow label="Version">
-          <span className="mono">{status.version ?? "unknown"}</span>
-        </SettingRow>
-        <SettingRow label="Installed with">{ORIGIN_LABELS[install.origin]}</SettingRow>
-        <SettingRow label="Program">
-          <span className="mono path-value">{install.script ?? install.bin}</span>
-        </SettingRow>
+      <Group>
+        <StatusLine
+          sub={install.origin === "unknown" ? undefined : install.origin === "portplane" ? ORIGIN_LABELS.portplane : `Installed with ${ORIGIN_LABELS[install.origin]}`}
+          actions={
+            install.update && (
+              <button type="button" className="btn" onClick={() => setPlan("update")}>
+                <Icon name={install.update.admin ? "shield" : "restart"} size={13} />
+                Update portless
+              </button>
+            )
+          }
+        >
+          Version <span className="mono">{status.version ?? "unknown"}</span>
+        </StatusLine>
         {!install.update && (
-          <div className="muted">
+          <div className="sgroup-text">
             <p>Portplane can't tell how this portless was installed, so update or remove it the way you installed it. With npm:</p>
             <CommandLine command="npm install --global portless@latest" />
           </div>
         )}
-        <div className="sgroup-foot">
-          {install.update && (
-            <button type="button" className="btn" onClick={() => setPlan("update")}>
-              {install.update.admin && <Icon name="shield" size={13} />}
-              <Icon name="restart" size={13} />
-              Update portless
-            </button>
-          )}
-        </div>
-        {install.update && (
-          <p className="field-hint">
-            Runs <span className="mono">{install.update.argv.map(quote).join(" ")}</span>. If the startup service still points at the old version afterwards, Portplane reinstalls it, which asks for your password.
-          </p>
-        )}
-      </SettingsGroup>
-      <SettingsGroup
-        title="Uninstall portless"
-        description={`Removes portless and everything it set up on ${machineLabel(ms)}: the service, the trusted certificate, its files and its hosts entries. Your apps, dekit.yaml and portless.json stay; apps lose their .localhost addresses.`}
-      >
-        <div className="sgroup-foot">
-          <button type="button" className="btn btn-danger" onClick={() => setPlan("uninstall")}>
-            <Icon name="trash" size={13} />
-            Uninstall portless…
-          </button>
-        </div>
-      </SettingsGroup>
+        <Fold summary="Details">
+          <dl className="dfacts">
+            <Fact label="Program">
+              <ShortPath path={install.script ?? install.bin} />
+            </Fact>
+            {install.update && (
+              <Fact label="Update runs">
+                <span className="mono">{install.update.argv.map(quote).join(" ")}</span>
+              </Fact>
+            )}
+          </dl>
+          {install.update && <p className="sgroup-text">If the startup service still points at the old version afterwards, Portplane reinstalls it, which asks for your password.</p>}
+        </Fold>
+      </Group>
+      <div className="dfolds">
+        <Fold className="dfold-section" summary="Uninstall portless">
+          <div className="sgroup">
+            <div className="sgroup-body">
+              <p className="sgroup-text">
+                Removes portless and everything it set up on {machineLabel(ms)}: the service, the trusted certificate, its files and its hosts entries. Your apps, dekit.yaml and portless.json stay; apps lose their .localhost addresses.
+              </p>
+              <div className="sgroup-foot">
+                {/* red only in the confirmation, where it is the decision */}
+                <button type="button" className="btn btn-ghost btn-danger-text" onClick={() => setPlan("uninstall")}>
+                  <Icon name="trash" size={13} />
+                  Uninstall portless…
+                </button>
+              </div>
+            </div>
+          </div>
+        </Fold>
+      </div>
       {plan && <PlanDialog action={plan} onClose={() => setPlan(null)} />}
     </>
   );

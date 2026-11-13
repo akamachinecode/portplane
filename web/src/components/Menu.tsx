@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { Icon, type IconName } from "./Icon";
 
 export interface MenuItem {
@@ -9,8 +9,11 @@ export interface MenuItem {
   onSelect(): void;
 }
 
-/** An overflow menu: a "more" button and a list of actions, keyboard-navigable. */
-export function Menu({ label, items }: { label: string; items: MenuItem[] }) {
+/**
+ * An overflow menu: a "more" button (or, with `button`, a text button such
+ * as "Share… ▾") and a list of actions, keyboard-navigable.
+ */
+export function Menu({ label, items, button, disabled, title }: { label: string; items: MenuItem[]; button?: ReactNode; disabled?: boolean; title?: string }) {
   const [open, setOpen] = useState(false);
   const [up, setUp] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
@@ -83,15 +86,16 @@ export function Menu({ label, items }: { label: string; items: MenuItem[] }) {
       <button
         ref={trigger}
         type="button"
-        className="icon-btn"
-        aria-label={label}
-        title="More actions"
+        className={button ? "btn btn-sm" : "icon-btn"}
+        aria-label={button ? undefined : label}
+        title={title ?? (button ? undefined : "More actions")}
+        disabled={disabled}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? id : undefined}
         onClick={toggle}
       >
-        <Icon name="more" />
+        {button ?? <Icon name="more" />}
       </button>
       {open && (
         <div className={up ? "menu menu-up" : "menu"} role="menu" id={id} aria-label={label}>

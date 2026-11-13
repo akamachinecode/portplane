@@ -84,7 +84,7 @@ function RunnersBody({ picker }: { picker: ReactNode }) {
         Runners are dekit's supervisors, one per project.{" "}
         {name ? (
           <>
-            Install it on {name} from its <a href={href({ view: "onboarding", machine: scope.id })}>guided setup</a>.
+            Install it on {name} in its <a href={href({ view: "onboarding", machine: scope.id })}>Setup</a>.
           </>
         ) : (
           <>
@@ -105,11 +105,8 @@ function RunnersBody({ picker }: { picker: ReactNode }) {
         <section className="dk-section" aria-labelledby="dk-host-title">
           <h2 className="section-title" id="dk-host-title">
             <Icon name={name ? "machine" : "monitor"} size={14} />
-            {name ?? "This computer"}
+            Machine-wide tasks
           </h2>
-          <p className="dk-section-text">
-            Tasks that belong to you rather than a project, such as a database you always want up. Their config lives in your home folder{name ? ` on ${name}` : ""}.
-          </p>
           <ul className="dk-runners">
             <RunnerRow runner={v.host} home={home} live={v.live} onChanged={reload} />
           </ul>
@@ -130,7 +127,7 @@ function RunnersBody({ picker }: { picker: ReactNode }) {
               A runner appears for each folder with a <code>dekit.yaml</code>.{" "}
               {name ? (
                 <>
-                  Set up a folder on {name} from its <a href={href({ view: "onboarding", machine: scope.id })}>guided setup</a>.
+                  Set up a folder on {name} in its <a href={href({ view: "onboarding", machine: scope.id })}>Setup</a>.
                 </>
               ) : (
                 <>
@@ -149,22 +146,22 @@ function RunnersBody({ picker }: { picker: ReactNode }) {
       <ViewHeader
         section="dekit"
         title="Runners"
-        description={`A runner is dekit's supervisor for one folder with a dekit.yaml: it starts that folder's apps and keeps them up. There is one per folder, plus one for ${name ?? "this computer"} itself. Open one to edit its tasks.`}
+        description={`A runner starts and watches the apps of one folder with a dekit.yaml. Machine-wide tasks, such as a database you always want up, have their own, with its config in your home folder${name ? ` on ${name}` : ""}. Open one to edit its tasks.`}
         actions={actions}
       />
       <RemoteStatusBanner />
       {body}
       {asking === "clean" && (
-        <ConfirmDialog open title="Clean stale records?" confirmLabel="Clean records" busy={busy} error={error} onClose={() => setAsking(null)} onConfirm={() => void run("clean")}>
+        <ConfirmDialog open tone="primary" title="Clean stale records?" confirmLabel="Clean records" busy={busy} error={error} onClose={() => setAsking(null)} onConfirm={() => void run("clean")}>
           <p className="dialog-text">
-            Removes dekit's records of runners whose process is gone ({value?.stale ?? 0}). Running runners are never touched, and no config changes.
+            Removes dekit's records of runners whose process is gone ({value?.stale ?? 0}). Running runners and config files stay as they are.
           </p>
         </ConfirmDialog>
       )}
       {asking === "upgrade" && (
-        <ConfirmDialog open title="Upgrade every runner?" confirmLabel="Upgrade all" busy={busy} error={error} onClose={() => setAsking(null)} onConfirm={() => void run("upgrade")}>
+        <ConfirmDialog open tone="primary" title="Upgrade every runner?" confirmLabel="Upgrade all" busy={busy} error={error} onClose={() => setAsking(null)} onConfirm={() => void run("upgrade")}>
           <p className="dialog-text">
-            Switches every running runner on an older copy of this dekit to the current one, in place: tasks keep running. Runners pinned to another binary (a project's <code>kernel:</code>) are left alone.
+            Switches every running runner to the current dekit, in place: tasks keep running. Runners pinned to another binary (a project's <code>kernel:</code>) stay as they are.
           </p>
         </ConfirmDialog>
       )}

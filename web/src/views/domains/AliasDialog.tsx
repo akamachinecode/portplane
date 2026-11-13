@@ -39,7 +39,7 @@ export function AliasDialog({ draft, routes, onClose }: { draft: AliasDraft; rou
   const problem = nameProblem(name, tld) ?? (host === "portplane.localhost" ? "portplane.localhost is Portplane's own address." : null);
   const portProblem = Number.isInteger(port) && port >= 1 && port <= 65535 ? null : "Pick a port between 1 and 65535.";
   const holder = routes.find((r) => r.hostname === host && r.hostname !== draft.from);
-  const clash = holder && !force ? `${host} already points to ${holder.owner?.label ?? `port ${holder.port}`}. Turn on “Replace the existing route” to take it over.` : null;
+  const clash = holder && !force ? `${host} already points to ${holder.owner?.label ?? `port ${holder.port}`}. Turn on “Replace the existing address” to take it over.` : null;
 
   const save = async () => {
     setTouched(true);
@@ -86,7 +86,7 @@ export function AliasDialog({ draft, routes, onClose }: { draft: AliasDraft; rou
           void save();
         }}
       >
-        <p className="dialog-text">An alias gives a stable address to a server portless doesn't start itself, such as a database UI, a container or <code>php -S</code>.</p>
+        <p className="dialog-text">A stable address for a server portless doesn't start, such as a database UI, a container or <code>php -S</code>.</p>
         <Field label="Name" htmlFor={ids.name} error={touched || name ? (problem ?? clash) : null}>
           <div className={`name-field${(touched || name) && (problem || clash) ? " has-error" : ""}`}>
             <span className="name-affix">https://</span>
@@ -111,14 +111,15 @@ export function AliasDialog({ draft, routes, onClose }: { draft: AliasDraft; rou
         {ports.length > 0 && (
           <div className="port-picks" role="group" aria-label="Ports listening now">
             {ports.map((p) => (
-              <button key={`${p.address}:${p.port}`} type="button" className={`chip chip-btn${p.port === port ? " is-on" : ""}`} aria-pressed={p.port === port} onClick={() => setPort(p.port)}>
+              <button key={`${p.address}:${p.port}`} type="button" className={`dchip dchip-btn${p.port === port ? " is-on" : ""}`} aria-pressed={p.port === port} onClick={() => setPort(p.port)}>
                 <span className="mono">:{p.port}</span> {p.process ?? "unknown"}
                 {p.route && <span className="muted"> · {p.route}</span>}
               </button>
             ))}
           </div>
         )}
-        <Switch checked={force} onChange={setForce} label="Replace the existing route" description="When another route already has this name, take it over. If a running app holds it, portless stops that app's portless process." />
+        {/* only when the name is taken: a choice nobody needs otherwise */}
+        {(holder || force) && <Switch checked={force} onChange={setForce} label="Replace the existing address" description="Take the name over. If a running app holds it, portless stops that app's portless process." />}
         {host && !problem && Number.isFinite(port) && (
           <p className="proxy-preview">
             <span className="mono">{status ? proxyUrl(host, status.proxy) : `https://${host}`}</span> → <span className="mono">127.0.0.1:{port}</span>
