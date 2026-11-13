@@ -94,7 +94,7 @@ function Proxy({ status, plan }: { status: PortlessStatus; plan: (a: PortlessAct
   );
 
   return (
-    <Group title="Proxy">
+    <Group>
       <StatusLine
         state={up ? "on" : "failed"}
         sub={service}

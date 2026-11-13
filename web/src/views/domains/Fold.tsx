@@ -18,9 +18,17 @@ type DotState = Parameters<typeof StateDot>[0]["state"];
  * A titled block like SettingsGroup (the same look), with its actions on
  * the right of the title, so a card doesn't need a row just for a button.
  */
-export function Group({ title, description, actions, children, id: forced }: { title: ReactNode; description?: ReactNode; actions?: ReactNode; children: ReactNode; id?: string }) {
+export function Group({ title, description, actions, children, id: forced }: { title?: ReactNode; description?: ReactNode; actions?: ReactNode; children: ReactNode; id?: string }) {
   const auto = useId();
   const id = forced ?? auto;
+  // the page's main card, under a title that already names it, has no title of its own (ADR-0032: say it once)
+  if (!title) {
+    return (
+      <section className="sgroup">
+        <div className="sgroup-body">{children}</div>
+      </section>
+    );
+  }
   return (
     <section className="sgroup" aria-labelledby={id}>
       <header className="sgroup-head group-head">

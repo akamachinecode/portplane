@@ -18,7 +18,7 @@ function Maintenance({ status }: { status: PortlessStatus }) {
   const install = status.install;
   return (
     <>
-      <Group title="portless">
+      <Group>
         <StatusLine
           sub={install.origin === "unknown" ? undefined : install.origin === "portplane" ? ORIGIN_LABELS.portplane : `Installed with ${ORIGIN_LABELS[install.origin]}`}
           actions={
