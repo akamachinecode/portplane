@@ -60,11 +60,19 @@ function Header({ ms, app, titleId }: DetailTabProps & { titleId: string }) {
           <h2 className="detail-title" id={titleId} tabIndex={-1} data-autofocus>
             {app.label}
           </h2>
+          {/* as in the list (ADR-0032): running is the dot and the address,
+              off is neither; the word shows when something needs a look */}
           <p className="detail-where">
-            <span className={`detail-state state-${app.state}`}>{stateLabel(app.state)}</span>
-            <span className="detail-where-sep" aria-hidden="true">
-              ·
-            </span>
+            {app.state === "on" || app.state === "off" ? (
+              <span className="sr-only">{stateLabel(app.state)}, </span>
+            ) : (
+              <>
+                <span className={`detail-state state-${app.state}`}>{stateLabel(app.state)}</span>
+                <span className="detail-where-sep" aria-hidden="true">
+                  ·
+                </span>
+              </>
+            )}
             {where}
           </p>
         </div>
