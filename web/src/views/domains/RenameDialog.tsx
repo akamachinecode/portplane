@@ -5,12 +5,12 @@ import type { NameInfo, NamePreview } from "../../api/portless";
 import { useApp } from "../../components/AppContext";
 import { CommandLine } from "../../components/Controls";
 import { Dialog } from "../../components/Dialog";
-import { FileDiff } from "../../components/FileDiff";
 import { Icon, Spinner } from "../../components/Icon";
 import { JobCard } from "../../components/JobCard";
 import { ErrorState, LoadingState } from "../../components/States";
 import { previewHostname, renameProblem, SOURCE_LABELS } from "../../lib/portless";
 import { TYPING_DELAY } from "../../lib/setup";
+import { ChangeFold } from "./Fold";
 // Its styles live with the Domains view, which may not have loaded (the app detail opens this too).
 import "../DomainsView.css";
 
@@ -258,24 +258,7 @@ export function RenameDialog({ machine, appId, route, label, runner, onClose }: 
                   {applyError}
                 </p>
               )}
-              {ready && preview.files.length > 0 && (
-                <div className="rename-diff">
-                  <h3 className="plan-title">The change</h3>
-                  {preview.files.map((f) => (
-                    <FileDiff key={f.path} file={f} folder={runner ?? dirOf(f.path)} />
-                  ))}
-                </div>
-              )}
-              {ready && preview.steps.length > 0 && (
-                <>
-                  <h3 className="plan-title">What happens</h3>
-                  <ol className="rename-steps">
-                    {preview.steps.map((s) => (
-                      <li key={s}>{s}</li>
-                    ))}
-                  </ol>
-                </>
-              )}
+              {ready && <ChangeFold files={preview.files} steps={preview.steps} folderOf={(path) => runner ?? dirOf(path)} />}
             </>
           )}
         </div>

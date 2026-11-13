@@ -23,12 +23,12 @@ export const SHARE_NAMES: Record<ShareKind, string> = {
   cloudflare: "Cloudflare",
 };
 
-/** What each one does, in a sentence. */
+/** Where a shared app opens, in a sentence. Who can open it is the dialog's title and its warning, said once. */
 export const SHARE_BLURBS: Record<ShareKind, string> = {
-  tailscale: "People signed in to your Tailscale network open it at this computer's tailnet address.",
-  funnel: "Anyone on the internet opens it at this computer's tailnet address, through Tailscale Funnel.",
-  ngrok: "Anyone on the internet opens it at a random ngrok address.",
-  cloudflare: "Anyone on the internet opens it at a random trycloudflare.com address that changes on every restart.",
+  tailscale: "It opens at this computer's tailnet address.",
+  funnel: "It opens at this computer's tailnet address, through Tailscale Funnel.",
+  ngrok: "It opens at a random ngrok address.",
+  cloudflare: "It opens at a random trycloudflare.com address that changes on every restart.",
 };
 
 export function isPublic(kind: ShareKind): boolean {

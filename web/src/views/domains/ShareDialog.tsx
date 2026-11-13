@@ -5,13 +5,13 @@ import type { SharePreview, ShareKind } from "../../api/sharing";
 import { copyWithToast } from "../../components/appActions";
 import { useApp } from "../../components/AppContext";
 import { Dialog } from "../../components/Dialog";
-import { FileDiff } from "../../components/FileDiff";
 import { Icon, Spinner } from "../../components/Icon";
 import { IconButton } from "../../components/IconButton";
 import { JobCard } from "../../components/JobCard";
 import { ErrorState, LoadingState } from "../../components/States";
 import { SHARE_BLURBS, SHARE_NAMES, SHARE_TITLES } from "../../lib/sharing";
 import { Requirements } from "./Requirements";
+import { ChangeFold } from "./Fold";
 import "./Sharing.css";
 // Its styles live with the Domains view, which may not have loaded (the app detail opens this too).
 import "../DomainsView.css";
@@ -143,20 +143,7 @@ export function ShareDialog({ target, kind, on, onClose }: { target: ShareTarget
                   </span>
                 </label>
               )}
-              {preview.files.length > 0 && (
-                <div className="rename-diff">
-                  <h3 className="plan-title">The change</h3>
-                  {preview.files.map((f) => (
-                    <FileDiff key={f.path} file={f} folder={target.runner ?? dirOf(f.path)} />
-                  ))}
-                </div>
-              )}
-              <h3 className="plan-title">What happens</h3>
-              <ol className="rename-steps">
-                {preview.steps.map((s) => (
-                  <li key={s}>{s}</li>
-                ))}
-              </ol>
+              <ChangeFold files={preview.files} steps={preview.steps} folderOf={(path) => target.runner ?? dirOf(path)} />
             </>
           )}
           {applyError && (

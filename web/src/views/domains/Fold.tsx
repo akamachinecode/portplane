@@ -1,4 +1,6 @@
 import { useId, type ReactNode } from "react";
+import type { FileChange } from "../../api/types";
+import { FileDiff } from "../../components/FileDiff";
 import { Icon } from "../../components/Icon";
 import { inferHome, shortenPath } from "../../lib/format";
 import { StateDot } from "../../components/StateDot";
@@ -80,5 +82,28 @@ export function ShortPath({ path }: { path: string }) {
     <span className="mono path-value" title={path}>
       {shortenPath(path, inferHome([path]))}
     </span>
+  );
+}
+
+/**
+ * What a change writes and runs, folded (ADR-0032): the dialog says what it
+ * does in a sentence; the diff and the steps are there for whoever checks.
+ */
+export function ChangeFold({ files, steps, folderOf }: { files: FileChange[]; steps: string[]; folderOf(path: string): string }) {
+  if (files.length === 0 && steps.length === 0) return null;
+  const names = files.map((f) => f.path.split(/[/\\]/).pop() ?? f.path);
+  return (
+    <Fold summary="What changes" hint={names.length ? names.join(", ") : undefined} className="change-fold">
+      {files.map((f) => (
+        <FileDiff key={f.path} file={f} folder={folderOf(f.path)} />
+      ))}
+      {steps.length > 0 && (
+        <ol className="rename-steps">
+          {steps.map((s) => (
+            <li key={s}>{s}</li>
+          ))}
+        </ol>
+      )}
+    </Fold>
   );
 }

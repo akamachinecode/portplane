@@ -35,6 +35,10 @@ describe("the setup timeline", () => {
     expect(stepRecord("install", f)).toBe("dekit 0.10.3 · Node.js 24.18.0 · portless 0.17.0");
     expect(stepRecord("folders", f)).toBe("~/code");
     expect(stepRecord("check", f)).toBe("All 4 checks pass");
+    // the same count as the open step's footer: what must be fixed, then what is only suggested
+    const optional = (id: Requirement["id"]): Requirement => ({ ...req(id, "warning"), optional: true });
+    expect(stepRecord("check", facts({ checks: { dekit: req("dekit", "missing"), git: req("git", "ok"), path: optional("path") } }))).toBe("One thing to fix · 1 fine");
+    expect(stepRecord("check", facts({ checks: { git: req("git", "ok"), path: optional("path") } }))).toBe("Ready, with one suggestion · 1 fine");
     expect(stepRecord("install", facts({ checks: { dekit: req("dekit", "missing") }, flow: { toolsReady: false, proxyReady: false, browsersNeeded: null } }))).toBe("Missing: dekit, Node.js, portless");
     expect(stepRecord("proxy", f)).toMatch(/^HTTPS on port \d+ · certificate trusted$/);
     expect(stepRecord("apps", f)).toMatch(/^\d+ apps in \d+ projects$/);

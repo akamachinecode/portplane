@@ -101,6 +101,20 @@ export function problems(reqs: Requirement[]): Requirement[] {
   });
 }
 
+/**
+ * The check's answer in a few words, the same on the open step and in the
+ * timeline (ADR-0032: one count): what must be fixed, else what is only
+ * suggested.
+ */
+export function checkVerdict(reqs: Requirement[]): string {
+  const issues = problems(reqs);
+  const fix = issues.filter((r) => !r.optional).length;
+  const suggested = issues.length - fix;
+  if (fix) return fix === 1 ? "One thing to fix" : `${fix} things to fix`;
+  if (suggested) return suggested === 1 ? "Ready, with one suggestion" : `Ready, with ${suggested} suggestions`;
+  return "Everything is ready";
+}
+
 /** The flow's facts from a check (the parts that were answered). */
 export function flowOf(check: Partial<Record<RequirementId, Requirement>>, browsersNeeded: boolean | null = null): Flow {
   const ok = (id: RequirementId) => {

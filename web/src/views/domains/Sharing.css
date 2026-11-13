@@ -117,15 +117,13 @@
   gap: var(--space-3);
 }
 
+/* what's missing, as the requirement cards themselves: no tinted box
+   around boxes that already carry their own warning */
 .share-problem {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--warn-soft);
+  gap: var(--space-3);
   color: var(--text);
   font-size: var(--text-sm);
 }

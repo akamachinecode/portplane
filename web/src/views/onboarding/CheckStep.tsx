@@ -3,7 +3,7 @@ import { Icon } from "../../components/Icon";
 import { useMachineScope, useRemoteCommand } from "../../components/MachineScope";
 import { useOnboarding } from "./context";
 import { CopyCommand, Mark, NextButton, StepFooter, StepLayout } from "./parts";
-import { CHECK_ORDER, firstFixStep, problems, statusOf } from "./steps";
+import { CHECK_ORDER, checkVerdict, firstFixStep, problems, statusOf } from "./steps";
 
 const PENDING_NAME: Record<RequirementId, string> = {
   dekit: "dekit",
@@ -112,9 +112,7 @@ export function CheckStep() {
 
   let status: string;
   if (running && known.length < shown.length) status = `Checking… ${known.length} of ${shown.length}`;
-  else if (required.length === 0 && optional.length === 0) status = "Everything is ready.";
-  else if (required.length === 0) status = optional.length === 1 ? "Ready, with one suggestion." : `Ready, with ${optional.length} suggestions.`;
-  else status = required.length === 1 ? "One thing to fix." : `${required.length} things to fix.`;
+  else status = `${checkVerdict(known)}.`;
 
   return (
     <StepLayout
