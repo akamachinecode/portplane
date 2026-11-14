@@ -4,14 +4,14 @@ go 1.27
 
 require (
 	fyne.io/systray v1.12.2
-	github.com/ebitengine/purego v0.11.2
-	github.com/godbus/dbus/v5 v5.1.0
+	github.com/ebitengine/purego v0.11.3
+	github.com/godbus/dbus/v5 v5.2.4
 	github.com/hashicorp/yamux v0.1.2
 	github.com/jchv/go-webview2 v0.0.0-20260205173254-56598839c808
 	github.com/shirou/gopsutil/v4 v4.26.10
 	github.com/yuin/goldmark v1.8.7
 	go.yaml.in/yaml/v3 v3.0.6
-	golang.org/x/sys v0.48.0
+	golang.org/x/sys v0.49.0
 )
 
 require (
